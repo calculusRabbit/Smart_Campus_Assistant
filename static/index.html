@@ -5,76 +5,346 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart Campus Assistant</title>
 
-    <style>
+        <style>
+        * {
+            box-sizing: border-box;
+        }
+
         body {
+            margin: 0;
             font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 40px auto;
-            padding: 20px;
+            background: #f4f6f8;
+            color: #1f2937;
         }
 
-        h1 {
-            text-align: center;
+        .topbar {
+            background: #111111;
+            color: white;
+            padding: 18px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
-        #chat-box {
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            min-height: 300px;
-            padding: 15px;
-            margin-bottom: 15px;
-            overflow-y: auto;
-        }
-
-        .user-message {
-            margin: 10px 0;
+        .brand {
+            font-size: 22px;
             font-weight: bold;
         }
 
+        .brand span {
+            color: #f4c430;
+        }
+
+        .hero {
+            background: linear-gradient(
+                rgba(0, 0, 0, 0.65),
+                rgba(0, 0, 0, 0.65)
+            );
+            color: white;
+            padding: 45px 40px;
+        }
+
+        .hero h1 {
+            margin: 0 0 10px 0;
+            font-size: 38px;
+            text-align: left;
+        }
+
+        .hero p {
+            margin: 0;
+            font-size: 18px;
+            max-width: 700px;
+            line-height: 1.5;
+        }
+
+        .page-layout {
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 25px;
+        }
+
+        .chat-container {
+            background: white;
+            border-radius: 14px;
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+        }
+
+        #chat-box {
+            min-height: 500px;
+            max-height: 600px;
+            overflow-y: auto;
+            padding: 25px;
+            background: #fafafa;
+        }
+
+        .message-row {
+            display: flex;
+            margin-bottom: 18px;
+        }
+
+        .message-row.user {
+            justify-content: flex-end;
+        }
+
+        .message-row.assistant {
+            justify-content: flex-start;
+        }
+
+        .message-bubble {
+            max-width: 75%;
+            padding: 14px 18px;
+            border-radius: 14px;
+            line-height: 1.5;
+        }
+
         .assistant-message {
-            margin: 10px 0 20px 0;
+            background: #eef1f4;
+            color: #1f2937;
+        }
+
+        .user-message {
+            background: #f4c430;
+            color: #111111;
+        }
+
+        .result-card {
+            margin-top: 12px;
+            padding: 14px;
+            border-radius: 10px;
+            background: white;
+            border: 1px solid #dcdcdc;
+        }
+
+        .result-card strong {
+            font-size: 17px;
         }
 
         .input-area {
             display: flex;
             gap: 10px;
+            padding: 18px;
+            border-top: 1px solid #e5e7eb;
+            background: white;
         }
 
         #message-input {
             flex: 1;
-            padding: 10px;
+            padding: 14px;
             font-size: 16px;
+            border: 1px solid #cfd4da;
+            border-radius: 10px;
+            outline: none;
+        }
+
+        #message-input:focus {
+            border-color: #f4c430;
         }
 
         button {
-            padding: 10px 20px;
+            background: #f4c430;
+            color: #111111;
+            border: none;
+            border-radius: 10px;
+            padding: 0 22px;
+            font-weight: bold;
             cursor: pointer;
+        }
+
+        button:hover {
+            background: #ddb125;
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .sidebar-card {
+            background: white;
+            border-radius: 14px;
+            padding: 20px;
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+        }
+
+        .sidebar-card h2 {
+            margin-top: 0;
+            font-size: 20px;
+        }
+
+        .quick-button {
+            width: 100%;
+            text-align: left;
+            padding: 12px 14px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        .quick-button:hover {
+            background: #fff5cc;
+        }
+
+        @media (max-width: 850px) {
+            .page-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .hero h1 {
+                font-size: 30px;
+            }
+
+            .topbar {
+                padding: 16px 20px;
+            }
         }
     </style>
 </head>
 
 <body>
 
-    <h1>Smart Campus Assistant</h1>
-
-    <div id="chat-box">
-        <div class="assistant-message">
-            Assistant: Hello! Ask me about campus events, dining,
-            courses, professors, or deadlines.
+<!-- Top Navigation -->
+    <header class="topbar">
+        <div class="brand">
+            <span>WSU</span> Smart Campus
         </div>
-    </div>
 
-    <div class="input-area">
-        <input
-            type="text"
-            id="message-input"
-            placeholder="Ask a campus question..."
-            onkeydown="if (event.key === 'Enter') sendMessage()"
-        >
-        <button onclick="sendMessage()">Send</button>
-    </div>
+        <div>
+            Smart Campus Assistant
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <h1>Smart Campus Assistant</h1>
+
+        <p>
+            Your one-stop assistant for campus events, dining,
+            courses, professors, deadlines, and personalized
+            recommendations.
+        </p>
+    </section>
+
+    <!-- Main Page -->
+    <main class="page-layout">
+
+        <!-- Chat Section -->
+        <section class="chat-container">
+
+            <div id="chat-box">
+
+                <div class="message-row assistant">
+                    <div class="message-bubble assistant-message">
+                        <strong>Assistant</strong><br>
+                        Hello! Ask me about campus events, dining,
+                        courses, professors, deadlines, or recommendations.
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="input-area">
+
+                <input
+                    type="text"
+                    id="message-input"
+                    placeholder="Type your campus question..."
+                    onkeydown="if (event.key === 'Enter') sendMessage()"
+                >
+
+                <button onclick="sendMessage()">
+                    Send
+                </button>
+
+            </div>
+
+        </section>
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+
+            <div class="sidebar-card">
+                <h2>Quick Questions</h2>
+
+                <button
+                    class="quick-button"
+                    onclick="askQuestion('What events are happening?')"
+                >
+                    📅 Events
+                </button>
+
+                <button
+                    class="quick-button"
+                    onclick="askQuestion('Where can I eat on campus?')"
+                >
+                    🍴 Dining
+                </button>
+
+                <button
+                    class="quick-button"
+                    onclick="askQuestion('Tell me about CS 560')"
+                >
+                    📚 Courses
+                </button>
+
+                <button
+                    class="quick-button"
+                    onclick="askQuestion('Tell me about Professor Cody')"
+                >
+                    👨‍🏫 Professors
+                </button>
+
+                <button
+                    class="quick-button"
+                    onclick="askQuestion('What are the important deadlines?')"
+                >
+                    🕐 Deadlines
+                </button>
+
+                <button
+                    class="quick-button"
+                    onclick="askQuestion(
+                        'I am interested in programming. What do you recommend?'
+                    )"
+                >
+                    ⭐ Recommendations
+                </button>
+
+            </div>
+
+            <div class="sidebar-card">
+                <h2>Example Questions</h2>
+
+                <p>“What events are happening?”</p>
+                <p>“Where can I eat on campus?”</p>
+                <p>“Tell me about CS 560.”</p>
+                <p>“What are the important deadlines?”</p>
+                <p>
+                    “I am interested in internships.
+                    What do you recommend?”
+                </p>
+            </div>
+
+        </aside>
+
+    </main>
 
     <script>
+
+        function askQuestion(question) {
+        const input = document.getElementById("message-input");
+
+        input.value = question;
+
+        sendMessage();
+        }
+
         async function sendMessage() {
             const input = document.getElementById("message-input");
             const chatBox = document.getElementById("chat-box");
@@ -86,8 +356,11 @@
             }
 
             chatBox.innerHTML += `
-                <div class="user-message">
-                    You: ${message}
+                <div class="message-row user">
+                    <div class="message-bubble user-message">
+                        <strong>You</strong><br>
+                        ${message}
+                    </div>
                 </div>
             `;
 
@@ -128,8 +401,7 @@
                                 Location: ${item.dining_location}<br>
                                 Hours: ${item.opening_time} - ${item.closing_time}<br>
                                 Status: ${item.dining_status}
-                            </div>
-                            <br>
+                            <div class="result-card">
                         `;
                     });
                 }
@@ -144,8 +416,26 @@
                                 Time: ${event.event_time}<br>
                                 Location: ${event.event_location}<br>
                                 ${event.event_description}
-                            </div>
-                            <br>
+                            <div class="result-card">
+                        `;
+                    });
+                }
+
+                // Recommendations
+                else if (
+                    result.intent === "recommendations" &&
+                    Array.isArray(result.data)
+                ) {
+                    result.data.forEach(event => {
+                        dataHtml += `
+                            <div>
+                                <strong>${event.event_name}</strong><br>
+                                Date: ${event.event_date}<br>
+                                Time: ${event.event_time}<br>
+                                Location: ${event.event_location}<br>
+                                Category: ${event.event_category}<br>
+                                ${event.event_description}
+                            <div class="result-card">
                         `;
                     });
                 }
@@ -164,8 +454,7 @@
                                 Room: ${course.room}<br>
                                 Professor: ${course.professor}<br>
                                 Credits: ${course.credits}
-                            </div>
-                            <br>
+                            <div class="result-card">
                         `;
                     });
                 }
@@ -184,8 +473,7 @@
                                 Email: ${professor.professor_email}<br>
                                 Office: ${professor.office_location}<br>
                                 Rating: ${professor.professor_rating}
-                            </div>
-                            <br>
+                            <div class="result-card">
                         `;
                     });
                 }
@@ -198,18 +486,19 @@
                                 <strong>${deadline.deadline_title}</strong><br>
                                 Date: ${deadline.deadline_date}<br>
                                 ${deadline.deadline_description}
-                            </div>
-                            <br>
+                            <div class="result-card">
                         `;
                     });
                 }
             }
 
             chatBox.innerHTML += `
-                <div class="assistant-message">
-                    <strong>Assistant:</strong> ${result.reply}
-                    <br><br>
-                    ${dataHtml}
+                <div class="message-row assistant">
+                    <div class="message-bubble assistant-message">
+                        <strong>Assistant</strong><br>
+                        ${result.reply}
+                        ${dataHtml}
+                    </div>
                 </div>
             `;
 
@@ -217,8 +506,11 @@
 
             } catch (error) {
                 chatBox.innerHTML += `
-                    <div class="assistant-message">
-                        Assistant: Unable to connect to the backend.
+                    <div class="message-row assistant">
+                        <div class="message-bubble assistant-message">
+                            <strong>Assistant</strong><br>
+                            Unable to connect to the backend.
+                        </div>
                     </div>
                 `;
             }

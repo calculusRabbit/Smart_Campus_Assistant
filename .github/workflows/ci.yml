@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: smart_campus
+          POSTGRES_USER: smartcampus
+          POSTGRES_PASSWORD: smartcampus_dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U smartcampus -d smart_campus"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      POSTGRES_DB: smart_campus
+      POSTGRES_USER: smartcampus
+      POSTGRES_PASSWORD: smartcampus_dev
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Ruff
+        run: ruff check .
+
+      - name: Run migration
+        run: |
+          PGPASSWORD=smartcampus_dev psql \
+            -h localhost \
+            -U smartcampus \
+            -d smart_campus \
+            -f migrations/001_initial_up.sql
+
+      - name: Seed database
+        run: python seed.py
+
+      - name: Run tests
+        run: python -m pytest -q

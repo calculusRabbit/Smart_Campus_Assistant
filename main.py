@@ -1,20 +1,18 @@
 import re
 
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from database import (
-    get_events_from_database,
-    save_student_interests,
-    get_student_interests,
-    get_deadlines_from_database,
     get_courses_from_database,
-    get_professors_from_database,
+    get_deadlines_from_database,
     get_dining_from_database,
+    get_events_from_database,
+    get_professors_from_database,
+    get_student_interests,
+    save_student_interests,
 )
-
-from fastapi import FastAPI, Query, HTTPException
-
 from models import ChatRequest, RecommendationRequest, StudentInterestsRequest
 
 INTEREST_GROUPS = {
@@ -102,28 +100,48 @@ def contains_keyword(message: str, keyword: str):
     pattern = rf"(?<!\w){re.escape(keyword)}(?!\w)"
     return re.search(pattern, message) is not None
 
-@app.post("/recommendations/events")
-def recommend_events(request: RecommendationRequest):
-    student_interests = [
-        interest.lower().strip()
-        for interest in request.interests
-    ]
+# FIRST NEW HELPER
+def extract_interests_from_message(message: str):
+    detected_interests = []
 
+    for category, related_interests in INTEREST_GROUPS.items():
+        for interest in related_interests:
+            if contains_keyword(message, interest):
+                detected_interests.append(interest)
+
+    return list(set(detected_interests))
+
+# SECOND NEW HELPER
+def get_event_recommendations(interests: list[str]):
     recommended_events = []
+
+    normalized_interests = [
+        interest.lower().strip()
+        for interest in interests
+    ]
 
     for event in get_events_from_database():
         category = event["event_category"].lower()
 
         related_interests = INTEREST_GROUPS.get(
-        category,
-        [category]
-)
+            category,
+            [category]
+        )
 
         if any(
             interest in related_interests
-            for interest in student_interests
+            for interest in normalized_interests
         ):
             recommended_events.append(event)
+
+    return recommended_events
+
+
+@app.post("/recommendations/events")
+def recommend_events(request: RecommendationRequest):
+    recommended_events = get_event_recommendations(
+        request.interests
+    )
 
     return {
         "interests": request.interests,
@@ -168,22 +186,11 @@ def get_student_event_recommendations(student_id: int):
         raise HTTPException(
             status_code=404,
             detail="No saved interests found for this student."
-        )    
-    recommended_events = []
+        )
 
-    for event in get_events_from_database():
-        category = event["event_category"].lower()
-
-        related_interests = INTEREST_GROUPS.get(
-        category,
-        [category]
-)
-
-        if any(
-            interest in related_interests
-            for interest in student_interests
-        ):
-            recommended_events.append(event)
+    recommended_events = get_event_recommendations(
+        student_interests
+    )
 
     return {
         "student_id": student_id,
@@ -204,8 +211,26 @@ def chat(request: ChatRequest):
     event_keywords = ["event", "events", "activity", "activities", "career fair", "competition"]
     dining_keywords = ["dining", "food", "eat", "cafeteria", "restaurant", "hungry"]
     course_keywords = ["course", "courses", "class", "classes", "cs 560", "cs 598"]
-    professor_keywords = ["professor", "instructor", "teacher", "who teaches", "dr.", "yang", "smith"]
+    professor_keywords = [
+    "professor",
+    "instructor",
+    "teacher",
+    "who teaches",
+    "dr.",
+    "yang",
+    "smith",
+    ]
     deadline_keywords = ["deadline", "deadlines", "registration", "add/drop", "due date"]
+    recommendation_keywords = [
+    "recommend",
+    "recommendation",
+    "recommendations",
+    "suggest",
+    "suggestion",
+    "suggestions",
+    "interested",
+    "interest",
+    ]
 
     matched_course = find_course_by_message(message)
     if matched_course:
@@ -221,6 +246,23 @@ def chat(request: ChatRequest):
             "intent": "professors",
             "reply": f"Here are the details for {matched_professor['professor_name']}.",
             "data": matched_professor
+        }
+
+    detected_interests = extract_interests_from_message(message)
+
+    if detected_interests and any(
+        contains_keyword(message, keyword)
+        for keyword in recommendation_keywords
+    ):
+        recommended_events = get_event_recommendations(
+            detected_interests
+        )
+
+        return {
+            "intent": "recommendations",
+            "reply": "Here are some campus events based on your interests.",
+            "interests": detected_interests,
+            "data": recommended_events
         }
 
     if any(
