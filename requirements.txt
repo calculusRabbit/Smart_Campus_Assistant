@@ -1,2 +1,6 @@
-beautifulsoup4
-requests
+fastapi
+uvicorn[standard]
+psycopg[binary]
+ruff
+pytest
+httpx

@@ -1,0 +1,10 @@
+BEGIN;
+
+DROP TABLE IF EXISTS student_interests;
+DROP TABLE IF EXISTS professors;
+DROP TABLE IF EXISTS events;
+DROP TABLE IF EXISTS dining;
+DROP TABLE IF EXISTS deadlines;
+DROP TABLE IF EXISTS courses;
+
+COMMIT;
