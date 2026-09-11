@@ -1,26 +1,29 @@
-let events = [
-  {id: 1, title: "Dev Club Meeting", date: "2026-03-15", time: "5:00 PM", location: "Jabara Hall 167", score: 87, type: "club"},
-  {id: 2, title: "CS Career Fair", date: "2026-03-15", time: "5:00 PM", location: "RSC", score: 99, type: "academic"},
-  {id: 3, title: "Basketball Tournament", date: "2026-03-15", time: "5:00 PM", location: "Heskett Center", score: 36, type: "sports"},
-  {id: 4, title: "Study Group - Algorithms CS560", date: "2026-03-15", time: "5:00 PM", location: "Ablah Library 2nd Floor", score: 100, type: "academic"},
-  {id: 5, title: "Vietnamese Student Association Potluck", date: "2026-03-15", time: "5:00 PM", location: "RSC Room 6767", score: 67, type: "social"},
-];
+// let events = [
+//   {id: 1, title: "Dev Club Meeting", date: "2026-03-15", time: "5:00 PM", location: "Jabara Hall 167", score: 87, type: "club"},
+//   {id: 2, title: "CS Career Fair", date: "2026-03-15", time: "5:00 PM", location: "RSC", score: 99, type: "academic"},
+//   {id: 3, title: "Basketball Tournament", date: "2026-03-15", time: "5:00 PM", location: "Heskett Center", score: 36, type: "sports"},
+//   {id: 4, title: "Study Group - Algorithms CS560", date: "2026-03-15", time: "5:00 PM", location: "Ablah Library 2nd Floor", score: 100, type: "academic"},
+//   {id: 5, title: "Vietnamese Student Association Potluck", date: "2026-03-15", time: "5:00 PM", location: "RSC Room 6767", score: 67, type: "social"},
+// ];
 
-let schedules = [
-  {id: 1, code: "CS 560", name: "Machine Learning", time: "TR 2:00-3:15 PM", room: "Jabara 210", professor: "Dr. Yang"},
-  {id: 2, code: "CS 797Y", name: "NLP", time: "TR 2:00-3:15 PM", room: "LinQuist 305", professor: "Mr. Bean"},
-  {id: 3, code: "CS 598", name: "Senior Project", time: "TR 2:00-3:15 PM", room: "Jabara 115", professor: "Dr. John Cena"},
-];
+// let schedules = [
+//   {id: 1, code: "CS 560", name: "Machine Learning", time: "TR 2:00-3:15 PM", room: "Jabara 210", professor: "Dr. Yang"},
+//   {id: 2, code: "CS 797Y", name: "NLP", time: "TR 2:00-3:15 PM", room: "LinQuist 305", professor: "Mr. Bean"},
+//   {id: 3, code: "CS 598", name: "Senior Project", time: "TR 2:00-3:15 PM", room: "Jabara 115", professor: "Dr. John Cena"},
+// ];
 
-let user = {id: 1, name: "Vu", year: "senior", major: "CS", money: -67}
+// react stuff
+import { useEffect, useState } from "react";
+
+let user = {id: 1, name: "Vu", year: "senior", major: "CS", money: -67};
 
 function EventCard({event}) {
   return (
     <div style={{border: "1px solid #ccc", backgroundColor: "white"}}>
-      <p style={{color: "gray"}}>{event.type}</p>
-      <h3>{event.title}</h3>
-      <p>{event.date} at {event.time}</p>
-      <p><strong>Location: </strong>{event.location}</p>
+      <p style={{color: "gray"}}>{event.event_tags}</p>
+      <h3>{event.event_name}</h3>
+      <p>{event.event_date} at {event.event_time}</p>
+      <p><strong>Location: </strong>{event.event_location}</p>
       <p style={{fontWeight: "bold", color: getScoreColor(event.score)}}>Match: {event.score}%</p>
 
       <div style={{display: "flex"}}>
@@ -45,24 +48,43 @@ function ScheduleCard({course}) {
 
 function getScoreColor(score) {
   if (score >= 50) {
-    return "green"
+    return "green";
   }
   else {
-    return "orange"
+    return "orange";
   }
 }
 
 
 export default function Dashboard() {
+
+  const [events,resetEvents] = useState([]);
+  const [schedules, resetSchedules] = useState([]);
+
+  // get data from backend and update arr
+  useEffect(() => {
+    // fetch events from backend
+    fetch("http://localhost:8000/events")
+    .then(res => res.json()).then(data => resetEvents(data.events));
+
+    // fetch schedue
+    fetch("http://localhost:8000/courses")
+    .then(res => res.json()).then(data => resetSchedules(data.courses));
+
+  }, []);
+
   let eventCards = [];
+  let eventScores = [50, 67, 87, 99, 100];
   for (let i = 0; i < events.length; i++) {
-    eventCards.push(<EventCard key={events[i].id} event={events[i]} />);
+    events[i].score = eventScores[i % eventScores.length]; // assign score for testing
+    eventCards.push(<EventCard key={events[i].event_id} event={events[i]} />);
   }
 
   let scheduleCards = [];
   for (let i = 0; i < schedules.length; i++) {
     scheduleCards.push(<ScheduleCard key={schedules[i].id} course={schedules[i]}/>);
   }
+
 
   
   return (

@@ -1,7 +1,16 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+# hey fai, added this so the frontend (localhost:5173) is allowed to talk to the backend (localhost:8000)
+# without this the browser will block all requests from frontend to backend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_methods=["GET","POST"],
+    allow_headers=["*"]
+)
 class ChatRequest(BaseModel):
     message: str
 
@@ -64,20 +73,27 @@ def get_courses():
     return {
         "courses": [
             {
-                "course_id": 101,
-                "course_code": "CS 598",
-                "course_name": "Senior Design Project",
-                "course_department": "Computer Science",
-                "course_description": "Capstone project course for senior students",
-                "course_credits": 3
+                "id": 1,
+                "code": "CS 560",
+                "name": "Machine Learning",
+                "time": "TR 2:00-3:15 PM",
+                "room": "Jabara 210",
+                "professor": "Dr. Yang",
+                "department": "Computer Science",
+                "description": "Introduction to machine learning concepts and models",
+                "credits": 3
             },
+            
             {
-                "course_id": 102,
-                "course_code": "CS 770",
-                "course_name": "Machine Learning",
-                "course_department": "Computer Science",
-                "course_description": "Introduction to machine learning concepts and models",
-                "course_credits": 3
+                "id": 2,
+                "code": "CS 598",
+                "name": "Senior Design Project",
+                "time": "MW 10:00-11:15 AM",
+                "room": "RSC 261",
+                "professor": "Dr. Smith",
+                "department": "Computer Science",
+                "description": "Capstone project course for senior students",
+                "credits": 3
             }
         ]
     }
