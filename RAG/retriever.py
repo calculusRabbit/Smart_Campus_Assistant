@@ -2,9 +2,8 @@ from sentence_transformers import SentenceTransformer
 import numpy as np
 import json
 import faiss
-docIdx_file_path = r"data/document_index.faiss"
-chunks_file_path = r"data/chunks.json"
-model = SentenceTransformer("all-MiniLM-L6-v2")
+from config import EMBEDDING_MODEL, INDEX_PATH, CHUNKS_PATH
+model = SentenceTransformer(EMBEDDING_MODEL)
 
 def embed_query(user_input: str) -> np.ndarray:
     vector = model.encode(user_input)
@@ -20,11 +19,9 @@ def search_similar(index_document, query_vector, top_k=5):
 
 
 def main():
-    # load index document that contain all vector represent text
-    index = faiss.read_index(docIdx_file_path)
+    index = faiss.read_index(INDEX_PATH)
 
-    # load chunks.json
-    with open(chunks_file_path, encoding="utf-8") as f:
+    with open(CHUNKS_PATH, encoding="utf-8") as f:
         chunks = json.load(f)
 
     # test a query

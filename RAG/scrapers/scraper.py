@@ -6,9 +6,9 @@ import time
 import re
 import os
 
+from config import EVENTS_PATH
 BASE_URL = "https://www.wichita.edu/calendar/index.php"
-OUTPUT_FILE = "data/chunks.json"
-PROGRESS_FILE = "data/progress.json"
+OUTPUT_FILE = EVENTS_PATH
 
 def clean_text(text):
     return re.sub(r'\s+', ' ', text).strip()
@@ -152,6 +152,7 @@ def scrape_event(eid):
         return None
 
     data = {
+        "source": "event",
         "eid": eid,
         "url": url_link,
         "title": title,

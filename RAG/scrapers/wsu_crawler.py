@@ -5,6 +5,8 @@ import re
 import time
 import os
 
+from config import RAW_DATA_PATH
+
 def scrape_page(url):
     try:
         res = requests.get(
@@ -69,7 +71,7 @@ def main():
     
     print("total urls:", len(urls))
 
-    output_file = "data/raw/wsu_pages.json"
+    output_file = RAW_DATA_PATH
 
     documents = []
     for i, url in enumerate(urls):

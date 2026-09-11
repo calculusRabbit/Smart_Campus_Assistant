@@ -4,11 +4,11 @@ import os
 from transformers import pipeline
 from processing.prompt import SYSTEM_INSTRUCTIONS, TASK_PROMPT
 import torch
-from config import EMBEDDING_MODEL, LLM_MODEL
+from config import JUDGE_MODEL, RAW_DATA_PATH, FILTERED_DIR
 import torch.multiprocessing as mp
 threshold = 0.35
-output_dir = "data/filtered"
-input_file  = "data/raw/wsu_pages_new.json"
+output_dir = FILTERED_DIR
+input_file = RAW_DATA_PATH
 num_gpus = 4
 
 
@@ -52,7 +52,7 @@ def judge_worker(gpu_id: int, pages: list, file_path: str, threshold: float):
     
     pipe = pipeline(
         "text-generation",
-        model=LLM_MODEL,
+        model=JUDGE_MODEL,
         device=f"cuda:{gpu_id}"
     )
     

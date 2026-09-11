@@ -4,8 +4,9 @@ import json
 import re
 import os
 
+from config import CLUBS_PATH
 api_url = "https://wichita.campuslabs.com/engage/api/discovery/search/organizations?top=300&skip=0"
-output_file = "data/chunks.json"
+output_file = CLUBS_PATH
 headers = {"User-Agent": "Mozilla/5.0"}
 
 
@@ -71,7 +72,7 @@ def parse_club(org):
     url = f"https://wichita.campuslabs.com/engage/organization/{website_key}" if website_key else ""
 
     club = {
-        "type": "club",
+        "source": "club",
         "url": url,
         "title": name,
         "status": status,

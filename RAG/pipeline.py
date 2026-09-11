@@ -4,31 +4,27 @@ import faiss
 import json
 import torch
 from datetime import datetime
-
-model_id = "Qwen/Qwen2.5-32B-Instruct"
-top_k = 5
-chunks_path = r"data/chunks.json"
-index_path= r"data/index_document.faiss"
+from config import GENERATION_MODEL, CHUNKS_PATH, INDEX_PATH, TOP_K
 
 
 # load everything ONCE
 print("Loading model...")
 pipe = pipeline(
     "text-generation",
-    model=model_id,
+    model=GENERATION_MODEL,
     device_map="cuda"
 )
 print("Model loaded")
 
-document_index = faiss.read_index(index_path)
-with open(chunks_path, encoding="utf-8") as f:
+document_index = faiss.read_index(INDEX_PATH)
+with open(CHUNKS_PATH, encoding="utf-8") as f:
     chunks = json.load(f)
 
 
 def query_RAG(user_input: str, history: list) -> str:
     # retrieve relevant chunks
     query_vector = embed_query(user_input)
-    distances, indices = search_similar(document_index, query_vector, top_k=top_k)
+    distances, indices = search_similar(document_index, query_vector, top_k=TOP_K)
 
     # build relevant documents
     relevant_documents = ""

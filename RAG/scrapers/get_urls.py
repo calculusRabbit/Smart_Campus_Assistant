@@ -1,7 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 import json
-import os
+from config import ALL_URLS_PATH
 
 site_map = "https://www.wichita.edu/sitemap.xml"
 
@@ -41,8 +41,12 @@ def filter_urls(urls):
 
 def main():
     list_url = get_all_urls()
+    # TODO: filter_urls() is defined above but never called here, so old/irrelevant
+    # pages (2018-2024) are NOT being dropped right now. Uncomment the line below
+    # to actually enable the filter before the next full scrape.
+    # list_url = filter_urls(list_url)
 
-    with open("data/all_urls.jsonl", "w", encoding="utf-8") as f:
+    with open(ALL_URLS_PATH, "w", encoding="utf-8") as f:
         for url in list_url:
             f.write(json.dumps({"url": url}) + "\n")
 

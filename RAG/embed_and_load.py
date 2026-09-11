@@ -2,7 +2,8 @@ from sentence_transformers import SentenceTransformer
 import numpy as np
 import json
 import faiss
-model = SentenceTransformer("all-MiniLM-L6-v2")
+from config import EMBEDDING_MODEL, CHUNKS_PATH, INDEX_PATH
+model = SentenceTransformer(EMBEDDING_MODEL)
 
 
 def embed_chunk(chunks: list) -> np.ndarray:
@@ -28,7 +29,7 @@ def build_faiss_index(vectors):
 
 
 def main():
-    data = load_json(r"data/chunks.json", encoding="utf-8")
+    data = load_json(CHUNKS_PATH, encoding="utf-8")
 
     chunks = []
     for item in data:
@@ -39,7 +40,7 @@ def main():
 
     print("start build db")
     document_index = build_faiss_index(vectors)
-    faiss.write_index(document_index, "data/document_index.faiss")
+    faiss.write_index(document_index, INDEX_PATH)
 
     print("Done: ", len(chunks))
 
