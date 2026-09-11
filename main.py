@@ -14,6 +14,9 @@ from database import (
     save_student_interests,
 )
 from models import ChatRequest, RecommendationRequest, StudentInterestsRequest
+from services.recommendation_service import RecommendationService
+
+recommendation_service = RecommendationService()
 
 INTEREST_GROUPS = {
     "coding": [
@@ -101,15 +104,9 @@ def contains_keyword(message: str, keyword: str):
     return re.search(pattern, message) is not None
 
 # FIRST NEW HELPER
-def extract_interests_from_message(message: str):
-    detected_interests = []
-
-    for category, related_interests in INTEREST_GROUPS.items():
-        for interest in related_interests:
-            if contains_keyword(message, interest):
-                detected_interests.append(interest)
-
-    return list(set(detected_interests))
+def extract_interests_from_message(message: str) -> list[str]:
+    """Extract student interest categories from a chat message."""
+    return recommendation_service.extract_interests(message)
 
 # SECOND NEW HELPER
 def get_event_recommendations(interests: list[str]):
@@ -123,10 +120,7 @@ def get_event_recommendations(interests: list[str]):
     for event in get_events_from_database():
         category = event["event_category"].lower()
 
-        related_interests = INTEREST_GROUPS.get(
-            category,
-            [category]
-        )
+        related_interests = recommendation_service.related_interests(category)
 
         if any(
             interest in related_interests
