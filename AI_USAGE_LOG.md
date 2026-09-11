@@ -1,253 +1,228 @@
-# AI Usage Log
+# AI Usage & Verification Log
 
-## Smart Campus Assistant Platform — Prototype 1
+**Project Name:** Smart Campus Assistant Platform  
+**Team Name:** The Three Musketeer
+**Team Member:** Teng Fai Leong  
+**Role:** Backend Developer / AI Integration  
 
-This document records the use of generative AI tools during development of the Smart Campus Assistant Platform. AI was used as a development assistant for planning, debugging, documentation, code suggestions, and testing guidance. AI-generated suggestions were reviewed, modified when necessary, and manually validated before being included in the project.
+---
 
-## AI Tool Used
+## Overview & AI Policy Compliance Statement
 
-- ChatGPT by OpenAI
+This repository utilizes Generative AI tools, primarily ChatGPT, in compliance with course AI guidelines. AI tools were used to assist with backend development, PostgreSQL integration, database migrations, Docker configuration, automated testing, CI/CD configuration, recommendation logic refactoring, debugging, and documentation.
 
-## 1. Backend Development
+All AI-assisted code was manually reviewed before being added to the project. Generated code and configuration were modified when necessary to match the existing project architecture. Changes were validated using Ruff static analysis, pytest automated tests, PostgreSQL migration and rollback testing, Docker execution, browser/API testing, and GitHub Actions CI.
 
-### AI Assistance
+---
 
-AI was used to help review and improve the FastAPI backend structure and API functionality.
+## Entry 1: Prototype 1 — PostgreSQL Database Migration & Rollback
 
-Example requests included:
+* **Date:** September 2026
+* **Team Member:** Teng Fai Leong
+* **Tool Used:** ChatGPT
+* **Associated Git Issue:** `#XX` — Implement Prototype 1 backend foundation and PostgreSQL data layer
+* **Associated Feature Branch:** `backend-testing`
 
-- Help reviewing FastAPI endpoint structure.
-- Help connecting FastAPI to PostgreSQL.
-- Help debugging database connection errors.
-- Help implementing and testing campus information endpoints.
-- Help reviewing chatbot intent handling and recommendation logic.
+### Exact Prompt Submitted:
 
-### Manual Review and Changes
+> Original migration prompt was submitted in an earlier ChatGPT conversation. The exact wording should be copied from that conversation before final submission.
 
-The suggested code was reviewed before being added to the project. Backend behavior was manually tested using FastAPI Swagger documentation and the web interface.
+### AI Output Summary & Code Generated:
 
-### Validation
+ChatGPT assisted with designing SQL migration scripts for the Prototype 1 PostgreSQL database.
 
-The following functionality was manually tested:
+The migration created the following tables:
 
-- Events endpoint
-- Courses endpoint
-- Dining endpoint
-- Professors endpoint
-- Deadlines endpoint
-- Student interests
-- Event recommendations
-- Chat endpoint
+- `events`
+- `courses`
+- `professors`
+- `dining`
+- `deadlines`
+- `student_interests`
 
-## 2. PostgreSQL Database
+Two migration files were created:
 
-### AI Assistance
+- `migrations/001_initial_up.sql`
+- `migrations/001_initial_down.sql`
 
-AI was used to help migrate the backend development environment from SQLite-based development to PostgreSQL and to review database connection configuration.
+The `up` migration creates the Prototype 1 schema, while the `down` migration provides rollback functionality.
 
-AI also assisted with creating reproducible SQL migration and rollback scripts.
+### Human Review, Refactoring & Modifications Made:
 
-### Manual Review and Changes
+- Reviewed all table names, columns, primary keys, and data types.
+- Confirmed that the migration matched the existing FastAPI database functions.
+- Used a separate PostgreSQL test database to avoid modifying the active development database.
+- Verified that all six required tables were created.
+- Reviewed the rollback file to confirm that all Prototype 1 tables were removed cleanly.
 
-The database schema was verified against the actual PostgreSQL database before migration scripts were finalized.
+### Verification & Testing Method:
 
-### Validation
+- Executed `001_initial_up.sql` against the `smart_campus_test` PostgreSQL database.
+- Verified that all six expected tables were created.
+- Executed `001_initial_down.sql`.
+- Verified that the tables were successfully removed.
+- Migration also executes as part of the GitHub Actions CI workflow.
 
-The initial migration was applied to a separate test database.
+---
 
-The rollback script was then executed and the database was checked to verify that the created tables were removed.
+## Entry 2: Prototype 1 — Docker and Development Environment
 
-The database tables included:
+* **Date:** September 2026
+* **Team Member:** Teng Fai Leong
+* **Tool Used:** ChatGPT
+* **Associated Git Issue:** `#XX` — Implement Prototype 1 backend foundation and PostgreSQL data layer
+* **Associated Feature Branch:** `backend-testing`
 
-- courses
-- deadlines
-- dining
-- events
-- professors
-- student_interests
+### Exact Prompt Submitted:
 
-## 3. Synthetic Database Seeder
+> "actually what is docker what how can i use docker"
 
-### AI Assistance
+### AI Output Summary & Code Generated:
 
-AI assisted with creating `seed.py` using the existing database insertion functions.
+ChatGPT assisted with creating and explaining the Docker development environment for the Smart Campus Assistant.
 
-### Manual Review and Changes
-
-The seeder was reviewed to ensure that it used synthetic development data rather than real student information.
-
-### Validation
-
-The seeder was executed against the PostgreSQL test database and inserted sample campus event data successfully.
-
-## 4. Docker Development Environment
-
-### AI Assistance
-
-AI provided guidance for creating:
+The AI-assisted configuration included:
 
 - `Dockerfile`
 - `docker-compose.yml`
 - `.env.example`
 - `requirements.txt`
 
-AI also assisted with debugging Docker-to-PostgreSQL connection issues.
+The Docker Compose environment contains separate services for:
 
-### Manual Review and Changes
+1. FastAPI backend
+2. PostgreSQL database
 
-The database connection code was updated to support environment variables inside Docker while maintaining local development support.
+### Human Review, Refactoring & Modifications Made:
 
-### Validation
+- Reviewed Docker ports and service configuration.
+- Configured PostgreSQL environment variables for development.
+- Modified `database.py` so database connection settings could be read from environment variables.
+- Preserved local PostgreSQL fallback behavior for development outside Docker.
+- Confirmed that development credentials were example credentials and not production secrets.
+- Validated the Docker Compose configuration before running the full application.
 
-The Docker configuration was validated with:
+### Verification & Testing Method:
 
-```bash
-docker compose config
-```
+* Ran `docker compose config` to validate the Docker Compose configuration and confirm there were no configuration errors.
+* Ran `docker compose up --build` to build and start the FastAPI backend and PostgreSQL database containers.
+* Confirmed that both the backend and PostgreSQL services started successfully.
+* Opened `http://127.0.0.1:8000/` in the browser and verified that the Smart Campus Assistant frontend loaded correctly.
+* Tested the application by sending requests through the Smart Campus Assistant interface.
+* Verified the `/events` endpoint and confirmed that event data could be retrieved successfully.
+* Verified the `/courses` endpoint and confirmed that course information, including CS 560, could be retrieved successfully.
+* Confirmed that the FastAPI backend running inside Docker could successfully communicate with the PostgreSQL database container.
+* Verified the API functionality using FastAPI Swagger documentation at `http://127.0.0.1:8000/docs`.
 
-The application was then built and started with Docker Compose.
+## Entry 3: Prototype 1 — PostgreSQL down script
 
-End-to-end requests were tested from the browser through FastAPI to PostgreSQL.
+* **Date:** September 8 2026
+* **Team Member:** Arpan Dey
+* **Tool Used:** Perplexity
+* **Associated Git Issue:** #12 - Create and add PostGres database migration rollback script ('down' script)
+* **Associated Feature Branch:** `feature/database`
 
-## 5. Static Analysis and Code Quality
+### Exact Prompt Submitted:
 
-### AI Assistance
+> give me an example of a postgres schema migration rollback
+>find any errors or major improvements for the DOWN file and give them to me one by one
+>any further errors/major improvements?
+>done, anything else?
+>done, anything else?
+>done, anything further?
 
-AI assisted with configuring Ruff through `pyproject.toml` and identifying code-quality issues.
+### AI Output Summary & Code Generated:
 
-### Manual Review and Changes
+Perplexity gave an example of a migration and rollback in PostGres, and identified errors in the human-written sca_database_v0.2.0_DOWN.sql file and suggested solutions.
 
-Ruff suggestions and automatic fixes were reviewed. Duplicate backend code and formatting issues were corrected.
+### Human Review, Refactoring & Modifications Made:
 
-### Validation
+- Reviewed AI-found errors and matched them to the .sql file.
+- Found errors, determined the solution, and matched them to AI solution
 
-Static analysis was run with:
+### Verification & Testing Method:
 
-```bash
-ruff check .
-```
+- Put corrected script into online SQL syntax checker (RunSQL) and found no errors.
+-Ran down script and confirmed all tables were deleted.
 
-The final local result was:
 
-```text
-All checks passed!
-```
+---
 
-## 6. Automated Testing
+## Entry 4: Prototype 1 — PostgreSQL dummy data population script
 
-### AI Assistance
+* **Date:** September 10 2026
+* **Team Member:** Arpan Dey
+* **Tool Used:** Perplexity
+* **Associated Git Issue:** #20 - Create and add completed database dummy data populator
+* **Associated Feature Branch:** `feature/database`
 
-AI assisted with creating initial Pytest tests for the FastAPI application.
+### Exact Prompt Submitted:
 
-Tests were created for:
+> besides the missing inserts for the remaining tables, is there anything wrong with the dummy data populator? Find any and all errors in the script and explain them, and suggest any major improvements to be made to the code. (Provided python file and schema migration file.)
 
-- Home page
-- Events endpoint
-- Courses endpoint
+### AI Output Summary & Code Generated:
 
-### Manual Review and Changes
+Perplexity gave corrections and potential solutions for many issues, including missing inner '()' for function arguments to make arguments sequences, and incorrect corrections like missing indentations.
 
-Initial test assumptions were corrected after comparing them with the actual API response structure.
+### Human Review, Refactoring & Modifications Made:
 
-### Validation
+- Reviewed AI-found errors and matched them to the .py file.
+- Ignored unnecessary errors and their corrections
+- Found errors, determined the solution, and matched them to AI solutions. Not all of them matched; some solutions the AI proposed were excessive and others did not make sense for the database schema. Those were ignored.
 
-Tests were run locally and inside Docker.
+### Verification & Testing Method:
 
-Local validation:
+- Found no errors in editor. As the script is not yet complete as of the time of writing, it couldn't be run yet.
 
-```bash
-python -m pytest -q
-```
+---
 
-Result:
 
-```text
-3 passed
-```
+## Audit Certification
+I certify as Team Lead that all entries above accurately represent AI usage within this project phase, all prompts have been recorded, and all code has been validated by human review and automated testing.
 
-## 7. Continuous Integration
+**Team Lead Signature:** *Arpan Dey* — **Date:** September 8, 2026
 
-### AI Assistance
 
-AI assisted with creating and debugging the GitHub Actions CI workflow.
+## Entry 5: Learn to Write Unit Test Cases
 
-The workflow includes:
+* Date: September 2026
+* Team Member: Vu Nguyen
+* Tool Used: GPT-5.6 Sol
+* Associated Git Issue: #21 — Test Cases for RAG
+* Associated Feature Branch: test/rag-unit-tests
 
-- Gitleaks secret scanning
-- Python setup
-- Dependency installation
-- Ruff
-- PostgreSQL
-- Database migration
-- Synthetic database seeding
-- Pytest
+### Exact Prompt Submitted: https://chatgpt.com/share/6aa38942-87d0-83e9-8b04-bf4d971022c6
 
-### Manual Review and Changes
+“what is unit test, what does it look like give me example unit test case”
 
-The CI workflow was updated after reviewing actual GitHub Actions failures.
+“what is pytest library”
 
-For example, the Gitleaks configuration was updated to provide the GitHub workflow token and checkout the full Git history required for pull-request scanning.
+“so for this code below right here can write test case for function filter_urls like i will have list of url link that have old year and unit test should test which url link suppose to drop bla bla etc”
 
-The `backend-testing` branch was also added as a CI push trigger during development.
+### AI Output Summary & Code Generated:
 
-### Validation
+ChatGPT was used to help me learn the fundamentals of unit testing and how to use the pytest framework in Python. The AI explained how unit tests provide controlled inputs to individual functions and verify that the returned results match the expected behavior.
 
-The GitHub Actions workflow was executed on GitHub and the final CI run completed successfully with a green status.
+ChatGPT also provided example test cases for the RAG data-processing functions, including tests for URL filtering and date-based event filtering. The examples demonstrated how to use Python assert statements and how to structure pytest test functions.
 
-## 8. Frontend Development
+### Human Review, Refactoring & Modifications Made:
 
-### AI Assistance
+* Reviewed the AI-generated examples to understand the pytest syntax before applying them to the project.
+* Adapted the example test cases to match the project’s existing RAG functions and expected behavior.
+* Manually selected test inputs and expected outputs for URL filtering.
+* Added test cases to verify that outdated URLs are removed and current URLs are retained.
+* Reviewed Python date utilities such as date.today(), isoformat(), and timedelta() before using them in date-filtering tests.
+* Modified AI examples where necessary rather than copying them directly into the project.
 
-AI provided suggestions for improving the Smart Campus Assistant frontend layout and displaying chatbot responses.
+### Verification & Testing Method:
 
-### Manual Review and Changes
+* Ran the unit tests using pytest.
+* Verified that current-year URLs were retained by the URL filtering function.
+* Tested outdated URLs to verify the expected filtering behavior and identify cases not handled by the existing implementation.
+* Tested the event date-filtering function with current and older dates.
+* Reviewed failed tests to distinguish between incorrect test expectations and issues in the implementation.
+* Manually reviewed the final test cases to confirm that each test represented the intended behavior of the RAG pipeline.
 
-Frontend changes were reviewed and tested manually in the browser.
 
-### Validation
 
-The frontend was tested with the running FastAPI and PostgreSQL Docker environment.
 
-Example chatbot questions included:
-
-```text
-What events are happening?
-Tell me about CS 560.
-```
-
-The application successfully displayed information retrieved through the backend.
-
-## 9. Documentation
-
-### AI Assistance
-
-AI assisted with organizing and drafting:
-
-- README documentation
-- Developer onboarding documentation
-- AI usage documentation
-
-### Manual Review and Changes
-
-Documentation was reviewed and updated to reflect the actual Prototype 1 implementation rather than planned features that were not yet implemented.
-
-## 10. Human Verification
-
-AI suggestions were not treated as automatically correct. Suggested changes were reviewed and validated using development tools and manual testing.
-
-Verification methods included:
-
-```text
-docker compose config
-docker compose up --build
-ruff check .
-python -m pytest -q
-git diff --check
-PostgreSQL migration testing
-PostgreSQL rollback testing
-GitHub Actions CI
-Browser-based application testing
-FastAPI Swagger testing
-```
-
-The development team remains responsible for the final code, testing, documentation, and submitted project.
