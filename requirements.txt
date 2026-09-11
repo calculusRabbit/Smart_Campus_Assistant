@@ -1,3 +1,6 @@
+beautifulsoup4
+requests
+pytest
 fastapi
 uvicorn[standard]
 psycopg[binary]

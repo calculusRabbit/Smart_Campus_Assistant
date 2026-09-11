@@ -1,0 +1,25 @@
+name: RAG CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/rag/**'
+  pull_request:
+    paths:
+      - 'services/rag/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt pytest
+
+      - name: Run RAG tests
+        run: pytest services/rag/tests -q
