@@ -181,3 +181,48 @@ Perplexity gave corrections and potential solutions for many issues, including m
 I certify as Team Lead that all entries above accurately represent AI usage within this project phase, all prompts have been recorded, and all code has been validated by human review and automated testing.
 
 **Team Lead Signature:** *Arpan Dey* — **Date:** September 8, 2026
+
+
+## Entry 5: Learn to Write Unit Test Cases
+
+* Date: September 2026
+* Team Member: Vu Nguyen
+* Tool Used: GPT-5.6 Sol
+* Associated Git Issue: #21 — Test Cases for RAG
+* Associated Feature Branch: test/rag-unit-tests
+
+### Exact Prompt Submitted: https://chatgpt.com/share/6aa38942-87d0-83e9-8b04-bf4d971022c6
+
+“what is unit test, what does it look like give me example unit test case”
+
+“what is pytest library”
+
+“so for this code below right here can write test case for function filter_urls like i will have list of url link that have old year and unit test should test which url link suppose to drop bla bla etc”
+
+### AI Output Summary & Code Generated:
+
+ChatGPT was used to help me learn the fundamentals of unit testing and how to use the pytest framework in Python. The AI explained how unit tests provide controlled inputs to individual functions and verify that the returned results match the expected behavior.
+
+ChatGPT also provided example test cases for the RAG data-processing functions, including tests for URL filtering and date-based event filtering. The examples demonstrated how to use Python assert statements and how to structure pytest test functions.
+
+### Human Review, Refactoring & Modifications Made:
+
+* Reviewed the AI-generated examples to understand the pytest syntax before applying them to the project.
+* Adapted the example test cases to match the project’s existing RAG functions and expected behavior.
+* Manually selected test inputs and expected outputs for URL filtering.
+* Added test cases to verify that outdated URLs are removed and current URLs are retained.
+* Reviewed Python date utilities such as date.today(), isoformat(), and timedelta() before using them in date-filtering tests.
+* Modified AI examples where necessary rather than copying them directly into the project.
+
+### Verification & Testing Method:
+
+* Ran the unit tests using pytest.
+* Verified that current-year URLs were retained by the URL filtering function.
+* Tested outdated URLs to verify the expected filtering behavior and identify cases not handled by the existing implementation.
+* Tested the event date-filtering function with current and older dates.
+* Reviewed failed tests to distinguish between incorrect test expectations and issues in the implementation.
+* Manually reviewed the final test cases to confirm that each test represented the intended behavior of the RAG pipeline.
+
+
+
+
