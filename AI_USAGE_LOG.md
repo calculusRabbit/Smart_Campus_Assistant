@@ -1,7 +1,7 @@
 # AI Usage & Verification Log
 
 **Project Name:** Smart Campus Assistant Platform  
-**Team Name:** The Three Musketeer
+**Team Name:** The Three Musketeers
 **Team Member:** Teng Fai Leong  
 **Role:** Backend Developer / AI Integration  
 
@@ -17,7 +17,7 @@ All AI-assisted code was manually reviewed before being added to the project. Ge
 
 ## Entry 1: Prototype 1 — PostgreSQL Database Migration & Rollback
 
-* **Date:** September 2026
+* **Date:** September 8 2026
 * **Team Member:** Teng Fai Leong
 * **Tool Used:** ChatGPT
 * **Associated Git Issue:** `#XX` — Implement Prototype 1 backend foundation and PostgreSQL data layer
@@ -67,7 +67,7 @@ The `up` migration creates the Prototype 1 schema, while the `down` migration pr
 
 ## Entry 2: Prototype 1 — Docker and Development Environment
 
-* **Date:** September 2026
+* **Date:** September 8 2026
 * **Team Member:** Teng Fai Leong
 * **Tool Used:** ChatGPT
 * **Associated Git Issue:** `#XX` — Implement Prototype 1 backend foundation and PostgreSQL data layer
@@ -177,12 +177,6 @@ Perplexity gave corrections and potential solutions for many issues, including m
 ---
 
 
-## Audit Certification
-I certify as Team Lead that all entries above accurately represent AI usage within this project phase, all prompts have been recorded, and all code has been validated by human review and automated testing.
-
-**Team Lead Signature:** *Arpan Dey* — **Date:** September 8, 2026
-
-
 ## Entry 5: Learn to Write Unit Test Cases
 
 * Date: September 2026
@@ -223,6 +217,11 @@ ChatGPT also provided example test cases for the RAG data-processing functions, 
 * Reviewed failed tests to distinguish between incorrect test expectations and issues in the implementation.
 * Manually reviewed the final test cases to confirm that each test represented the intended behavior of the RAG pipeline.
 
+--
 
+## Audit Certification
+I certify as Team Lead that all entries above accurately represent AI usage within this project phase, all prompts have been recorded, and all code has been validated by human review and automated testing.
+
+**Team Lead Signature:** *Arpan Dey* — **Date:** September 8, 2026
 
 
