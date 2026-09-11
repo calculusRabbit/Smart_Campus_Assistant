@@ -76,7 +76,10 @@ CREATE TABLE IF NOT EXISTS Courses (
 	course_number VARCHAR(10) NOT NULL,
 	course_name TEXT CHECK(LENGTH(course_name)<=75) NOT NULL,
 	course_description TEXT CHECK(LENGTH(course_description)<=500),
-	course_credits REAL CHECK(course_credits>=0.00) NOT NULL
+	course_credits REAL CHECK(course_credits>=0.00) NOT NULL,
+	-- no duplicate courses 
+	CONSTRAINT unique_department_coursenum UNIQUE (department_id, course_number),
+	CONSTRAINT unique_course_code_number UNIQUE (course_code, course_number)
 );
 
 
