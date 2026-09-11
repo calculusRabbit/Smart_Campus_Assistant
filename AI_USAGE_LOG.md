@@ -114,6 +114,69 @@ The Docker Compose environment contains separate services for:
 * Confirmed that the FastAPI backend running inside Docker could successfully communicate with the PostgreSQL database container.
 * Verified the API functionality using FastAPI Swagger documentation at `http://127.0.0.1:8000/docs`.
 
+## Entry 3: Prototype 1 — PostgreSQL down script
+
+* **Date:** September 8 2026
+* **Team Member:** Arpan Dey
+* **Tool Used:** Perplexity
+* **Associated Git Issue:** #12 - Create and add PostGres database migration rollback script ('down' script)
+* **Associated Feature Branch:** `feature/database`
+
+### Exact Prompt Submitted:
+
+> give me an example of a postgres schema migration rollback
+>find any errors or major improvements for the DOWN file and give them to me one by one
+>any further errors/major improvements?
+>done, anything else?
+>done, anything else?
+>done, anything further?
+
+### AI Output Summary & Code Generated:
+
+Perplexity gave an example of a migration and rollback in PostGres, and identified errors in the human-written sca_database_v0.2.0_DOWN.sql file and suggested solutions.
+
+### Human Review, Refactoring & Modifications Made:
+
+- Reviewed AI-found errors and matched them to the .sql file.
+- Found errors, determined the solution, and matched them to AI solution
+
+### Verification & Testing Method:
+
+- Put corrected script into online SQL syntax checker (RunSQL) and found no errors.
+-Ran down script and confirmed all tables were deleted.
+
+
+---
+
+## Entry 4: Prototype 1 — PostgreSQL dummy data population script
+
+* **Date:** September 10 2026
+* **Team Member:** Arpan Dey
+* **Tool Used:** Perplexity
+* **Associated Git Issue:** #20 - Create and add completed database dummy data populator
+* **Associated Feature Branch:** `feature/database`
+
+### Exact Prompt Submitted:
+
+> besides the missing inserts for the remaining tables, is there anything wrong with the dummy data populator? Find any and all errors in the script and explain them, and suggest any major improvements to be made to the code. (Provided python file and schema migration file.)
+
+### AI Output Summary & Code Generated:
+
+Perplexity gave corrections and potential solutions for many issues, including missing inner '()' for function arguments to make arguments sequences, and incorrect corrections like missing indentations.
+
+### Human Review, Refactoring & Modifications Made:
+
+- Reviewed AI-found errors and matched them to the .py file.
+- Ignored unnecessary errors and their corrections
+- Found errors, determined the solution, and matched them to AI solutions. Not all of them matched; some solutions the AI proposed were excessive and others did not make sense for the database schema. Those were ignored.
+
+### Verification & Testing Method:
+
+- Found no errors in editor. As the script is not yet complete as of the time of writing, it couldn't be run yet.
+
+---
+
+
 ## Audit Certification
 I certify as Team Lead that all entries above accurately represent AI usage within this project phase, all prompts have been recorded, and all code has been validated by human review and automated testing.
 
