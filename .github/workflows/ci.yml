@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - develop
+      - backend-testing
   pull_request:
 
 jobs:
