@@ -7,5 +7,5 @@
 #SBATCH --mem=64G                           
 #SBATCH --time=10:00:00                 
 source ~/data/nlp_env/bin/activate                                            
-cd ~/data/WSU_senior_design_project_2026/RAG
+cd ~/data/WSU_senior_design_project_2026/services/rag
 python -m processing.llm_judge
