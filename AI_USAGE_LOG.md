@@ -222,6 +222,6 @@ ChatGPT also provided example test cases for the RAG data-processing functions, 
 ## Audit Certification
 I certify as Team Lead that all entries above accurately represent AI usage within this project phase, all prompts have been recorded, and all code has been validated by human review and automated testing.
 
-**Team Lead Signature:** *Arpan Dey* — **Date:** September 8, 2026
+**Team Lead Signature:** *Arpan Dey* — **Date:** September 10, 2026
 
 
