@@ -1,23 +1,37 @@
 import { useState } from "react"
+import { login } from "../api"
+import shockerImage from "../assets/images/wsu-shocker.png"
+import styles from "./Auth.module.css"
 
-export default function Login() {
+export default function Login({ goTo }) {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
-    // TODO: connect to backend
-    console.log(email, password)
+
+    try {
+      await login(email, password)
+      setError("")
+      goTo("dashboard")
+    } catch (err) {
+      setError(err.message)
+    }
   }
 
   return (
-    <div style={{ maxWidth: "800px", margin: "0 auto" }}>
-      <div style={{ backgroundColor: "white", padding: "20px", border: "1px solid gray", textAlign: "center" }}>
-        <h1>Log In</h1>
-        {error && <p>{error}</p>}
+    <div className={styles.page}>
+      <div className={styles.card}>
+        <img className={styles.logo} src={shockerImage} alt="WSU Shocker" />
+        <h2 className={styles.title}>Smart Campus</h2>
+        <p className={styles.subtitle}>Log in to your account</p>
+
+        {error && <p className={styles.error}>{error}</p>}
+
         <form onSubmit={handleSubmit}>
           <input
+            className={styles.input}
             autoComplete="off"
             autoFocus
             placeholder="Email"
@@ -26,22 +40,25 @@ export default function Login() {
             onChange={(e) => setEmail(e.target.value)}
             required
           />
-          <br /><br />
           <input
+            className={styles.input}
             placeholder="Password"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
           />
-          <br /><br />
-          <button type="submit" style={{ backgroundColor: "cornflowerblue", padding: "10px 25px" }}>
+          <button type="submit" className={styles.button}>
             Log In
           </button>
         </form>
-        <br />
-        <a href="/register" style={{ marginRight: "20px" }}>Register</a>
-        <a href="/">Back to Home</a>
+
+        <p className={styles.switchText}>
+          Don't have an account?{" "}
+          <button onClick={() => goTo("signup")} className={styles.linkButton}>
+            Register
+          </button>
+        </p>
       </div>
     </div>
   )

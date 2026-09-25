@@ -1,6 +1,9 @@
 import { useState } from "react"
+import { signup } from "../api"
+import shockerImage from "../assets/images/wsu-shocker.png"
+import styles from "./Auth.module.css"
 
-export default function SignUp() {
+export default function SignUp({ goTo }) {
   const [username, setUsername] = useState("")
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
@@ -11,7 +14,7 @@ export default function SignUp() {
   const [confirmPassword, setConfirmPassword] = useState("")
   const [error, setError] = useState("")
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
 
     // GUYS!!! this is not enough btw, backend needs to check all this too
@@ -42,135 +45,122 @@ export default function SignUp() {
     }
 
     setError("")
-    // TODO: connect to backend once a /signup endpoint exists
-    console.log({ username, firstName, lastName, email, dob, zipcode, password })
+
+    try {
+      await signup({
+        username: username,
+        first_name: firstName,
+        last_name: lastName,
+        email: email,
+        dob: dob,
+        zipcode: zipcode,
+        password: password,
+      })
+      goTo("login")
+    } catch (err) {
+      setError(err.message)
+    }
   }
 
   return (
-    <div>
-      <h1>Create account</h1>
-      {error && <p style={{ color: "red" }}>{error}</p>}
+    <div className={styles.page}>
+      <div className={styles.card}>
+        <img className={styles.logo} src={shockerImage} alt="WSU Shocker" />
+        <h2 className={styles.title}>Create account</h2>
+        <p className={styles.subtitle}>Join Smart Campus</p>
 
-      <form onSubmit={handleSubmit}>
-        <center>
-          <table>
-            <tbody>
-              <tr>
-                <td><label>Username</label></td>
-                <td>
-                  <input
-                    type="text"
-                    name="username"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    required
-                  />
-                </td>
-              </tr>
+        {error && <p className={styles.error}>{error}</p>}
 
-              <tr>
-                <td><label>First Name</label></td>
-                <td>
-                  <input
-                    type="text"
-                    name="first_name"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    required
-                  />
-                </td>
-              </tr>
+        <form onSubmit={handleSubmit}>
+          <input
+            className={styles.input}
+            type="text"
+            name="username"
+            placeholder="Username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            required
+          />
 
-              <tr>
-                <td><label>Last Name</label></td>
-                <td>
-                  <input
-                    type="text"
-                    name="last_name"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    required
-                  />
-                </td>
-              </tr>
+          <div className={styles.nameRow}>
+            <input
+              className={styles.input}
+              type="text"
+              name="first_name"
+              placeholder="First name"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              required
+            />
+            <input
+              className={styles.input}
+              type="text"
+              name="last_name"
+              placeholder="Last name"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              required
+            />
+          </div>
 
-              <tr>
-                <td><label>Email</label></td>
-                <td>
-                  <input
-                    type="email"
-                    name="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </td>
-              </tr>
+          <input
+            className={styles.input}
+            type="email"
+            name="email"
+            placeholder="you@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
 
-              <tr>
-                <td><label>Date of Birth</label></td>
-                <td>
-                  <input
-                    type="date"
-                    name="dob"
-                    value={dob}
-                    onChange={(e) => setDob(e.target.value)}
-                    required
-                  />
-                </td>
-              </tr>
+          <p className={styles.label}>Date of birth</p>
+          <input
+            className={styles.input}
+            type="date"
+            name="dob"
+            value={dob}
+            onChange={(e) => setDob(e.target.value)}
+            required
+          />
 
-              <tr>
-                <td><label>Zipcode</label></td>
-                <td>
-                  <input
-                    type="text"
-                    name="zipcode"
-                    placeholder="67260"
-                    value={zipcode}
-                    onChange={(e) => setZipcode(e.target.value)}
-                    required
-                  />
-                </td>
-              </tr>
+          <input
+            className={styles.input}
+            type="text"
+            name="zipcode"
+            placeholder="Zipcode (67260)"
+            value={zipcode}
+            onChange={(e) => setZipcode(e.target.value)}
+            required
+          />
 
-              <tr>
-                <td><label>Password</label></td>
-                <td>
-                  <input
-                    type="password"
-                    name="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </td>
-              </tr>
+          <input
+            className={styles.input}
+            type="password"
+            name="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
 
-              <tr>
-                <td><label>Confirm Password</label></td>
-                <td>
-                  <input
-                    type="password"
-                    name="confirmPassword"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                  />
-                </td>
-              </tr>
+          <input
+            className={styles.input}
+            type="password"
+            name="confirmPassword"
+            placeholder="Confirm password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            required
+          />
 
-              <tr>
-                <td></td>
-                <td><button type="submit">Create Account</button></td>
-              </tr>
-            </tbody>
-          </table>
-        </center>
-      </form>
+          <button type="submit" className={styles.button}>Create Account</button>
+        </form>
 
-      <p>already have a account? <a href="/login">sign in</a></p>
+        <p className={styles.switchText}>
+          Already have an account?{" "}
+          <button onClick={() => goTo("login")} className={styles.linkButton}>Sign in</button>
+        </p>
+      </div>
     </div>
   )
 }
