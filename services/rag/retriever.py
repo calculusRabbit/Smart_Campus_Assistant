@@ -2,13 +2,33 @@ from sentence_transformers import SentenceTransformer
 import numpy as np
 import json
 import faiss
-from config import EMBEDDING_MODEL, INDEX_PATH, CHUNKS_PATH
-model = SentenceTransformer(EMBEDDING_MODEL)
+from services.rag.config import (
+    EMBEDDING_MODEL,
+    EMBEDDING_DIM,
+    INDEX_PATH,
+    CHUNKS_PATH,
+)
+
+model = None
+
+def get_embedding_model():
+    global model
+
+    if model is None:
+        print("Loading embedding model...")
+        model = SentenceTransformer(EMBEDDING_MODEL)
+        print("Embedding model loaded")
+
+    return model
 
 def embed_query(user_input: str) -> np.ndarray:
-    vector = model.encode(user_input)
+    embedding_model = get_embedding_model()
+    vector = embedding_model.encode(
+        user_input,
+        truncate_dim=EMBEDDING_DIM
+    )
     vector = vector.astype(np.float32)
-    vector = vector.reshape(1, -1)  # reshape to 2D [1, 384] before normalize
+    vector = vector.reshape(1, -1)  # reshape to 2D for FAISS
     faiss.normalize_L2(vector)  # normalize since in document index we also already normalize all vectors
     return vector
 

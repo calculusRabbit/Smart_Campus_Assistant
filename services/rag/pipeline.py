@@ -1,22 +1,34 @@
 from transformers import pipeline
-from retriever import embed_query, search_similar
+from services.rag.retriever import embed_query, search_similar
 import faiss
 import json
 import torch
 from datetime import datetime
-from config import GENERATION_MODEL, CHUNKS_PATH, INDEX_PATH, TOP_K
-
-
-# load everything ONCE
-print("Loading model...")
-pipe = pipeline(
-    "text-generation",
-    model=GENERATION_MODEL,
-    device_map="cuda"
+from services.rag.config import (
+    GENERATION_MODEL,
+    CHUNKS_PATH,
+    INDEX_PATH,
+    TOP_K,
 )
-print("Model loaded")
 
-document_index = faiss.read_index(INDEX_PATH)
+
+pipe = None
+
+def get_generation_pipeline():
+    global pipe
+
+    if pipe is None:
+        print("Loading generation model...")
+        pipe = pipeline(
+            "text-generation",
+            model=GENERATION_MODEL,
+            device_map="auto"
+        )
+        print("Generation model loaded")
+
+    return pipe
+
+document_index = faiss.read_index(str(INDEX_PATH))
 with open(CHUNKS_PATH, encoding="utf-8") as f:
     chunks = json.load(f)
 
@@ -52,16 +64,20 @@ def query_RAG(user_input: str, history: list) -> str:
     prompt = f"Question: {user_input}\n\nRelevant Documents:\n{relevant_documents}\n\nAnswer the question based on the relevant documents above."
     messages.append({"role": "user", "content": prompt})
 
+    # Load the generation model only when RAG actually needs it
+    generation_pipe = get_generation_pipeline()
+
     # generate answer
-    output = pipe(
-        messages,
-        max_new_tokens=512,
-        temperature=0.7,
-        do_sample=True,
-        top_p=0.9,
-        repetition_penalty=1.2,
-        return_full_text=False
+    output = generation_pipe(
+    messages,
+    max_new_tokens=512,
+    temperature=0.7,
+    do_sample=True,
+    top_p=0.9,
+    repetition_penalty=1.2,
+    return_full_text=False
     )
+    
     answer = output[0]["generated_text"]
     return answer, sources_text
 

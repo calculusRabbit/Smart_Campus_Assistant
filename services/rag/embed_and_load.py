@@ -2,12 +2,12 @@ from sentence_transformers import SentenceTransformer
 import numpy as np
 import json
 import faiss
-from config import EMBEDDING_MODEL, CHUNKS_PATH, INDEX_PATH
+from config import EMBEDDING_MODEL, EMBEDDING_DIM, CHUNKS_PATH, INDEX_PATH
 model = SentenceTransformer(EMBEDDING_MODEL)
 
 
 def embed_chunk(chunks: list) -> np.ndarray:
-    vectors = model.encode(chunks, show_progress_bar=True) # will embed into vector size 384 dim
+    vectors = model.encode(chunks, show_progress_bar=True, truncate_dim=EMBEDDING_DIM)
     return vectors
 
 

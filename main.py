@@ -15,6 +15,7 @@ from database import (
 )
 from models import ChatRequest, RecommendationRequest, StudentInterestsRequest
 from services.recommendation_service import RecommendationService
+from services.rag.config import RAG_ENABLED
 
 recommendation_service = RecommendationService()
 
@@ -310,6 +311,20 @@ def chat(request: ChatRequest):
         }
 
     else:
+        if RAG_ENABLED:
+            from services.rag.pipeline import query_RAG
+
+            answer, sources = query_RAG(
+                request.message,
+                history=[]
+            )
+
+            return {
+                "intent": "rag",
+                "reply": answer,
+                "sources": sources
+            }
+
         return {
             "intent": "unknown",
             "reply": (

@@ -1,11 +1,19 @@
+from pathlib import Path
+
+RAG_DIR = Path(__file__).resolve().parent
+DATA_DIR = RAG_DIR / "data"
+
+RAG_ENABLED = False
+
 # models
 EMBEDDING_MODEL  = "Qwen/Qwen3-Embedding-4B"
+EMBEDDING_DIM = 384
 JUDGE_MODEL      = "meta-llama/Llama-3.1-8B-Instruct"
 GENERATION_MODEL = "Qwen/Qwen2.5-14B-Instruct"
 
 # paths
-CHUNKS_PATH       = "data/chunks.json"
-INDEX_PATH        = "data/document_index.faiss"
+CHUNKS_PATH = DATA_DIR / "chunks.json"
+INDEX_PATH = DATA_DIR / "document_index.faiss"
 RAW_DATA_PATH     = "data/raw/wsu_pages_new.json"
 FILTERED_DIR      = "data/filtered"
 ALL_URLS_PATH     = "data/all_urls.jsonl"

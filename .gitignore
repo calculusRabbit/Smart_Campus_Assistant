@@ -133,3 +133,4 @@ pnpm-debug.log*
 #Postgres 
 postgres-data/
 
+venv-rag/
