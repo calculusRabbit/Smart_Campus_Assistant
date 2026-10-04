@@ -7,3 +7,4 @@ psycopg[binary]
 ruff
 pytest
 httpx
+python-dotenv

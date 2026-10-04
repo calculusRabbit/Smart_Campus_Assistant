@@ -1,32 +1,23 @@
-from transformers import pipeline
-from services.rag.retriever import embed_query, search_similar
-import faiss
 import json
-import torch
+import os
 from datetime import datetime
+
+import faiss
+from dotenv import load_dotenv
+from huggingface_hub import InferenceClient
+
 from services.rag.config import (
-    GENERATION_MODEL,
     CHUNKS_PATH,
+    GENERATION_MODEL,
     INDEX_PATH,
     TOP_K,
 )
+from services.rag.retriever import embed_query, search_similar
 
+load_dotenv()
 
-pipe = None
-
-def get_generation_pipeline():
-    global pipe
-
-    if pipe is None:
-        print("Loading generation model...")
-        pipe = pipeline(
-            "text-generation",
-            model=GENERATION_MODEL,
-            device_map="auto"
-        )
-        print("Generation model loaded")
-
-    return pipe
+hf_token = os.getenv("HF_TOKEN")
+client = InferenceClient(token=hf_token)
 
 document_index = faiss.read_index(str(INDEX_PATH))
 with open(CHUNKS_PATH, encoding="utf-8") as f:
@@ -51,7 +42,11 @@ def query_RAG(user_input: str, history: list) -> str:
 
 
     today = datetime.now().strftime("%B %d, %Y")
-    system_instruction = f"You are a helpful assistant for WSU students. Today is {today}. Use the relevant documents to answer the question as best as you can. If you don't know the answer, say you don't know."
+    system_instruction = (
+    f"You are a helpful assistant for WSU students. Today is {today}. "
+    "Use the relevant documents to answer the question as best as you can. "
+    "If you don't know the answer, say you don't know."
+    )
 
     messages = [{"role": "system", "content": system_instruction}]
 
@@ -61,24 +56,23 @@ def query_RAG(user_input: str, history: list) -> str:
         messages.append({"role": "assistant", "content": assistant})
 
     # add current question with relevant documents
-    prompt = f"Question: {user_input}\n\nRelevant Documents:\n{relevant_documents}\n\nAnswer the question based on the relevant documents above."
+    prompt = (
+    f"Question: {user_input}\n\n"
+    f"Relevant Documents:\n{relevant_documents}\n\n"
+    "Answer the question based on the relevant documents above."
+    )
     messages.append({"role": "user", "content": prompt})
 
-    # Load the generation model only when RAG actually needs it
-    generation_pipe = get_generation_pipeline()
-
-    # generate answer
-    output = generation_pipe(
-    messages,
-    max_new_tokens=512,
-    temperature=0.7,
-    do_sample=True,
-    top_p=0.9,
-    repetition_penalty=1.2,
-    return_full_text=False
+    # Generate the answer using remote Hugging Face inference
+    response = client.chat_completion(
+        messages=messages,
+        model=GENERATION_MODEL,
+        max_tokens=512,
+        temperature=0.7,
+        top_p=0.9,
     )
-    
-    answer = output[0]["generated_text"]
+
+    answer = response.choices[0].message.content
     return answer, sources_text
 
 
