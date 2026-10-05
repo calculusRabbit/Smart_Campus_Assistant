@@ -5,7 +5,7 @@ import re
 import time
 import os
 
-from config import RAW_DATA_PATH
+from services.rag.config import ALL_URLS_PATH, RAW_DATA_PATH
 
 def scrape_page(url):
     try:
@@ -14,6 +14,10 @@ def scrape_page(url):
             timeout=10,
             headers={"User-Agent": "Mozilla/5.0"}
         )
+
+        # not a normal page, dont save it
+        if res.status_code != 200:
+            return None, None
 
         soup = BeautifulSoup(res.text, "html.parser")
 
@@ -65,7 +69,7 @@ def scrape_page(url):
 
 def main():
     urls = []
-    with open("data/all_urls.jsonl", "r", encoding="utf-8") as f:
+    with open(ALL_URLS_PATH, "r", encoding="utf-8") as f:
         for line in f:
             urls.append(json.loads(line)["url"])
     
@@ -73,9 +77,28 @@ def main():
 
     output_file = RAW_DATA_PATH
 
+    # pages we already scraped
     documents = []
-    for i, url in enumerate(urls):
-        print(f"scraping {i+1}/{len(urls)}: {url}")
+    if os.path.exists(output_file):
+        with open(output_file, "r", encoding="utf-8") as f:
+            documents = json.load(f)
+    old_count = len(documents)
+    print("pages we already have:", old_count)
+
+    scraped = set()
+    for doc in documents:
+        scraped.add(doc["url"])
+
+    # only the urls we dont have yet, failed ones are not saved so they get tried again
+    todo = []
+    for url in urls:
+        if url not in scraped:
+            todo.append(url)
+            scraped.add(url)
+    print("urls to scrape:", len(todo))
+
+    for i, url in enumerate(todo):
+        print(f"scraping {i+1}/{len(todo)}: {url}")
         title, text = scrape_page(url)
 
         if title and text:
@@ -88,17 +111,18 @@ def main():
             print("failed to scrape:", url)
         
         #save every 100 documents
-        if i % 100 == 0 and i > 0:
+        if i % 100 == 0 and i > 0 and len(documents) > old_count:
             with open(output_file, "w", encoding="utf-8") as f:
                 json.dump(documents, f, ensure_ascii=False, indent=2)
 
         time.sleep(0.3)
 
-    # final save
-    with open(output_file, "w", encoding="utf-8") as f:
-        json.dump(documents, f, ensure_ascii=False, indent=2)
+    # save at the end if there is something new
+    if len(documents) > old_count:
+        with open(output_file, "w", encoding="utf-8") as f:
+            json.dump(documents, f, ensure_ascii=False, indent=2)
     
-    print("done! total documents:", len(documents))
+    print(f"done! {len(documents) - old_count} new pages, {len(documents)} total")
 
 
 if __name__ == "__main__":
