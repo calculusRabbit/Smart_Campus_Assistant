@@ -3,6 +3,7 @@ import os
 from datetime import datetime
 
 import faiss
+import httpx
 from dotenv import load_dotenv
 from huggingface_hub import InferenceClient
 
@@ -26,8 +27,16 @@ document_index = faiss.read_index(str(INDEX_PATH))
 with open(CHUNKS_PATH, encoding="utf-8") as f:
     chunks = json.load(f)
 
+def is_bad_generation(answer: str) -> bool:
+    if not answer:
+        return True
 
-def query_RAG(user_input: str, history: list) -> str:
+    most_common_count = max(answer.count(char) for char in set(answer))
+    repetition_ratio = most_common_count / len(answer)
+
+    return repetition_ratio > 0.5
+
+def query_RAG(user_input: str, history: list) -> tuple[str, str]:
     # retrieve relevant chunks
     query_vector = embed_query(user_input)
     distances, indices = search_similar(document_index, query_vector, top_k=TOP_K)
@@ -67,15 +76,40 @@ def query_RAG(user_input: str, history: list) -> str:
     messages.append({"role": "user", "content": prompt})
 
     # Generate the answer using remote Hugging Face inference
-    response = client.chat_completion(
-        messages=messages,
-        model=GENERATION_MODEL,
-        max_tokens=512,
-        temperature=0.0,
-        frequency_penalty=0.5,
-    )
+    try:
+        response = client.chat_completion(
+            messages=messages,
+            model=GENERATION_MODEL,
+            max_tokens=512,
+            temperature=0.0,
+            frequency_penalty=0.5,
+        )
 
-    answer = response.choices[0].message.content
+        answer = response.choices[0].message.content
+
+        if is_bad_generation(answer):
+            retry_response = client.chat_completion(
+                messages=messages,
+                model=GENERATION_MODEL,
+                max_tokens=512,
+                temperature=0.0,
+                frequency_penalty=0.5,
+            )
+
+            answer = retry_response.choices[0].message.content
+
+            if is_bad_generation(answer):
+                answer = (
+                    "I couldn't generate a reliable answer right now. "
+                    "Please try asking your question again."
+                )
+
+    except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout):
+        answer = (
+            "I'm having trouble connecting to the AI service right now. "
+            "Please try again in a moment."
+        )
+
     return answer, sources_text
 
 
