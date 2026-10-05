@@ -1,0 +1,273 @@
+/* one professor: big score, review list and write review form */
+
+.page {
+  min-height: 100vh;
+  background-color: var(--page-bg);
+}
+
+.content {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.backButton {
+  padding: 0;
+  margin-bottom: 15px;
+  font-size: 16px;
+  color: #0066cc;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.backButton:hover {
+  text-decoration: underline;
+}
+
+/* top box with the score */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 25px;
+  padding: 25px;
+  margin-bottom: 20px;
+  color: white;
+  background-color: var(--black);
+  border-bottom: 4px solid var(--yellow);
+  border-radius: 10px;
+  text-align: left;
+}
+
+.bigScore {
+  min-width: 110px;
+  text-align: center;
+}
+
+.bigNumber {
+  font-size: 56px;
+  font-weight: bold;
+  color: var(--yellow);
+}
+
+.outOf {
+  font-size: 20px;
+  color: #cccccc;
+}
+
+.name {
+  margin: 0;
+  font-size: 30px;
+  color: white;
+}
+
+.meta {
+  margin: 4px 0 0 0;
+  color: #cccccc;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.select {
+  padding: 10px;
+  font-size: 15px;
+  border: 1px solid #cccccc;
+  border-radius: 6px;
+  background-color: white;
+}
+
+.primaryButton {
+  padding: 10px 20px;
+  font-size: 15px;
+  font-weight: bold;
+  color: var(--black);
+  background-color: var(--yellow);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.primaryButton:hover {
+  background-color: var(--yellow-dark);
+}
+
+/* write review form */
+.form {
+  padding: 20px;
+  margin-bottom: 20px;
+  background-color: white;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  text-align: left;
+}
+
+.formTitle {
+  margin-top: 0;
+}
+
+.error {
+  color: #c62828;
+}
+
+.label {
+  margin: 0 0 5px 0;
+  font-size: 14px;
+  color: var(--gray);
+}
+
+.input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 15px;
+  font-size: 16px;
+  border: 1px solid #cccccc;
+  border-radius: 6px;
+  background-color: white;
+}
+
+.input:focus,
+.select:focus {
+  outline: none;
+  border-color: var(--yellow);
+  box-shadow: 0 0 0 3px rgba(244, 196, 48, 0.35);
+}
+
+.textarea {
+  min-height: 120px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.pills {
+  margin-bottom: 15px;
+}
+
+.pill {
+  margin: 0 6px 6px 0;
+  padding: 6px 14px;
+  color: var(--black);
+  background-color: white;
+  border: 2px solid var(--black);
+  border-radius: 20px;
+  cursor: pointer;
+}
+
+.pillPicked {
+  background-color: var(--yellow);
+}
+
+.checkbox {
+  display: block;
+  margin-bottom: 15px;
+}
+
+/* one review */
+.reviewCard {
+  padding: 16px;
+  margin-bottom: 15px;
+  background-color: white;
+  border-radius: 10px;
+  border-left: 6px solid var(--yellow);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  text-align: left;
+}
+
+.reviewTop {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.reviewScore {
+  padding: 6px 12px;
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--yellow);
+  background-color: var(--black);
+  border-radius: 6px;
+}
+
+.reviewClass {
+  flex: 1;
+  font-weight: bold;
+}
+
+.date {
+  font-size: 14px;
+  color: #888888;
+}
+
+.reviewTitle {
+  margin: 10px 0 5px 0;
+}
+
+.tag {
+  display: inline-block;
+  margin: 0 6px 6px 0;
+  padding: 3px 10px;
+  font-size: 12px;
+  color: var(--black);
+  background-color: #eef1f4;
+  border-radius: 12px;
+}
+
+.reviewBottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.who {
+  font-size: 14px;
+  color: var(--gray);
+}
+
+.voteButton {
+  margin-left: 8px;
+  padding: 6px 12px;
+  font-size: 14px;
+  color: var(--black);
+  background-color: white;
+  border: 1px solid #cccccc;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.voteButton:hover {
+  background-color: #f0f0f0;
+}
+
+.voteUp {
+  background-color: var(--yellow);
+  border-color: var(--yellow-dark);
+}
+
+.voteDown {
+  color: white;
+  background-color: var(--black);
+  border-color: var(--black);
+}
+
+.empty {
+  text-align: center;
+  color: var(--gray);
+}
+
+@media (max-width: 850px) {
+  .header {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+}

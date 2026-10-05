@@ -1,34 +1,25 @@
-// let events = [
-//   {id: 1, title: "Dev Club Meeting", date: "2026-03-15", time: "5:00 PM", location: "Jabara Hall 167", score: 87, type: "club"},
-//   {id: 2, title: "CS Career Fair", date: "2026-03-15", time: "5:00 PM", location: "RSC", score: 99, type: "academic"},
-//   {id: 3, title: "Basketball Tournament", date: "2026-03-15", time: "5:00 PM", location: "Heskett Center", score: 36, type: "sports"},
-//   {id: 4, title: "Study Group - Algorithms CS560", date: "2026-03-15", time: "5:00 PM", location: "Ablah Library 2nd Floor", score: 100, type: "academic"},
-//   {id: 5, title: "Vietnamese Student Association Potluck", date: "2026-03-15", time: "5:00 PM", location: "RSC Room 6767", score: 67, type: "social"},
-// ];
-
-// let schedules = [
-//   {id: 1, code: "CS 560", name: "Machine Learning", time: "TR 2:00-3:15 PM", room: "Jabara 210", professor: "Dr. Yang"},
-//   {id: 2, code: "CS 797Y", name: "NLP", time: "TR 2:00-3:15 PM", room: "LinQuist 305", professor: "Mr. Bean"},
-//   {id: 3, code: "CS 598", name: "Senior Project", time: "TR 2:00-3:15 PM", room: "Jabara 115", professor: "Dr. John Cena"},
-// ];
-
-// react stuff
 import { useEffect, useState } from "react";
-
-let user = {id: 1, name: "Vu", year: "senior", major: "CS", money: -67};
+import { getUser, getEvents, getCourses, getRecommendedEvents, sendChat } from "../api";
+import NavBar from "../components/NavBar";
+import styles from "./Dashboard.module.css";
 
 function EventCard({event}) {
   return (
-    <div style={{border: "1px solid #ccc", backgroundColor: "white"}}>
-      <p style={{color: "gray"}}>{event.event_tags}</p>
-      <h3>{event.event_name}</h3>
+    <div className={styles.eventCard}>
+      <p className={styles.eventCategory}>{event.event_category}</p>
+      <h3 className={styles.eventName}>{event.event_name}</h3>
       <p>{event.event_date} at {event.event_time}</p>
       <p><strong>Location: </strong>{event.event_location}</p>
-      <p style={{fontWeight: "bold", color: getScoreColor(event.score)}}>Match: {event.score}%</p>
+      <p>{event.event_description}</p>
 
-      <div style={{display: "flex"}}>
-        <button>View Details</button>
-        <button>Save</button>
+      {/* backend does not send a score yet so only show it when there is one */}
+      {event.score !== undefined &&
+        <p style={{fontWeight: "bold", color: getScoreColor(event.score)}}>Match: {event.score}%</p>
+      }
+
+      <div className={styles.eventButtons}>
+        <button className={styles.primaryButton}>View Details</button>
+        <button className={styles.darkButton}>Save</button>
       </div>
     </div>
   );
@@ -37,10 +28,10 @@ function EventCard({event}) {
 
 function ScheduleCard({course}) {
   return (
-    <div style={{borderBottom: "1px solid gray"}}>
-      <p style={{fontWeight: "bold"}}>{course.code} - {course.name}</p>
-      <p style={{fontSize: "13px", color: "#555"}}>{course.time} | {course.room}</p>
-      <p style={{fontSize: "12px", color: "#888"}}>{course.professor}</p>
+    <div className={styles.scheduleItem}>
+      <p className={styles.scheduleName}>{course.code} - {course.name}</p>
+      <p className={styles.scheduleInfo}>{course.time} | {course.room}</p>
+      <p className={styles.scheduleProfessor}>{course.professor}</p>
     </div>
   );
 }
@@ -56,27 +47,136 @@ function getScoreColor(score) {
 }
 
 
-export default function Dashboard() {
+// turn the data that /chat sends back into simple lines of text
+function chatDataToLines(result) {
+  let lines = [];
+  if (!result.data) {
+    return lines;
+  }
 
-  const [events,resetEvents] = useState([]);
+  let items = result.data;
+  if (!Array.isArray(items)) {
+    items = [items];
+  }
+
+  for (let i = 0; i < items.length; i++) {
+    let item = items[i];
+
+    if (result.intent === "events" || result.intent === "recommendations") {
+      lines.push(item.event_name + " | " + item.event_date + " " + item.event_time + " | " + item.event_location);
+    }
+    else if (result.intent === "dining") {
+      lines.push(item.dining_name + " | " + item.dining_location + " | " + item.opening_time + " - " + item.closing_time + " | " + item.dining_status);
+    }
+    else if (result.intent === "courses") {
+      lines.push(item.code + " " + item.name + " | " + item.time + " | " + item.room + " | " + item.professor);
+    }
+    else if (result.intent === "professors") {
+      lines.push(item.professor_name + " | " + item.professor_department + " | " + item.professor_email + " | rating " + item.professor_rating);
+    }
+    else if (result.intent === "deadlines") {
+      lines.push(item.deadline_title + " | " + item.deadline_date + " | " + item.deadline_description);
+    }
+  }
+  return lines;
+}
+
+
+function ChatPanel() {
+  const [messages, setMessages] = useState([
+    {from: "bot", text: "Hi! Ask me about events, dining, courses, professors or deadlines.", lines: []}
+  ]);
+  const [input, setInput] = useState("");
+
+  async function handleSend(e) {
+    e.preventDefault();
+    const text = input.trim();
+    if (text === "") {
+      return;
+    }
+
+    // show what the user typed right away
+    let newMessages = [...messages, {from: "user", text: text, lines: []}];
+    setMessages(newMessages);
+    setInput("");
+
+    try {
+      const result = await sendChat(text);
+      // result.detail is the error message from fastapi
+      const reply = result.reply || result.detail || "Something went wrong.";
+      setMessages([...newMessages, {from: "bot", text: reply, lines: chatDataToLines(result)}]);
+    } catch {
+      setMessages([...newMessages, {from: "bot", text: "Cannot connect to the backend.", lines: []}]);
+    }
+  }
+
+  let messageList = [];
+  for (let i = 0; i < messages.length; i++) {
+    let m = messages[i];
+    let lineList = [];
+    for (let j = 0; j < m.lines.length; j++) {
+      lineList.push(<p key={j} className={styles.chatLine}>- {m.lines[j]}</p>);
+    }
+
+    let isUser = m.from === "user";
+    messageList.push(
+      <div key={i} className={isUser ? styles.message + " " + styles.messageUser : styles.message}>
+        <span className={isUser ? styles.bubble + " " + styles.bubbleUser : styles.bubble}>
+          {m.text}
+          {lineList}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.box + " " + styles.chat}>
+      <h3 className={styles.boxTitle}>Campus Assistant</h3>
+      <div className={styles.chatMessages}>
+        {messageList}
+      </div>
+      <form onSubmit={handleSend} className={styles.chatForm}>
+        <input
+          className={styles.chatInput}
+          placeholder="Ask something..."
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+        />
+        <button type="submit" className={styles.primaryButton}>Send</button>
+      </form>
+    </div>
+  );
+}
+
+
+export default function Dashboard({ goTo }) {
+
+  const user = getUser();
+
+  const [events, resetEvents] = useState([]);
   const [schedules, resetSchedules] = useState([]);
+  const [recommended, setRecommended] = useState(false);
 
   // get data from backend and update arr
   useEffect(() => {
-    // fetch events from backend
-    fetch("http://localhost:8000/events")
-    .then(res => res.json()).then(data => resetEvents(data.events));
+    // if the student saved interests show recommended events, if not show all events
+    getRecommendedEvents(user.id).then(recs => {
+      if (recs.length > 0) {
+        resetEvents(recs);
+        setRecommended(true);
+      }
+      else {
+        getEvents().then(all => resetEvents(all));
+      }
+    });
 
     // fetch schedue
-    fetch("http://localhost:8000/courses")
-    .then(res => res.json()).then(data => resetSchedules(data.courses));
+    getCourses().then(courses => resetSchedules(courses));
 
   }, []);
 
   let eventCards = [];
-  let eventScores = [50, 67, 87, 99, 100];
   for (let i = 0; i < events.length; i++) {
-    events[i].score = eventScores[i % eventScores.length]; // assign score for testing
     eventCards.push(<EventCard key={events[i].event_id} event={events[i]} />);
   }
 
@@ -86,42 +186,33 @@ export default function Dashboard() {
   }
 
 
-  
   return (
-    <div style={{backgroundColor: "#f5f5f5"}}>
+    <div className={styles.page}>
 
-      <nav style={{backgroundColor: "#fff", display: "flex", justifyContent: "space-between"}}>
-        <span style={{fontWeight: "bold", fontSize: "20px"}}>Smart Campus</span>
-        <span style={{fontWeight: "bold"}}>Vu Nguyen</span>
-      </nav>
+      <NavBar goTo={goTo} />
 
+      <div className={styles.banner}>
+        <h1 className={styles.bannerTitle}>Hey, {user.name}</h1>
+        <p className={styles.bannerText}>Here is whats going on around campus today.</p>
+      </div>
 
-      <div style={{margin: "0 auto", padding: "20px"}}>
-        <h1>Hey, Vu</h1>
-        <p style={{color: "#555"}}>Here is whats going on around campus today.</p>
-        <div style={{display: "grid", gridTemplateColumns: "1fr 300px", gap: "20px"}}>
+      <div className={styles.content}>
+        <div className={styles.layout}>
 
           <div>
-            <h2>Recommended For You ({events.length} events)</h2>
+            <h2 className={styles.sectionTitle}>{recommended ? "Recommended For You" : "Upcoming Events"} ({events.length} events)</h2>
+            {!recommended && <p className={styles.hint}>Add your interests in Profile to get recommendations.</p>}
             {eventCards}
           </div>
 
 
-
           <div>
-            <div style={{backgroundColor: "#fff", border: "1px solid #ddd", padding: "16px"}}>
-              <h3 style={{marginTop: 0}}>My Classes</h3>
+            <div className={styles.box}>
+              <h3 className={styles.boxTitle}>My Classes</h3>
               {scheduleCards}
             </div>
 
-
-            <div style={{backgroundColor: "#fff", border: "1px solid #ddd", padding: "10px"}}>
-              <h3 style={{marginTop: 0}}>Notifications</h3>
-              <p>CS560 homework DUE in 2 days</p>
-              <p>New club event matche your profile</p>
-              <p>Career fair registration closes tomorrow</p>
-            </div>
-
+            <ChatPanel />
           </div>
         </div>
       </div>
