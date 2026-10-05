@@ -14,8 +14,8 @@ from database import (
     save_student_interests,
 )
 from models import ChatRequest, RecommendationRequest, StudentInterestsRequest
-from services.recommendation_service import RecommendationService
 from services.rag.config import RAG_ENABLED
+from services.recommendation_service import RecommendationService
 
 recommendation_service = RecommendationService()
 

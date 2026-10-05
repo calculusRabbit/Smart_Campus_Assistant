@@ -3,7 +3,7 @@ from pathlib import Path
 RAG_DIR = Path(__file__).resolve().parent
 DATA_DIR = RAG_DIR / "data"
 
-RAG_ENABLED = False
+RAG_ENABLED = True
 
 # models
 EMBEDDING_MODEL  = "Qwen/Qwen3-Embedding-4B"
