@@ -71,8 +71,7 @@ def query_RAG(user_input: str, history: list) -> str:
         messages=messages,
         model=GENERATION_MODEL,
         max_tokens=512,
-        temperature=0.7,
-        top_p=0.9,
+        temperature=0.0,
     )
 
     answer = response.choices[0].message.content
