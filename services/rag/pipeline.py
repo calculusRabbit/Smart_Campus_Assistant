@@ -17,7 +17,10 @@ from services.rag.retriever import embed_query, search_similar
 load_dotenv()
 
 hf_token = os.getenv("HF_TOKEN")
-client = InferenceClient(token=hf_token)
+client = InferenceClient(
+    provider="featherless-ai",
+    token=hf_token,
+)
 
 document_index = faiss.read_index(str(INDEX_PATH))
 with open(CHUNKS_PATH, encoding="utf-8") as f:
