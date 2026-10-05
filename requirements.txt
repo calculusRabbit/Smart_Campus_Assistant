@@ -5,6 +5,8 @@ fastapi
 uvicorn[standard]
 psycopg[binary]
 ruff
-pytest
 httpx
 python-dotenv
+huggingface_hub
+sentence-transformers
+faiss-cpu
