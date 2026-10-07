@@ -327,7 +327,8 @@ def insert_all(cur):
     
     #Reviews_resources
     
-    #Events, Arpan if u saw this, i've created the #events for now coz i want to populate with the PostgreSQL and rerun the tests
+    # Events
+    # Populate test events for PostgreSQL integration and API tests.
     event_ids = []
     for i, (dept_id, school_id) in enumerate(department_ids):
         location_id = location_by_school[school_id]
