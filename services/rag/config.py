@@ -1,9 +1,10 @@
+import os
 from pathlib import Path
 
 RAG_DIR = Path(__file__).resolve().parent
 DATA_DIR = RAG_DIR / "data"
 
-RAG_ENABLED = True
+RAG_ENABLED = os.getenv("RAG_ENABLED", "true").lower() == "true"
 
 # models
 EMBEDDING_MODEL  = "Qwen/Qwen3-Embedding-4B"
