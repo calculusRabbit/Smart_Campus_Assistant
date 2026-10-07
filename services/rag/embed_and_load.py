@@ -1,13 +1,29 @@
-from sentence_transformers import SentenceTransformer
-import numpy as np
 import json
+
 import faiss
-from config import EMBEDDING_MODEL, CHUNKS_PATH, INDEX_PATH
-model = SentenceTransformer(EMBEDDING_MODEL)
+import numpy as np
+from sentence_transformers import SentenceTransformer
+
+from services.rag.config import (
+    CHUNKS_PATH,
+    EMBEDDING_DIM,
+    EMBEDDING_MODEL,
+    INDEX_PATH,
+)
+
+model = SentenceTransformer(
+    EMBEDDING_MODEL,
+    model_kwargs={"torch_dtype": "float16"},
+)
 
 
 def embed_chunk(chunks: list) -> np.ndarray:
-    vectors = model.encode(chunks, show_progress_bar=True) # will embed into vector size 384 dim
+    vectors = model.encode(
+        chunks,
+        show_progress_bar=True,
+        truncate_dim=EMBEDDING_DIM,
+        batch_size=1,
+    )
     return vectors
 
 
@@ -40,7 +56,7 @@ def main():
 
     print("start build db")
     document_index = build_faiss_index(vectors)
-    faiss.write_index(document_index, INDEX_PATH)
+    faiss.write_index(document_index, str(INDEX_PATH))
 
     print("Done: ", len(chunks))
 
