@@ -1,9 +1,16 @@
-beautifulsoup4
-requests
-pytest
+# backend - API server
 fastapi
 uvicorn[standard]
+
+# postgres, password hashing
 psycopg[binary]
-ruff
-pytest
+bcrypt
+
+# scraping, HTTP requests
+beautifulsoup4
+requests
 httpx
+
+# testing, linting
+pytest
+ruff
