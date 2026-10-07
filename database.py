@@ -154,7 +154,29 @@ def get_events_from_database():
     cursor.execute("SELECT * FROM events")
     rows = cursor.fetchall()
 
-    events = [dict(row) for row in rows]
+    events = []
+
+    for row in rows:
+        event = dict(row)
+
+        # Convert PostgreSQL tstzmultirange into JSON-safe data.
+        # Legacy/CI event_time strings are already JSON-safe.
+        if (
+            event.get("event_time") is not None
+            and not isinstance(event["event_time"], str)
+        ):
+            event["event_time"] = [
+                {
+                    "start": time_range.lower.isoformat()
+                    if time_range.lower is not None else None,
+                    "end": time_range.upper.isoformat()
+                    if time_range.upper is not None else None,
+                    "bounds": time_range.bounds,
+                }
+                for time_range in event["event_time"]
+            ]
+
+        events.append(event)
 
     connection.close()
     return events
