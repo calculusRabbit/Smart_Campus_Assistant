@@ -1,7 +1,48 @@
-venv-rag/
-venv/
-.venv/
-.git/
-__pycache__/
-*.pyc
-.env
+# Version-control and editor metadata
+.git
+.github
+**/.vscode
+**/.idea
+
+# Real environment files; retain sanitized templates
+**/.env
+**/.env.*
+!**/.env.example
+
+# Host Python environments
+**/.venv
+**/venv
+**/VENV
+**/env
+**/ENV
+**/env.bak
+**/venv.bak
+
+# Python bytecode and tool caches
+**/__pycache__
+**/*.py[cod]
+**/.pytest_cache
+**/.ruff_cache
+**/.mypy_cache
+
+# Coverage and generated reports
+**/.coverage
+**/.coverage.*
+**/htmlcov
+**/coverage
+**/coverage.xml
+
+# Node dependencies and separate frontend build context
+**/node_modules
+frontend
+
+# Local database files and optional host PostgreSQL storage
+**/*.db
+**/db.sqlite3
+**/db.sqlite3-journal
+postgres-data
+
+# Operating-system files and logs
+**/.DS_Store
+**/Thumbs.db
+**/*.log
