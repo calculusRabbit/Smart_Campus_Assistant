@@ -11,6 +11,13 @@ beautifulsoup4
 requests
 httpx
 
+# AI / RAG
+python-dotenv
+huggingface_hub
+sentence-transformers
+faiss-cpu
+
 # testing, linting
 pytest
+pytest-cov
 ruff

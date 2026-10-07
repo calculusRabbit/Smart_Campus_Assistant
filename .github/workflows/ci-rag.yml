@@ -22,4 +22,4 @@ jobs:
         run: pip install -r requirements.txt pytest
 
       - name: Run RAG tests
-        run: pytest services/rag/tests -q
+        run: python -m pytest services/rag/tests -q
