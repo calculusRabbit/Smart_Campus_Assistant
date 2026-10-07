@@ -269,8 +269,11 @@ def insert_all(cur):
         is_anonymous = random.choice([True, False])
         anonymous_username = None
         if is_anonymous:
-            anonymous_username = f"{random.choice(anon_username_fields).title()}_"
-            "{random.choice(anon_username_fields).title()}{random.randint(0,9)}{random.randint(0,9)}"
+            anonymous_username = (
+                f"{random.choice(anon_username_fields).title()}_"
+                f"{random.choice(anon_username_fields).title()}"
+                f"{random.randint(0,9)}{random.randint(0,9)}"
+            )
         
         review_id = insert(cur, "INSERT INTO Reviews_generic (student_id, school_id, rating, "
         "review_tags, review_title, review_comment, anonymous, anonymous_username, submitted) " 
@@ -324,7 +327,50 @@ def insert_all(cur):
     
     #Reviews_resources
     
-    #Events
+    #Events, Arpan if u saw this, i've created the #events for now coz i want to populate with the PostgreSQL and rerun the tests
+    event_ids = []
+    for i, (dept_id, school_id) in enumerate(department_ids):
+        location_id = location_by_school[school_id]
+
+        event_start = now + timedelta(days=i + 1)
+        event_end = event_start + timedelta(hours=2)
+
+        event_id = insert(
+            cur,
+            """
+            INSERT INTO Events (
+                event_name,
+                event_time,
+                event_location,
+                event_description,
+                event_creator,
+                event_tags,
+                event_department
+            )
+            VALUES (
+                %s,
+                tstzmultirange(tstzrange(%s, %s, '[)')),
+                %s,
+                %s,
+                %s,
+                %s,
+                %s
+            )
+            RETURNING event_id
+            """,
+            (
+                f"Test Campus Event {i + 1}",
+                event_start,
+                event_end,
+                location_id,
+                f"Test event for department {dept_id}.",
+                f"test_admin{i % user_count}",
+                ["campus", "student"],
+                dept_id
+            )
+        )
+
+        event_ids.append((event_id, school_id))
     
     #Event_responses
     
