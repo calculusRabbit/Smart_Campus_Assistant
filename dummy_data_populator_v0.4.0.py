@@ -1,20 +1,20 @@
 # requires: psycopg, bcrypt
-# populates (already-created) postgres database (according to schema in sca_database_v0.3.0.sql) with dummy data
+# populates existing postgres DB according to sca_database_v0.3.0.sql with dummy data
 
 # run command: python <this_script_name> <DSN>
     #DSN format: postgresql://[user[:password]@][netloc][:port][/dbname][?param1=value1&...]
 
 
-
-import os
 import argparse
+
+#import os
+import random
 import sys
+from datetime import datetime, timedelta, timezone
+
+import bcrypt
 import psycopg
 from psycopg.types.json import Jsonb
-import random
-from datetime import datetime, timedelta, timezone
-import bcrypt
-
 
 #=================================Static Values=================================
 
@@ -67,7 +67,8 @@ def insert_all(cur):
     department_ids = []
     i = 1
     for school_id in school_ids:
-        dept_id = insert(cur, "INSERT INTO Departments (school_id, department_name, department_code) "
+        dept_id = insert(cur, "INSERT INTO Departments (school_id, " 
+        "department_name, department_code) "
         "VALUES (%s, %s, %s) RETURNING department_id", (school_id, 
         f"Test {random.choice(('Department', 'School'))} {i}", f"TEST{i}")
         )
@@ -108,7 +109,7 @@ def insert_all(cur):
         "email, edu_email, zipcode, account_status, created_at, interests) "
         "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING student_id", (username, 
         f"TestFirstName{i}", f"Test last Names{i}", datetime(random.randint(1970,2009),
-        random.randint(1,12), random.randint(1,28)).date(),f"student_personal-email{i}@test.com",
+        random.randint(1,12), random.randint(1,28), tzinfo=timezone.utc).date(),f"student_personal-email{i}@test.com",
         f"test_edu_email-{username}@test.edu", f"{random.randint(0, 99999):05d}", 
         random.choice(["pending", "open", "denied", "closed"]), 
         now - timedelta(days=i+random.randint(1,10)), random.choice((["coding", "software", "history"], ["research", 
@@ -171,7 +172,7 @@ def insert_all(cur):
         location_id = location_by_school[school_id]
         instructor_id = insert(cur, "INSERT INTO INSTRUCTORS (instructor_fname, "
         "instructor_lnames, instructor_department, instructor_email, instructor_office) "
-        "VALUES(%s,%s,%s,%s,%s) RETURNING instructor_id", ("TestFname", f"Test last name", dept_id,
+        "VALUES(%s,%s,%s,%s,%s) RETURNING instructor_id", ("TestFname", "Test last name", dept_id,
         f"test.instructoremail_{dept_id}@testuniversity.edu", location_id))
         instructor_ids.append((instructor_id, dept_id, school_id))
 
@@ -188,7 +189,7 @@ def insert_all(cur):
             "offering_session, class_timings, school_id, primary_instructor) VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING offering_id",
             (f"{course_id+1234}",course_id, location_id, session_id, 
             Jsonb([{'days': [0,2], 'times': [['11:00','12:15']]}, {'days': [1,3,4,5,6], 'times': []}]), school_id,
-            random.choice((dept_instructors))))
+            random.choice(dept_instructors)))
         offering_ids.append((offering_id, course_id, dept_id, school_id, session_id))
 
 
@@ -277,7 +278,7 @@ def insert_all(cur):
 
 
     offerings_by_school = {school_id: [] for school_id in school_ids}
-    offerings_by_student = {student_id: [] for student_id in student_ids}
+    #offerings_by_student = {student_id: [] for student_id in student_ids}
     dining_by_school = {school_id: [] for school_id in school_ids}
     items_by_dining = {}
 
@@ -353,17 +354,20 @@ def main():
     user_count = args.num_users
     
     try:
-        with psycopg.connect(args.dsn) as conn:
-            with conn.cursor() as cur:
-                if args.reset:
-                    erase_data(cur)
-                
-                insert_all(cur)
-                print("Fresh dummy data inserted into database")
-                conn.commit()
-                
-    except Exception as ex:
-        sys.exit(f"Failed to open/write to database: {ex}")
+        with psycopg.connect(args.dsn) as conn, conn.cursor() as cur:
+            if args.reset:
+                erase_data(cur)
+            
+            insert_all(cur)
+            print("Fresh dummy data inserted into database")
+            conn.commit()
+
+    except psycopg.errors.OperationalError as ex:
+        sys.exit(f"Failed to connect to / write to database: {ex}")
+    except psycopg.errors.UniqueViolation as ex:
+        print(f"Failed to write to field due to unique constraint: {ex}")
+    except psycopg.DatabaseError as ex:
+        sys.exit(f"A stopping database failure ocurred: {ex}")
 
 
 if __name__ == "__main__":
