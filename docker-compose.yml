@@ -1,33 +1,98 @@
+name: smart-campus-assistant
+
 services:
   db:
-    image: postgres:16
-
+    image: pgvector/pgvector:pg16
     environment:
-      POSTGRES_DB: smart_campus
-      POSTGRES_USER: smartcampus
-      POSTGRES_PASSWORD: smartcampus_dev
-
+      POSTGRES_DB: ${POSTGRES_DB:-smart_campus}
+      POSTGRES_USER: ${POSTGRES_USER:-smartcampus}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in root .env}
     ports:
-      - "5432:5432"
-
+      - "127.0.0.1:${DB_HOST_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - type: bind
+        source: ./sca_database_v0.3.0.sql
+        target: /docker-entrypoint-initdb.d/001-schema.sql
+        read_only: true
+        bind:
+          create_host_path: false
+    healthcheck:
+      test: ["CMD-SHELL", 'pg_isready -h 127.0.0.1 -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
 
   backend:
-    build: .
-
-    depends_on:
-      - db
-
+    build:
+      context: .
+      dockerfile: Dockerfile
     environment:
-      POSTGRES_DB: smart_campus
-      POSTGRES_USER: smartcampus
-      POSTGRES_PASSWORD: smartcampus_dev
+      POSTGRES_DB: ${POSTGRES_DB:-smart_campus}
+      POSTGRES_USER: ${POSTGRES_USER:-smartcampus}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in root .env}
       POSTGRES_HOST: db
-      POSTGRES_PORT: 5432
-
+      POSTGRES_PORT: "5432"
+      FRONTEND_ORIGIN: http://localhost:${FRONTEND_HOST_PORT:-5173}
     ports:
-      - "8000:8000"
+      - "127.0.0.1:${API_HOST_PORT:-8000}:8000"
+    volumes:
+      - .:/app
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    environment:
+      VITE_API_URL: http://localhost:${API_HOST_PORT:-8000}
+    ports:
+      - "127.0.0.1:${FRONTEND_HOST_PORT:-5173}:5173"
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    depends_on:
+      backend:
+        condition: service_started
+
+  seed:
+    profiles: ["tools"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      APP_ENV: development
+      POSTGRES_DB: ${POSTGRES_DB:-smart_campus}
+      POSTGRES_USER: ${POSTGRES_USER:-smartcampus}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in root .env}
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+    command:
+      - python
+      - -c
+      - |
+        import os, runpy, sys
+        from psycopg.conninfo import make_conninfo
+        if os.environ.get("APP_ENV") not in {"development", "test"}:
+            raise SystemExit("Refusing to reset data outside development/test")
+        dsn = make_conninfo(
+            host=os.environ["POSTGRES_HOST"],
+            port=os.environ["POSTGRES_PORT"],
+            dbname=os.environ["POSTGRES_DB"],
+            user=os.environ["POSTGRES_USER"],
+            password=os.environ["POSTGRES_PASSWORD"],
+        )
+        sys.argv = ["dummy_data_populator_v0.4.0.py", "--dsn", dsn, "--reset"]
+        runpy.run_path("/app/dummy_data_populator_v0.4.0.py", run_name="__main__")
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
 
 volumes:
   postgres_data:
+  frontend_node_modules:
