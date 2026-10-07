@@ -1,4 +1,4 @@
--- Migration rollback (down) file for sca_database_v0.2.0.sql
+-- Migration rollback (down) file for sca_database_v0.3.0.sql
 -- Naming for this file will follow the naming for its corresponding UP file
 
 BEGIN;
@@ -10,6 +10,15 @@ DROP INDEX idx_reviews_school;
 DROP INDEX idx_review_replies_review;
 DROP INDEX idx_review_votes_review;
 DROP INDEX idx_registrations_student;
+DROP INDEX uq_enrolments_one_primary_per_student;
+
+DROP INDEX idx_enrolments_school;
+DROP INDEX idx_enrolments_first_semester;
+DROP INDEX idx_enrolments_last_semester;
+DROP INDEX idx_offerings_primary_instructor;
+DROP INDEX idx_offerings_secondary_instructor;
+DROP INDEX idx_dining_location;
+DROP INDEX idx_dining_items_dining;
 
 DROP TABLE IF EXISTS Attendance;
 
@@ -49,13 +58,15 @@ DROP TABLE IF EXISTS Review_votes;
 
 DROP TABLE IF EXISTS Reviews_generic;
 
-DROP TABLE IF EXISTS Instructors;
-
 DROP TABLE IF EXISTS Deadlines;
+
+DROP TABLE IF EXISTS Enrolments;
 
 DROP TABLE IF EXISTS Students;
 
 DROP TABLE IF EXISTS Offerings;
+
+DROP TABLE IF EXISTS Instructors;
 
 DROP TABLE IF EXISTS Sessions;
 
@@ -65,9 +76,9 @@ DROP TABLE IF EXISTS Dining;
 
 DROP TABLE IF EXISTS Events;
 
-DROP TABLE IF EXISTS Locations;
+DROP TABLE IF EXISTS Locations CASCADE;
 
-DROP TABLE IF EXISTS Departments;
+DROP TABLE IF EXISTS Departments CASCADE;
 
 DROP TABLE IF EXISTS Users;
 
