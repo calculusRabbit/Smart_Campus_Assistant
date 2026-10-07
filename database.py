@@ -160,7 +160,11 @@ def get_events_from_database():
         event = dict(row)
 
         # Convert PostgreSQL tstzmultirange into JSON-safe data.
-        if event.get("event_time") is not None:
+        # Legacy/CI event_time strings are already JSON-safe.
+        if (
+            event.get("event_time") is not None
+            and not isinstance(event["event_time"], str)
+        ):
             event["event_time"] = [
                 {
                     "start": time_range.lower.isoformat()
