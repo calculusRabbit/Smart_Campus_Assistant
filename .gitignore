@@ -119,7 +119,8 @@ dmypy.json
 
 # IDE settings
 .idea/
-.vscode/
+.vscode/*
+!.vscode/extensions.json
 
 # OS-generated files
 .DS_Store
