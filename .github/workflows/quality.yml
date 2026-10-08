@@ -1,0 +1,137 @@
+name: Quality
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - develop
+      - backend-testing
+  workflow_dispatch:
+  schedule:
+    - cron: "0 12 * * 1" 
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: Python quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Lint and cyclomatic complexity
+        run: ruff check .
+
+      - name: Formatting
+        run: ruff format --check .
+
+      - name: Type checking
+        run: mypy
+
+      - name: Cognitive complexity
+        run: |
+          complexipy main.py --max-complexity-allowed 15
+          complexipy models.py --max-complexity-allowed 15
+          complexipy services --max-complexity-allowed 15
+
+  frontend:
+    name: Frontend quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run typecheck
+      - run: npm run build
+
+  security:
+    name: Security audits
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Prepare reports
+        run: mkdir -p reports
+
+      - name: Python security analysis
+        run: |
+          bandit -r main.py models.py services \
+            -x services/rag/tests,services/rag/data \
+            -f json -o reports/bandit.json
+
+      - name: Python dependency vulnerabilities
+        if: ${{ !cancelled() }}
+        run: |
+          pip-audit --format json --output reports/pip-audit.json
+
+      - name: Install frontend dependencies
+        if: ${{ !cancelled() }}
+        run: npm ci --prefix frontend
+
+      - name: Frontend dependency vulnerabilities
+        if: ${{ !cancelled() }}
+        working-directory: frontend
+        run: npm audit --audit-level=low --json > ../reports/npm-audit.json
+
+      - name: Upload security reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports
+          path: reports/
+          retention-days: 30
+          if-no-files-found: warn
