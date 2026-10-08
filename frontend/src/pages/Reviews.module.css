@@ -1,0 +1,112 @@
+/* professor search page */
+
+.page {
+  min-height: 100vh;
+  background-color: var(--page-bg);
+}
+
+.banner {
+  padding: 25px 30px;
+  color: white;
+  background-color: var(--black);
+  border-top: 3px solid var(--yellow);
+}
+
+.bannerTitle {
+  margin: 0;
+  font-size: 32px;
+  color: white;
+  text-align: left;
+}
+
+.bannerText {
+  margin: 5px 0 0 0;
+  color: #cccccc;
+}
+
+.content {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.search {
+  width: 100%;
+  padding: 14px;
+  margin-bottom: 20px;
+  font-size: 18px;
+  border: 1px solid #cccccc;
+  border-radius: 8px;
+}
+
+.search:focus {
+  outline: none;
+  border-color: var(--yellow);
+  box-shadow: 0 0 0 3px rgba(244, 196, 48, 0.35);
+}
+
+/* one professor in the list */
+.professorCard {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 16px;
+  margin-bottom: 15px;
+  background-color: white;
+  border-radius: 10px;
+  border-left: 6px solid var(--yellow);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.professorCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+.score {
+  min-width: 70px;
+  padding: 15px 10px;
+  font-size: 24px;
+  font-weight: bold;
+  color: var(--yellow);
+  background-color: var(--black);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.professorInfo {
+  flex: 1;
+}
+
+.professorName {
+  margin: 0;
+}
+
+.professorMeta {
+  margin: 3px 0 0 0;
+  font-size: 14px;
+  color: var(--gray);
+}
+
+.primaryButton {
+  padding: 10px 20px;
+  font-size: 15px;
+  font-weight: bold;
+  color: var(--black);
+  background-color: var(--yellow);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.primaryButton:hover {
+  background-color: var(--yellow-dark);
+}
+
+.empty {
+  text-align: center;
+  color: var(--gray);
+}

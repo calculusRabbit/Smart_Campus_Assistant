@@ -17,8 +17,3 @@ huggingface_hub
 sentence-transformers
 faiss-cpu
 langchain-text-splitters
-
-# testing, linting
-pytest
-pytest-cov
-ruff
