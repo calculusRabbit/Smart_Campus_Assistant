@@ -1,4 +1,4 @@
-from scrapers.get_urls import filter_urls
+from services.rag.scrapers.get_urls import filter_urls
 
 
 def test_drops_urls_with_old_years():
