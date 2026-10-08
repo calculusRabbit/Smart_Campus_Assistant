@@ -3,6 +3,7 @@ name: smart-campus-assistant
 services:
   db:
     image: pgvector/pgvector:pg16
+    mem_limit: ${DB_MEMORY_LIMIT:-512m}
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-smart_campus}
       POSTGRES_USER: ${POSTGRES_USER:-smartcampus}
@@ -25,6 +26,7 @@ services:
       start_period: 30s
 
   backend:
+    mem_limit: ${BACKEND_MEMORY_LIMIT:-1g}
     build:
       context: .
       dockerfile: Dockerfile
@@ -34,19 +36,20 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in root .env}
       POSTGRES_HOST: db
       POSTGRES_PORT: "5432"
-      HF_TOKEN: ${HF_TOKEN}
+      HF_TOKEN: ${HF_TOKEN:-}
       RAG_ENABLED: ${RAG_ENABLED:-true}
       FRONTEND_ORIGIN: http://localhost:${FRONTEND_HOST_PORT:-5173}
     ports:
       - "127.0.0.1:${API_HOST_PORT:-8000}:8000"
     volumes:
       - .:/app
-    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
     depends_on:
       db:
         condition: service_healthy
 
   frontend:
+    mem_limit: ${FRONTEND_MEMORY_LIMIT:-512m}
     build:
       context: ./frontend
       dockerfile: Dockerfile
