@@ -177,7 +177,12 @@ def set_student_interests(
             detail="At least one student interest is required."
         )
         
-    save_student_interests(student_id, request.interests)
+    saved = save_student_interests(student_id, request.interests)
+    if not saved:
+        raise HTTPException(
+            status_code=404,
+            detail="Student not found."
+        )
 
     return {
         "student_id": student_id,
