@@ -1,0 +1,55 @@
+/* top bar */
+.nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px 30px;
+  color: white;
+  background-color: var(--black);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  font-size: 20px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.logo {
+  height: 40px;
+  margin-right: 10px;
+}
+
+.brandAccent {
+  margin-left: 5px;
+  color: var(--yellow);
+}
+
+.userName {
+  margin-right: 10px;
+  font-weight: bold;
+}
+
+.navButton {
+  margin-left: 8px;
+  padding: 8px 14px;
+  font-weight: bold;
+  color: var(--black);
+  background-color: var(--yellow);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.navButton:hover {
+  background-color: var(--yellow-dark);
+}
+
+@media (max-width: 850px) {
+  .nav {
+    padding: 12px 15px;
+  }
+}

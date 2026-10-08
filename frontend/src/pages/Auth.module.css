@@ -1,0 +1,145 @@
+/* styles for login, sign up and profile (they all use the same card on the campus photo) */
+
+.page {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  overflow-y: auto;
+  background-image: linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)),
+    url(../assets/images/wsu-campus.jpeg);
+  background-size: cover;
+  background-position: center;
+}
+
+/* margin auto puts the card in the middle, and it still scrolls when the form is tall */
+.card {
+  width: 400px;
+  max-width: 90%;
+  margin: auto;
+  padding: 35px;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+  text-align: center;
+}
+
+.logo {
+  height: 75px;
+}
+
+.title {
+  margin: 5px 0;
+  color: var(--black);
+  font-size: 26px;
+}
+
+.subtitle {
+  margin: 0 0 22px 0;
+  color: var(--gray);
+}
+
+.error {
+  color: #c62828;
+}
+
+.message {
+  font-weight: bold;
+}
+
+.label {
+  margin: 0 0 5px 0;
+  font-size: 14px;
+  color: var(--gray);
+  text-align: left;
+}
+
+.input {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 15px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--yellow);
+  box-shadow: 0 0 0 3px rgba(244, 196, 48, 0.35);
+}
+
+.nameRow {
+  display: flex;
+  gap: 10px;
+}
+
+.button {
+  width: 100%;
+  padding: 12px;
+  font-size: 16px;
+  font-weight: bold;
+  color: var(--black);
+  background-color: var(--yellow);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.button:hover {
+  background-color: var(--yellow-dark);
+}
+
+.darkButton {
+  margin-top: 15px;
+  padding: 10px 20px;
+  font-weight: bold;
+  color: var(--yellow);
+  background-color: var(--black);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.darkButton:hover {
+  background-color: #333;
+}
+
+.switchText {
+  margin: 20px 0 0 0;
+  color: var(--gray);
+}
+
+.linkButton {
+  padding: 0;
+  font-size: 16px;
+  color: #0066cc;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.linkButton:hover {
+  text-decoration: underline;
+}
+
+/* interest pills on the profile page */
+.pills {
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.pill {
+  margin: 5px;
+  padding: 10px 20px;
+  font-weight: bold;
+  color: var(--black);
+  background-color: white;
+  border: 2px solid var(--black);
+  border-radius: 20px;
+  cursor: pointer;
+}
+
+.pillPicked {
+  background-color: var(--yellow);
+}
