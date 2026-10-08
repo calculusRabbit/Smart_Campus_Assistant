@@ -161,7 +161,10 @@ export default function Dashboard({ goTo }) {
   const [events, resetEvents] = useState([]);
   const [allEvents, setAllEvents] = useState([]);
   const [schedules, resetSchedules] = useState([]);
-  const [recommended, setRecommended] = useState(false);
+  const [recEvents, setRecEvents] = useState([]);
+  const [recLoaded, setRecLoaded] = useState(false);
+  const [recLoading, setRecLoading] = useState(false);
+  const [recMessage, setRecMessage] = useState("");
   const [tab, setTab] = useState("upcoming");
 
   // saved events are only in the browser for now
@@ -178,21 +181,33 @@ export default function Dashboard({ goTo }) {
     localStorage.setItem("savedEvents", JSON.stringify(newIds));
   }
 
+  // the backend compares the students interests with the events, the first time is slow
+  async function loadRecommendations() {
+    setRecLoading(true);
+    setRecMessage("");
+
+    let recs = [];
+    try {
+      recs = await getRecommendedEvents(user.id);
+    } catch {
+      setRecMessage("Could not reach the backend.");
+    }
+
+    setRecEvents(recs);
+    setRecLoaded(true);
+    setRecLoading(false);
+    setTab("recommended");
+
+    if (recs.length === 0) {
+      setRecMessage("No matches yet. Write what you like in Profile and try again.");
+    }
+  }
+
   // get data from backend and update arr
   useEffect(() => {
     getEvents().then(all => {
       setAllEvents(all);
-
-      // if the student saved interests show recommended events, if not show all events
-      getRecommendedEvents(user.id).then(recs => {
-        if (recs.length > 0) {
-          resetEvents(recs);
-          setRecommended(true);
-        }
-        else {
-          resetEvents(all);
-        }
-      });
+      resetEvents(all);
     });
 
     // fetch schedue
@@ -200,17 +215,20 @@ export default function Dashboard({ goTo }) {
 
   }, []);
 
-  // saved tab shows the saved ones from all events
+  // saved tab shows the saved ones from all events and from the recommended ones
   let savedEvents = [];
-  for (let i = 0; i < allEvents.length; i++) {
-    if (savedIds.includes(allEvents[i].event_id)) {
-      savedEvents.push(allEvents[i]);
+  let everyEvent = allEvents.concat(recEvents);
+  for (let i = 0; i < everyEvent.length; i++) {
+    if (savedIds.includes(everyEvent[i].event_id)) {
+      savedEvents.push(everyEvent[i]);
     }
   }
 
   let shownEvents = events;
   if (tab === "saved") {
     shownEvents = savedEvents;
+  } else if (tab === "recommended") {
+    shownEvents = recEvents;
   }
 
   let eventCards = [];
@@ -250,8 +268,16 @@ export default function Dashboard({ goTo }) {
                 className={tab === "upcoming" ? styles.tabActive : styles.tab}
                 onClick={() => setTab("upcoming")}
               >
-                {recommended ? "Recommended" : "Upcoming"} ({events.length})
+                Upcoming ({events.length})
               </button>
+              {recLoaded &&
+                <button
+                  className={tab === "recommended" ? styles.tabActive : styles.tab}
+                  onClick={() => setTab("recommended")}
+                >
+                  Recommended ({recEvents.length})
+                </button>
+              }
               <button
                 className={tab === "saved" ? styles.tabActive : styles.tab}
                 onClick={() => setTab("saved")}
@@ -260,7 +286,12 @@ export default function Dashboard({ goTo }) {
               </button>
             </div>
 
-            {tab === "upcoming" && !recommended && <p className={styles.hint}>Add your interests in Profile to get recommendations.</p>}
+            <button className={styles.primaryButton} onClick={loadRecommendations} disabled={recLoading}>
+              {recLoading ? "Finding events..." : "Get recommendations"}
+            </button>
+            <p className={styles.hint}>Compares what you wrote in Profile with the events.</p>
+
+            {tab === "recommended" && recMessage !== "" && <p className={styles.hint}>{recMessage}</p>}
             {tab === "saved" && savedEvents.length === 0 && <p className={styles.hint}>No saved events yet, click Save on an event.</p>}
             {eventCards}
           </div>

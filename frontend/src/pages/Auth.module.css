@@ -68,6 +68,12 @@
   box-shadow: 0 0 0 3px rgba(244, 196, 48, 0.35);
 }
 
+.textarea {
+  min-height: 100px;
+  font-family: inherit;
+  resize: vertical;
+}
+
 .nameRow {
   display: flex;
   gap: 10px;

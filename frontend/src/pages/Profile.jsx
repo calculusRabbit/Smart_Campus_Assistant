@@ -1,10 +1,8 @@
 import { useEffect, useState } from "react"
 import { getUser, getInterests, saveInterests } from "../api"
 import shockerImage from "../assets/images/wsu-shocker.png"
+import { interestOptions, MAX_TAG_WORDS } from "../interests"
 import styles from "./Auth.module.css"
-
-// interests the backend knows about right now
-const interestOptions = ["coding", "career"]
 
 export default function Profile({ goTo }) {
   const user = getUser()
@@ -13,11 +11,25 @@ export default function Profile({ goTo }) {
   const [major, setMajor] = useState(localStorage.getItem("major") || "")
   const [year, setYear] = useState(localStorage.getItem("year") || "freshman")
   const [interests, setInterests] = useState([])
+  const [aboutText, setAboutText] = useState("")
   const [message, setMessage] = useState("")
 
   // load saved stuff when the page opens
+  // the text and the tags are saved in the same list so split them again here
   useEffect(() => {
-    getInterests(user.id).then(saved => setInterests(saved))
+    getInterests(user.id).then(saved => {
+      let tags = []
+      let texts = []
+      for (let i = 0; i < saved.length; i++) {
+        if (saved[i].split(" ").length > MAX_TAG_WORDS) {
+          texts.push(saved[i])
+        } else {
+          tags.push(saved[i])
+        }
+      }
+      setInterests(tags)
+      setAboutText(texts.join(" "))
+    })
   }, [])
 
   function toggleInterest(name) {
@@ -34,14 +46,29 @@ export default function Profile({ goTo }) {
     localStorage.setItem("major", major)
     localStorage.setItem("year", year)
 
+    const text = aboutText.trim()
+
+    // a text with only a few words would be saved like a tag
+    if (text !== "" && text.split(" ").length <= MAX_TAG_WORDS) {
+      setMessage("Write a bit more, a full sentence works best.")
+      return
+    }
+
+    // the text goes first, then the tags
+    let toSave = []
+    if (text !== "") {
+      toSave.push(text)
+    }
+    toSave = toSave.concat(interests)
+
     // backend says at least one interest is needed
-    if (interests.length === 0) {
-      setMessage("Pick at least one interest.")
+    if (toSave.length === 0) {
+      setMessage("Write something you like or pick at least one tag.")
       return
     }
 
     try {
-      await saveInterests(user.id, interests)
+      await saveInterests(user.id, toSave)
       setMessage("Saved!")
     } catch (err) {
       setMessage(err.message)
@@ -91,7 +118,15 @@ export default function Profile({ goTo }) {
             <option value="senior">Senior</option>
           </select>
 
-          <p className={styles.label}>Interests</p>
+          <p className={styles.label}>What do you like to do, get involved in or explore?</p>
+          <textarea
+            className={styles.input + " " + styles.textarea}
+            placeholder="I like going to concerts and hackathons, and I want to join a club about..."
+            value={aboutText}
+            onChange={(e) => setAboutText(e.target.value)}
+          />
+
+          <p className={styles.label}>Pick some tags too</p>
           <div className={styles.pills}>{interestButtons}</div>
 
           <button type="submit" className={styles.button}>

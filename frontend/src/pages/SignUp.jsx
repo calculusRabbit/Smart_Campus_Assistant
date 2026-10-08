@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { signup } from "../api"
 import shockerImage from "../assets/images/wsu-shocker.png"
+import { interestOptions, MAX_TAG_WORDS } from "../interests"
 import styles from "./Auth.module.css"
 
 export default function SignUp({ goTo }) {
@@ -12,7 +13,17 @@ export default function SignUp({ goTo }) {
   const [zipcode, setZipcode] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
+  const [aboutText, setAboutText] = useState("")
+  const [interests, setInterests] = useState([])
   const [error, setError] = useState("")
+
+  function toggleInterest(name) {
+    if (interests.includes(name)) {
+      setInterests(interests.filter(i => i !== name))
+    } else {
+      setInterests([...interests, name])
+    }
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -44,6 +55,20 @@ export default function SignUp({ goTo }) {
       return
     }
 
+    // the text is optional but a text with only a few words would be saved like a tag
+    const text = aboutText.trim()
+    if (text !== "" && text.split(" ").length <= MAX_TAG_WORDS) {
+      setError("Write a bit more about what you like, a full sentence works best.")
+      return
+    }
+
+    // the text goes first, then the tags (same as the profile page)
+    let interestList = []
+    if (text !== "") {
+      interestList.push(text)
+    }
+    interestList = interestList.concat(interests)
+
     setError("")
 
     try {
@@ -55,11 +80,29 @@ export default function SignUp({ goTo }) {
         dob: dob,
         zipcode: zipcode,
         password: password,
+        interests: interestList,
       })
       goTo("login")
     } catch (err) {
       setError(err.message)
     }
+  }
+
+  // each tag is a button that turns yellow when picked
+  let interestButtons = []
+  for (let i = 0; i < interestOptions.length; i++) {
+    let name = interestOptions[i]
+    let picked = interests.includes(name)
+    interestButtons.push(
+      <button
+        key={name}
+        type="button"
+        onClick={() => toggleInterest(name)}
+        className={picked ? styles.pill + " " + styles.pillPicked : styles.pill}
+      >
+        {name}
+      </button>
+    )
   }
 
   return (
@@ -152,6 +195,17 @@ export default function SignUp({ goTo }) {
             onChange={(e) => setConfirmPassword(e.target.value)}
             required
           />
+
+          <p className={styles.label}>What do you like to do, get involved in or explore?</p>
+          <textarea
+            className={styles.input + " " + styles.textarea}
+            placeholder="I like going to concerts and hackathons, and I want to join a club about..."
+            value={aboutText}
+            onChange={(e) => setAboutText(e.target.value)}
+          />
+
+          <p className={styles.label}>Pick some tags too</p>
+          <div className={styles.pills}>{interestButtons}</div>
 
           <button type="submit" className={styles.button}>Create Account</button>
         </form>
