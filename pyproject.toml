@@ -1,7 +1,63 @@
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-extend-exclude = ["services/rag"]
+extend-exclude = [
+    "data.py",
+    "database.py",
+    "seed.py",
+    "dummy_data_populator_v0.4.0.py",
+    "services/rag/data",
+]
 
 [tool.ruff.lint]
-select = ["E", "F", "I"]
+select = [
+    "E",
+    "F",
+    "I",
+    "B",
+    "UP",
+    "C90",
+    "RUF100"
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.12"
+files = [
+    "main.py",
+    "models.py",
+    "services/recommendation_service.py",
+    "services/rag",
+]
+exclude = [
+    "^services/rag/tests/",
+    "^services/rag/data/",
+]
+check_untyped_defs = true
+disallow_untyped_defs = true
+implicit_optional = false
+warn_return_any = true
+warn_unused_ignores = true
+show_error_codes = true
+
+[tool.coverage.run]
+branch = true
+source = [
+    "main",
+    "models",
+    "services",
+]
+omit = [
+    "services/rag/tests/*",
+]
+
+[tool.coverage.report]
+fail_under = 60
+show_missing = true
+skip_covered = false
