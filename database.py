@@ -389,9 +389,27 @@ def get_professors_from_database():
     connection = get_connection()
     cursor = connection.cursor()
 
-    cursor.execute("SELECT * FROM professors")
-    rows = cursor.fetchall()
+    cursor.execute(
+         "SELECT to_regclass('public.instructors') AS instructors_table"
+    )
+    instructors_table = cursor.fetchone()["instructors_table"]
 
+    if instructors_table is not None:
+        cursor.execute("""
+            SELECT
+                instructor_id AS professor_id,
+                CONCAT(instructor_fname, ' ', instructor_lnames)
+                    AS professor_name,
+                instructor_department AS professor_department,
+                instructor_email AS professor_email,
+                instructor_office AS office_location,
+                instructor_hours AS office_hours
+            FROM instructors
+        """)
+    else:
+        cursor.execute("SELECT * FROM professors")
+
+    rows = cursor.fetchall()
     professors = [dict(row) for row in rows]
 
     connection.close()

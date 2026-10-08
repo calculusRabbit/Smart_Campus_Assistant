@@ -1,31 +1,47 @@
 import json
-import os
 from datetime import datetime
 
 import faiss
 import httpx
-from dotenv import load_dotenv
-from huggingface_hub import InferenceClient
 
 from services.rag.config import (
     CHUNKS_PATH,
     GENERATION_MODEL,
     INDEX_PATH,
+    OLLAMA_URL,
     TOP_K,
 )
 from services.rag.retriever import embed_query, search_similar
 
-load_dotenv()
-
-hf_token = os.getenv("HF_TOKEN")
-client = InferenceClient(
-    provider="featherless-ai",
-    token=hf_token,
-)
-
 document_index = faiss.read_index(str(INDEX_PATH))
 with open(CHUNKS_PATH, encoding="utf-8") as f:
     chunks = json.load(f)
+
+def generate_with_ollama(messages: list[dict]) -> str:
+    response = httpx.post(
+        f"{OLLAMA_URL}/api/chat",
+        json={
+            "model": GENERATION_MODEL,
+            "messages": messages,
+            "stream": False,
+            "think": False,
+            "options": {
+                "temperature": 0,
+                "num_predict": 512,
+            },
+        },
+        timeout=120.0,
+    )
+    response.raise_for_status()
+
+    data = response.json()
+    content = data["message"]["content"]
+
+    # Qwen3 may include internal reasoning before </think>.
+    if "</think>" in content:
+        content = content.split("</think>", 1)[1]
+
+    return content.strip()
 
 def is_bad_generation(answer: str) -> bool:
     if not answer:
@@ -55,9 +71,13 @@ def query_RAG(user_input: str, history: list) -> tuple[str, str]:
 
     today = datetime.now().strftime("%B %d, %Y")
     system_instruction = (
-    f"You are a helpful assistant for WSU students. Today is {today}. "
-    "Use the relevant documents to answer the question as best as you can. "
-    "If you don't know the answer, say you don't know."
+        f"You are a helpful assistant for Wichita State University students. "
+        f"Today is {today}. "
+        "Answer using only the relevant documents provided. "
+        "Give a direct and concise answer, usually 2 to 4 sentences. "
+        "Do not describe your reasoning process or discuss irrelevant documents. "
+        "If the documents do not contain enough information to answer the question, "
+        "say you don't know based on the available information."
     )
 
     messages = [{"role": "system", "content": system_instruction}]
@@ -71,32 +91,17 @@ def query_RAG(user_input: str, history: list) -> tuple[str, str]:
     prompt = (
     f"Question: {user_input}\n\n"
     f"Relevant Documents:\n{relevant_documents}\n\n"
-    "Answer the question based on the relevant documents above."
+    "Answer the question directly using the relevant documents above. "
+    "Keep the answer concise."
     )
     messages.append({"role": "user", "content": prompt})
 
-    # Generate the answer using remote Hugging Face inference
+    # Generate the answer using local Ollama inference
     try:
-        response = client.chat_completion(
-            messages=messages,
-            model=GENERATION_MODEL,
-            max_tokens=512,
-            temperature=0.0,
-            frequency_penalty=0.5,
-        )
-
-        answer = response.choices[0].message.content
+        answer = generate_with_ollama(messages)
 
         if is_bad_generation(answer):
-            retry_response = client.chat_completion(
-                messages=messages,
-                model=GENERATION_MODEL,
-                max_tokens=512,
-                temperature=0.0,
-                frequency_penalty=0.5,
-            )
-
-            answer = retry_response.choices[0].message.content
+            answer = generate_with_ollama(messages)
 
             if is_bad_generation(answer):
                 answer = (
@@ -104,12 +109,17 @@ def query_RAG(user_input: str, history: list) -> tuple[str, str]:
                     "Please try asking your question again."
                 )
 
-    except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout):
+    except (
+        httpx.ConnectError,
+        httpx.ConnectTimeout,
+        httpx.ReadTimeout,
+        httpx.HTTPStatusError,
+    ) as exc:
+        print(f"Ollama generation error: {exc}")
         answer = (
-            "I'm having trouble connecting to the AI service right now. "
-            "Please try again in a moment."
+            "I found relevant campus information, but the AI generation "
+            "service is temporarily unavailable. Please try again in a moment."
         )
-
     return answer, sources_text
 
 
