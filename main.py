@@ -15,6 +15,7 @@ from database import (
     save_student_interests,
 )
 from models import ChatRequest, RecommendationRequest, StudentInterestsRequest
+from services.event_recommender import get_recommender, profile_to_text
 from services.rag.config import RAG_ENABLED
 from services.recommendation_service import RecommendationService
 
@@ -210,9 +211,17 @@ def get_student_event_recommendations(student_id: int):
             detail="No saved interests found for this student."
         )
 
-    recommended_events = get_event_recommendations(
-        student_interests
-    )
+    # compare the students text with the events, the first time it loads the model
+    try:
+        recommended_events = get_recommender().recommend(
+            profile_to_text(student_interests)
+        )
+    except Exception as error:
+        # the event files are not there, use the old way with the categories
+        print("event recommender not available:", error)
+        recommended_events = get_event_recommendations(
+            student_interests
+        )
 
     return {
         "student_id": student_id,

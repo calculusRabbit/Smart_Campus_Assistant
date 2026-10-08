@@ -53,7 +53,6 @@ def format_clock(text):
 
 
 def get_first_times(schedule):
-    # schedule looks like [{"days": [0, 2], "times": [["11:00", "12:15"]]}, {"days": [1, 3], "times": []}]
     # gives back the days and times of the first entry that has times
     for entry in schedule or []:
         if entry.get("times"):
