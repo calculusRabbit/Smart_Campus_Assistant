@@ -12,6 +12,9 @@ EMBEDDING_DIM = 384
 JUDGE_MODEL      = "meta-llama/Llama-3.1-8B-Instruct"
 GENERATION_MODEL = "Qwen/Qwen2.5-14B-Instruct"
 
+# model for the event recommendations, small so it runs on cpu
+EVENTS_EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+
 # paths
 CHUNKS_PATH = DATA_DIR / "chunks.json"
 INDEX_PATH = DATA_DIR / "document_index.faiss"
@@ -22,6 +25,8 @@ EVENTS_PATH = DATA_DIR / "events.json"
 CLUBS_PATH = DATA_DIR / "clubs.json"
 PAGES_CHUNKS_PATH = DATA_DIR / "pages_chunks.json"
 SHOCKERSYNC_EVENTS_PATH = DATA_DIR / "shockersync_events.json"
+ALL_EVENTS_PATH = DATA_DIR / "all_events.json"
+EVENTS_INDEX_PATH = DATA_DIR / "events_index.faiss"
 
 # calendar scraper
 MAX_MISSES = 300 # stop after this many empty eIDs in a row
