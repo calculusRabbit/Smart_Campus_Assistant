@@ -33,6 +33,7 @@ jobs:
       POSTGRES_PASSWORD: smartcampus_dev
       POSTGRES_HOST: localhost
       POSTGRES_PORT: 5432
+      APP_ENV: test
 
     steps:
       - name: Checkout repository
@@ -56,13 +57,13 @@ jobs:
       - name: Run Ruff
         run: ruff check .
 
-      - name: Run migration
+      - name: Create the tables
         run: |
           PGPASSWORD=smartcampus_dev psql \
             -h localhost \
             -U smartcampus \
             -d smart_campus \
-            -f migrations/001_initial_up.sql
+            -f sca_database_v0.3.0.sql
 
       - name: Seed database
         run: python seed.py
