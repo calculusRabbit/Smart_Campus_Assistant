@@ -16,8 +16,3 @@ python-dotenv
 huggingface_hub
 sentence-transformers
 faiss-cpu
-
-# testing, linting
-pytest
-pytest-cov
-ruff
