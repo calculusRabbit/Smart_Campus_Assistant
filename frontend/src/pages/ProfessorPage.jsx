@@ -96,8 +96,7 @@ export default function ProfessorPage({ goTo, professorId }) {
     getCourses().then(data => setCourses(data));
   }, [professorId]);
 
-  // the classes this professor teaches. the seed data names do not match yet
-  // (Dr. Yang vs Professor Cody) so if nothing matches show all classes
+  // classes this professor teaches, show all classes if none match
   function getClassOptions() {
     let mine = [];
     for (let i = 0; i < courses.length; i++) {
