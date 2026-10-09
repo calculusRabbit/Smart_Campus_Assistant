@@ -1,0 +1,21 @@
+# .github/workflows/lint-migrations.yml
+name: Lint Migrations
+
+on: pull_request
+
+jobs:
+  lint_migrations:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Find modified migrations
+        run: |
+          modified_migrations=$(git diff --diff-filter=d --name-only origin/$GITHUB_BASE_REF...origin/$GITHUB_HEAD_REF 'migrations/*.sql' | tr '\n' ' ')
+          echo "$modified_migrations"
+          echo "file_names=$modified_migrations" >> $GITHUB_OUTPUT
+        id: modified-migrations
+      - uses: sbdchd/squawk-action@v2
+        with:
+          files: ${{ steps.modified-migrations.outputs.file_names }}
