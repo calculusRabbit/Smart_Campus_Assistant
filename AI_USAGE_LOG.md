@@ -256,7 +256,7 @@ ChatGPT help me write pytest tests for the FastAPI backend and the database func
 * **Associated Git Issue:** #11, #12, #20, #34
 * **Associated Feature Branch:** `feature/dabase`
 
-## Exact promot submitted
+## Exact prompt submitted
 > besides the missing inserts for the remaining tables, is there anything wrong with the dummy data populator? Find any and all errors in the script and explain them, and suggest any major improvements to be made to the code. (initial prompt)
 
 ### Shared conversation:
@@ -286,7 +286,7 @@ Perplexity reviewed my code for various errors, and gave those errors and sugges
 * **Associated Git Issue:** 35
 * **Associated Feature Branch:** `main` (various branches used to merge)
 
-## Exact promot submitted
+## Exact prompt submitted
 > update the docker-compose.yml file to suit the project. Note: backend is fastapi, frontend is react, database is postgres. if any supporting files are needed, tell me (initial prompt)
 
 ### Shared conversation:
@@ -317,7 +317,7 @@ Perplexity improved the robustness of my Docker configuration files and generate
 * **Associated Git Issue:** #45, #48
 * **Associated Feature Branch:** `main` (various branches used to merge)
 
-## Exact promot submitted
+## Exact prompt submitted
 > Help me complete the implementations of linting, static code analysis, CI/CD, security secret scanning, etc for this repository according to the requirements (up to prototype 2) in the deliverables.
 
 Repo tree: (note: the python files related to data like seed.py and database.py are temporary and can be ignored, the actual DB schema is there, called sca-database_v0.3.0.sql)
@@ -341,17 +341,6 @@ Perplexity suggested improvements to the current Ruff setup, suggested MyPy, fro
 
 * Compared CI configuration files to defaults
 * Implemented CIs locally and tested if they could identify errors and went away as expected, then implemented workflows and did the same.
-
-
-
-
-
-## Audit Certification
-I certify as Team Lead that all entries above accurately represent AI usage within this project phase, all prompts have been recorded, and all code has been validated by human review and automated testing.
-
-**Team Lead Signature:** *Arpan Dey* — **Date:** October 08, 2026
-
-
 
 ---
 
@@ -454,3 +443,8 @@ The AI-assisted work included:
 **Repository:** https://github.com/calculusRabbit/Smart_Campus_Assistant
 
 ---
+
+## Audit Certification
+I certify as Team Lead that all entries above accurately represent AI usage within this project phase, all prompts have been recorded, and all code has been validated by human review and automated testing.
+
+**Team Lead Signature:** *Arpan Dey* — **Date:** October 08, 2026
