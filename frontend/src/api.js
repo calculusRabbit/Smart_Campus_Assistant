@@ -1,4 +1,4 @@
-// all backend calls live here so the url is only in one place
+// all the backend calls are in this file
 const BASE_URL = "http://localhost:8000";
 
 // TODO: set this to false when the real /login and /signup endpoints are done
@@ -61,8 +61,7 @@ export async function getEvents() {
   return data.events;
 }
 
-// TODO: remove these sample lists when the backend is always running.
-// they only show up when the backend cannot be reached, so the pages are not empty
+// sample data for when the backend is off, remove later
 const sampleProfessors = [
   {professor_id: 101, professor_name: "Professor Cody", professor_department: "Computer Science",
    professor_email: "cody@wsu.edu", office_location: "Room 209", professor_rating: 4.7},
@@ -85,7 +84,7 @@ export async function getCourses() {
   }
 }
 
-// recommended events for one student, empty list if they have no interests yet
+// recommended events for a student, empty if no interests
 export async function getRecommendedEvents(studentId) {
   const res = await fetch(BASE_URL + "/students/" + studentId + "/recommendations/events");
   if (!res.ok) {
@@ -132,10 +131,8 @@ export async function getProfessors() {
   }
 }
 
-// TODO: there is no reviews endpoint in the backend yet, so for now reviews are
-// kept in the browser (localStorage). when the endpoints exist, change these
-// functions to fetch() like the others and the pages do not need to change.
-// professor_id is the same id as in the professors table
+// TODO: no reviews endpoint yet so reviews are saved in the browser
+// change these to fetch() when the backend has it
 const sampleReviews = [
   {id: 1, professor_id: 101, course: "CS 598", rating: 5, title: "Best senior design class",
    comment: "Very clear about what he wants and gives feedback every week. Lots of work but you learn a lot.",

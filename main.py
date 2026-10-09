@@ -15,6 +15,7 @@ from database import (
     save_student_interests,
 )
 from models import ChatRequest, RecommendationRequest, StudentInterestsRequest
+from services.event_recommender import get_recommender, profile_to_text
 from services.rag.config import RAG_ENABLED
 from services.recommendation_service import RecommendationService
 
@@ -193,7 +194,12 @@ def set_student_interests(
             detail="At least one student interest is required."
         )
         
-    save_student_interests(student_id, request.interests)
+    saved = save_student_interests(student_id, request.interests)
+    if not saved:
+        raise HTTPException(
+            status_code=404,
+            detail="Student not found."
+        )
 
     return {
         "student_id": student_id,
@@ -221,15 +227,52 @@ def get_student_event_recommendations(student_id: int):
             detail="No saved interests found for this student."
         )
 
-    recommended_events = get_event_recommendations(
-        student_interests
-    )
+    # compare the students text with the events, the first time it loads the model
+    try:
+        recommended_events = get_recommender().recommend(
+            profile_to_text(student_interests)
+        )
+    except Exception as error:
+        # the event files are not there, use the old way with the categories
+        print("event recommender not available:", error)
+        recommended_events = get_event_recommendations(
+            student_interests
+        )
 
     return {
         "student_id": student_id,
         "interests": student_interests,
         "recommended_events": recommended_events
     }
+
+# nothing matched in chat, ask the rag if it is on, if not say we dont know
+# (this is its own function so chat is not too complex for the linter)
+def get_fallback_reply(request: ChatRequest):
+    if RAG_ENABLED:
+        from services.rag.pipeline import query_RAG
+
+        answer, sources = query_RAG(
+            request.message,
+            history=[]
+        )
+
+        return {
+            "intent": "rag",
+            "reply": answer,
+            "sources": sources
+        }
+
+    return {
+        "intent": "unknown",
+        "reply": (
+            "I could not understand that request. "
+            "I can help with campus events, dining, courses, "
+            "professors, deadlines, and student recommendations. "
+            "Try asking something like 'What events are happening?' "
+            "or 'Tell me about CS 560.'"
+        )
+    }
+
 
 @app.post("/chat")
 def chat(request: ChatRequest):
@@ -359,27 +402,4 @@ def chat(request: ChatRequest):
         }
 
     else:
-        if RAG_ENABLED:
-            from services.rag.pipeline import query_RAG
-
-            answer, sources = query_RAG(
-                request.message,
-                history=[]
-            )
-
-            return {
-                "intent": "rag",
-                "reply": answer,
-                "sources": sources
-            }
-
-        return {
-            "intent": "unknown",
-            "reply": (
-                "I could not understand that request. "
-                "I can help with campus events, dining, courses, "
-                "professors, deadlines, and student recommendations. "
-                "Try asking something like 'What events are happening?' "
-                "or 'Tell me about CS 560.'"
-            )
-        }
+        return get_fallback_reply(request)

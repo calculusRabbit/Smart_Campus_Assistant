@@ -13,6 +13,9 @@ EMBEDDING_DIM = 384
 GENERATION_MODEL = "qwen3-direct"
 OLLAMA_URL = "http://host.docker.internal:11434"
 
+# model for the event recommendations, small so it runs on cpu
+EVENTS_EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+
 # paths
 CHUNKS_PATH = DATA_DIR / "chunks.json"
 INDEX_PATH = DATA_DIR / "document_index.faiss"
@@ -23,6 +26,8 @@ EVENTS_PATH             = "data/events.json"
 CLUBS_PATH              = "data/clubs.json"
 PAGES_CHUNKS_PATH       = "data/pages_chunks.json"
 SHOCKERSYNC_EVENTS_PATH = "data/shockersync_events.json"
+ALL_EVENTS_PATH = DATA_DIR / "all_events.json"
+EVENTS_INDEX_PATH = DATA_DIR / "events_index.faiss"
 
 # retrieval
 TOP_K = 5
