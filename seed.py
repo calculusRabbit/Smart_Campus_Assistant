@@ -20,8 +20,8 @@ def seed_database():
         password=os.environ["POSTGRES_PASSWORD"],
     )
 
-    sys.argv = ["dummy_data_populator_v0.4.0.py", "--dsn", dsn, "--reset"]
-    runpy.run_path("dummy_data_populator_v0.4.0.py", run_name="__main__")
+    sys.argv = ["dummy_data_populator_v0.5.0.py", "--dsn", dsn, "--reset"]
+    runpy.run_path("dummy_data_populator_v0.5.0.py", run_name="__main__")
 
 
 if __name__ == "__main__":

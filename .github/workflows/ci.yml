@@ -63,7 +63,7 @@ jobs:
             -h localhost \
             -U smartcampus \
             -d smart_campus \
-            -f sca_database_v0.3.0.sql
+            -f sca_database_v0.4.0.sql
 
       - name: Seed database
         run: python seed.py
