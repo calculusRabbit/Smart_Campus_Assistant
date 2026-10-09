@@ -2,9 +2,9 @@ import re
 import json
 import os
 from transformers import pipeline
-from processing.prompt import SYSTEM_INSTRUCTIONS, TASK_PROMPT
+from services.rag.processing.prompt import SYSTEM_INSTRUCTIONS, TASK_PROMPT
 import torch
-from config import JUDGE_MODEL, RAW_DATA_PATH, FILTERED_DIR
+from services.rag.config import JUDGE_MODEL, RAW_DATA_PATH, FILTERED_DIR
 import torch.multiprocessing as mp
 threshold = 0.35
 output_dir = FILTERED_DIR

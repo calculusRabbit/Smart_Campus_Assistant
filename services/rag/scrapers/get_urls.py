@@ -1,7 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 import json
-from config import ALL_URLS_PATH
+from services.rag.config import ALL_URLS_PATH
 
 site_map = "https://www.wichita.edu/sitemap.xml"
 

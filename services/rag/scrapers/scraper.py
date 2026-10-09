@@ -6,9 +6,15 @@ import time
 import re
 import os
 
-from config import EVENTS_PATH
+from services.rag.config import BOOTSTRAP_EID, CHUNKS_PATH, DATA_DIR, EVENTS_PATH, MAX_MISSES, RETRIES
 BASE_URL = "https://www.wichita.edu/calendar/index.php"
 OUTPUT_FILE = EVENTS_PATH
+
+# scrape_event gives back one of these
+OK = "ok" # got an event
+EMPTY = "empty" # no event on this page
+OLD = "old" # event is too old
+ERROR = "error" # page didnt load
 
 def clean_text(text):
     return re.sub(r'\s+', ' ', text).strip()
@@ -62,25 +68,41 @@ def format_chunk(data):
 
     return text
 
+def fetch_page(url_link):
+    # wsu site times out sometimes so try a few times, None if it keeps failing
+    for attempt in range(RETRIES):
+        try:
+            res = requests.get(url_link, timeout=10)
+            print("http code: ", res.status_code)
+
+            # 404 means no event with this id
+            if res.status_code == 404:
+                return ""
+            if res.status_code < 400:
+                return res.text
+        except requests.RequestException as e:
+            print(f"request error: {e}")
+
+        time.sleep(2 * (attempt + 1))
+    return None
+
 def scrape_event(eid):
+    # returns (status, event), event is only there when status is OK
     url_link = BASE_URL + "?eID=" + str(eid)
 
-    # fetch page 
-    try:
-        res = requests.get(url_link, timeout=10)
-        print("http code: ", res.status_code)
-    except requests.RequestException as e:
-        print(f"request error: {e}")
-        return None
+    # fetch page
+    html = fetch_page(url_link)
+    if html is None:
+        return ERROR, None
 
-    soup = BeautifulSoup(res.text, "html.parser")
+    soup = BeautifulSoup(html, "html.parser")
 
 
-    # check if valid event page 
+    # check if valid event page
     article = soup.find("article", class_= "wsu_calendar_event_display")
     if not article:
         print("no article tag found, not a valid event page")
-        return None
+        return EMPTY, None
 
 
     # get title
@@ -89,7 +111,7 @@ def scrape_event(eid):
         title = clean_text(title.get_text())
     if not title:
         print("article found but no title, skipping")
-        return None
+        return EMPTY, None
     print("TITLE: ", title)
 
 
@@ -155,9 +177,9 @@ def scrape_event(eid):
 
 
     # apply date filter, ONLY keep events within last 6 or 7 months 
-    if not should_keep(start_date, categories):
+    if not should_keep(end_date or start_date, categories):
         print(f"FILTERED OUT: date {start_date} is too old")
-        return None
+        return OLD, None
 
     data = {
         "source": "event",
@@ -173,59 +195,109 @@ def scrape_event(eid):
         "description": description
     }
     data["chunk_text"] = format_chunk(data)
-    return data
+    return OK, data
 
 
-def find_existing(chunks, title):
-    for c in chunks:
-        if c["title"] == title:
-            return c
-    return None
+def load_events():
+    if os.path.exists(OUTPUT_FILE):
+        with open(OUTPUT_FILE, encoding="utf-8") as f:
+            return json.load(f)
+
+    # first time, use the events we already collected
+    if os.path.exists(CHUNKS_PATH):
+        with open(CHUNKS_PATH, encoding="utf-8") as f:
+            chunks = json.load(f)
+
+        # only the calendar events have an eid, clubs dont
+        events = []
+        for c in chunks:
+            if "eid" in c:
+                events.append(c)
+        return events
+
+    return []
+
+
+def save_events(events):
+    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+        json.dump(events, f, indent=2, ensure_ascii=False)
+
+
+def get_start_eid(events):
+    # start after the highest eID we saved
+    if not events:
+        return BOOTSTRAP_EID
+    # TODO: maybe add a lookback later, start a bit below the max (like max - 200)
+    # in case an event got published late and has a lower eID than the highest one
+    highest = 0
+    for e in events:
+        if e["eid"] > highest:
+            highest = e["eid"]
+    return highest + 1
+
+
+def sort_by_eid(by_eid):
+    # dict back to a list, lowest eID first
+    sorted_events = []
+    for eid in sorted(by_eid):
+        sorted_events.append(by_eid[eid])
+    return sorted_events
 
 
 def main():
-    EID_end = 20000
-    EID_start = 33000
     delay_time = 0.3
     save_every = 50
 
-    os.makedirs("data", exist_ok=True)
+    os.makedirs(DATA_DIR, exist_ok=True)
 
+    events = load_events()
+    eid = get_start_eid(events)
+    print(f"{len(events)} events saved already, starting at eID {eid}")
 
-    chunks = []
-    total_saved = 0
-    for i, eid in enumerate(range(EID_start, EID_end - 1, -1)):
-        print("Scraping...")
+    # one record per eID, repeats get grouped in ingest.py
+    by_eid = {}
+    for e in events:
+        by_eid[e["eid"]] = e
 
-        event = scrape_event(eid)
+    misses = 0
+    added = 0
+    scanned = 0
+    while misses < MAX_MISSES:
+        status, event = scrape_event(eid)
 
-        if event:
-            existing = find_existing(chunks, event["title"])
-            if existing:
-                if event["start_date"] < existing["start_date"]:
-                    existing["start_date"] = event["start_date"]
-                if event["start_date"] > existing["end_date"]:
-                    existing["end_date"] = event["start_date"]
-                existing["chunk_text"] = format_chunk(existing)
-                print(f"MERGED: {event['title']} (range now {existing['start_date']} to {existing['end_date']})")
-            else:
-                chunks.append(event)
-                total_saved += 1
-                print(f"SAVED EID {eid}: {event['title']}")
-                print("CHUNK TEXT:", event["chunk_text"])
+        if status == ERROR:
+            # dont skip it, next run starts here again
+            print(f"could not load eID {eid} after {RETRIES} tries, stopping. run again later")
+            break
+
+        if status == EMPTY:
+            misses += 1
+            print(f"eID {eid} is empty ({misses} in a row)")
         else:
-            print(f"eID {eid} skipped")
+            misses = 0
 
-        if i > 0 and i % 100 == 0: 
-            with open(OUTPUT_FILE, "w",  encoding="utf-8") as f:
-                json.dump(chunks, f, indent=2, ensure_ascii=False)
-            print(f"saved - {total_saved} events so far")
+        if status == OK:
+            by_eid[eid] = event
+            added += 1
+            print(f"SAVED EID {eid}: {event['title']}")
+
+        eid += 1
+        scanned += 1
+
+        if scanned % save_every == 0:
+            save_events(sort_by_eid(by_eid))
+            print(f"saved - {added} new events so far")
 
         time.sleep(delay_time)
 
-    with open(OUTPUT_FILE, "w",  encoding="utf-8") as f:
-        json.dump(chunks, f, indent=2, ensure_ascii=False)
-    print("DONE" , {total_saved})
+    # drop events that are too old now
+    kept = []
+    for e in sort_by_eid(by_eid):
+        if should_keep(e.get("end_date") or e.get("start_date", ""), e.get("categories", [])):
+            kept.append(e)
+
+    save_events(kept)
+    print(f"DONE: {added} new events, {len(by_eid) - len(kept)} too old removed, {len(kept)} total")
 
 
 if __name__ == "__main__":

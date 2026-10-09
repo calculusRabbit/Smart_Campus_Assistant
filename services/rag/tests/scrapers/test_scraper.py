@@ -1,5 +1,5 @@
 from datetime import date, timedelta
-from scrapers.scraper import should_keep
+from services.rag.scrapers.scraper import should_keep
 
 
 def test_recent_event_is_kept():

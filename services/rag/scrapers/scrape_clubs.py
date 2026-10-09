@@ -3,11 +3,15 @@ from bs4 import BeautifulSoup
 import json
 import re
 import os
+import time
 
-from config import CLUBS_PATH
-api_url = "https://wichita.campuslabs.com/engage/api/discovery/search/organizations?top=300&skip=0"
+from services.rag.config import CLUBS_PATH, DATA_DIR, RETRIES
+api_url = "https://wichita.campuslabs.com/engage/api/discovery/search/organizations"
 output_file = CLUBS_PATH
 headers = {"User-Agent": "Mozilla/5.0"}
+
+# ask for way more than there are so we get all the clubs in one request
+TOP = 1000
 
 
 def clean_text(text):
@@ -34,32 +38,39 @@ def format_chunk(club):
 
 
 def fetch_clubs():
+    # returns (clubs, total), or None if it keeps failing
     print("Fetching club from API")
-    res = requests.get(api_url, headers=headers, timeout=10)
-    print("http code:", res.status_code)
-    return res.json().get("value", [])
+    params = {"top": TOP, "skip": 0, "orderBy": "Name"}
+    for attempt in range(RETRIES):
+        try:
+            res = requests.get(api_url, params=params, headers=headers, timeout=20)
+            print("http code:", res.status_code)
+            if res.status_code == 200:
+                data = res.json()
+                return data.get("value", []), data.get("@odata.count")
+        except (requests.RequestException, ValueError) as e:
+            print(f"request error: {e}")
+
+        time.sleep(2 * (attempt + 1))
+    return None
 
 
-def load_chunks():
+def load_old_clubs():
     if os.path.exists(output_file):
         with open(output_file, "r", encoding="utf-8") as f:
-            chunks = json.load(f)
-        print(f"Loaded {len(chunks)} existing chunks")
-        return chunks
+            return json.load(f)
     return []
 
 
-def get_existing_club_titles(chunks):
-    existing = set()
-    for c in chunks:
-        if c.get("type") == "club":
-            existing.add(c["title"])
-    return existing
+def save_clubs(clubs):
+    with open(output_file, "w", encoding="utf-8") as f:
+        json.dump(clubs, f, indent=2, ensure_ascii=False)
 
 
 def parse_club(org):
     name = clean_text(org.get("Name", ""))
-    if not name:
+    club_id = org.get("Id")
+    if not name or not club_id:
         return None
 
     raw_desc = org.get("Description") or org.get("Summary") or ""
@@ -73,6 +84,7 @@ def parse_club(org):
 
     club = {
         "source": "club",
+        "id": club_id,
         "url": url,
         "title": name,
         "status": status,
@@ -84,32 +96,54 @@ def parse_club(org):
 
 
 def main():
-    os.makedirs("data", exist_ok=True)
+    os.makedirs(DATA_DIR, exist_ok=True)
 
-    organizations = fetch_clubs()
+    result = fetch_clubs()
+    if result is None:
+        print("could not load clubs, stopping. the old file is kept as it is")
+        return
+    organizations, total = result
     print(f"Total clubs found: {len(organizations)}")
 
-    chunks = load_chunks()
-    existing_titles = get_existing_club_titles(chunks)
+    # if we got less than the api says, the list got cut off
+    if total is not None and len(organizations) != total:
+        print(f"got {len(organizations)} clubs but the api says {total}, stopping. the old file is kept as it is")
+        return
 
-    total_added = 0
+    # keyed by id so a club is only saved once
+    clubs = {}
     for org in organizations:
         club = parse_club(org)
-        if not club:
-            continue
+        if club:
+            clubs[club["id"]] = club
 
-        if club["title"] in existing_titles:
-            print(f"SKIPPED (already there): {club['title']}")
-            continue
+    old_clubs = load_old_clubs()
+    if len(clubs) == 0 and len(old_clubs) > 0:
+        print("got 0 clubs, something is probably wrong. the old file is kept as it is")
+        return
 
-        chunks.append(club)
-        total_added += 1
-        print(f"ADDED: {club['title']}")
+    # compare with last time just to print what changed
+    # (old records have no id so the first run says everything is new)
+    old_by_id = {}
+    for c in old_clubs:
+        if "id" in c:
+            old_by_id[c["id"]] = c
 
-    with open(output_file, "w", encoding="utf-8") as f:
-        json.dump(chunks, f, indent=2, ensure_ascii=False)
+    added = 0
+    changed = 0
+    for club_id, club in clubs.items():
+        if club_id not in old_by_id:
+            added += 1
+        elif old_by_id[club_id]["chunk_text"] != club["chunk_text"]:
+            changed += 1
 
-    print(f"\nDONE: added {total_added} clubs, total chunks now: {len(chunks)}")
+    removed = 0
+    for club_id in old_by_id:
+        if club_id not in clubs:
+            removed += 1
+
+    save_clubs(list(clubs.values()))
+    print(f"\nDONE: {added} new, {changed} changed, {removed} removed, {len(clubs)} total")
 
 
 if __name__ == "__main__":
