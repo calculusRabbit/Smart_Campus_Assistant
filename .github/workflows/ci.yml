@@ -67,5 +67,25 @@ jobs:
       - name: Seed database
         run: python seed.py
 
-      - name: Run tests
-        run: python -m pytest -q
+      - name: Run tests with coverage
+        run: |
+          python -m pytest -q \
+            --cov=main \
+            --cov=database \
+            --cov=services \
+            --cov-report=term-missing \
+            --cov-report=xml:coverage.xml \
+            --cov-report=html:htmlcov \
+            --cov-fail-under=60 \
+            --junitxml=test-results.xml
+
+      - name: Upload test and coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-coverage-reports
+          path: |
+            test-results.xml
+            coverage.xml
+            htmlcov/
+          if-no-files-found: warn

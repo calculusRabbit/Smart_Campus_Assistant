@@ -126,6 +126,22 @@ def contains_keyword(message: str, keyword: str):
     pattern = rf"(?<!\w){re.escape(keyword)}(?!\w)"
     return re.search(pattern, message) is not None
 
+def is_event_listing_request(message: str) -> bool:
+    """Identify requests for a general list of campus events."""
+    listing_phrases = (
+        "show me",
+        "list",
+        "upcoming",
+        "what events",
+        "which events",
+        "any events",
+        "events happening",
+        "events this",
+        "campus events",
+    )
+
+    return any(phrase in message for phrase in listing_phrases)
+
 # FIRST NEW HELPER
 def extract_interests_from_message(message: str) -> list[str]:
     """Extract student interest categories from a chat message."""
@@ -288,10 +304,14 @@ def chat(request: ChatRequest):
             "data": recommended_events
         }
 
-    if any(
-    contains_keyword(message, keyword)
-    for keyword in event_keywords
-):
+    if (
+        any(
+            contains_keyword(message, keyword)
+            for keyword in event_keywords
+        )
+        and is_event_listing_request(message)
+    ):
+
         return {
             "intent": "events",
             "reply": "Here are some upcoming campus events.",
