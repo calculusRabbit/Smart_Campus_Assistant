@@ -211,3 +211,100 @@ def test_scrape_event_filters_old_events(monkeypatch):
     )
 
     assert scraper.scrape_event(12345) is None
+
+def test_main_saves_and_merges_events(monkeypatch, tmp_path):
+    from scrapers import scraper
+
+    output_file = tmp_path / "events.json"
+    monkeypatch.setattr(scraper, "OUTPUT_FILE", output_file)
+
+    # Keep the test small instead of scraping thousands of event IDs.
+    real_range = range
+
+    def small_range(*args):
+        if args == (33000, 19999, -1):
+            return iter([33000, 32999])
+        return real_range(*args)
+
+    monkeypatch.setattr("builtins.range", small_range)
+    monkeypatch.setattr(scraper.time, "sleep", lambda seconds: None)
+
+    events = {
+        33000: {
+            "title": "Japan Festival",
+            "start_date": "2026-10-20",
+            "end_date": "2026-10-20",
+        },
+        32999: {
+            "title": "Japan Festival",
+            "start_date": "2026-10-21",
+            "end_date": "2026-10-21",
+        },
+    }
+
+    def fake_scrape_event(eid):
+        event = events[eid].copy()
+        event.update({
+            "time": "10:00 AM",
+            "location": "Rhatigan Student Center",
+            "description": "Cultural celebration",
+            "categories": ["Student Life"],
+            "cost": "Free",
+        })
+        event["chunk_text"] = scraper.format_chunk(event)
+        return event
+
+    monkeypatch.setattr(scraper, "scrape_event", fake_scrape_event)
+
+    scraper.main()
+
+    import json
+
+    saved = json.loads(output_file.read_text(encoding="utf-8"))
+
+    assert len(saved) == 1
+    assert saved[0]["title"] == "Japan Festival"
+    assert saved[0]["start_date"] == "2026-10-20"
+    assert saved[0]["end_date"] == "2026-10-21"
+
+def test_scrape_event_extracts_real_wsu_location(monkeypatch):
+    from scrapers import scraper
+
+    html = """
+    <article class="wsu_calendar_event_display">
+        <h1 itemprop="name">Campus Event</h1>
+
+        <div itemprop="location"
+             itemscope
+             itemtype="http://schema.org/Place">
+            <h3 class="location heading5">Location:</h3>
+            <p>
+                <a href="/calendar/index.php?com=location&lID=38">
+                    Wilner Auditorium
+                </a>
+            </p>
+        </div>
+    </article>
+    """
+
+    class FakeResponse:
+        status_code = 200
+        text = html
+
+    monkeypatch.setattr(
+        scraper.requests,
+        "get",
+        lambda *args, **kwargs: FakeResponse()
+    )
+
+    # Avoid relying on the actual date-filtering behavior.
+    monkeypatch.setattr(
+        scraper,
+        "parse_description",
+        lambda *args, **kwargs: "Campus event at Wilner Auditorium."
+    )
+
+    event = scraper.scrape_event(33000)
+
+    assert event is not None
+    assert event["location"] == "Wilner Auditorium"
