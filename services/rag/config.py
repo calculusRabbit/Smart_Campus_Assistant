@@ -7,10 +7,11 @@ DATA_DIR = RAG_DIR / "data"
 RAG_ENABLED = os.getenv("RAG_ENABLED", "true").lower() == "true"
 
 # models
-EMBEDDING_MODEL  = "Qwen/Qwen3-Embedding-4B"
+EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 EMBEDDING_DIM = 384
-JUDGE_MODEL      = "meta-llama/Llama-3.1-8B-Instruct"
-GENERATION_MODEL = "Qwen/Qwen2.5-14B-Instruct"
+
+GENERATION_MODEL = "qwen3-direct"
+OLLAMA_URL = "http://host.docker.internal:11434"
 
 # paths
 CHUNKS_PATH = DATA_DIR / "chunks.json"

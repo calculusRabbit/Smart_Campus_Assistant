@@ -96,9 +96,22 @@ def get_deadlines():
     return {"deadlines": get_deadlines_from_database()}
 
 def find_course_by_message(message: str):
+    message = message.lower()
+
     for course in get_courses_from_database():
-        if course["code"].lower() in message or course["name"].lower() in message:
+        # Support both the legacy/CI schema and Prototype 2 schema.
+        course_code = course.get("code") or course.get("course_code") or ""
+        course_number = course.get("course_number") or ""
+        course_name = course.get("name") or course.get("course_name") or ""
+
+        full_code = f"{course_code} {course_number}".strip()
+
+        if (
+            (full_code and full_code.lower() in message)
+            or (course_name and course_name.lower() in message)
+        ):
             return course
+
     return None
 
 def find_professor_by_message(message: str):
@@ -238,10 +251,16 @@ def chat(request: ChatRequest):
 
     matched_course = find_course_by_message(message)
     if matched_course:
+        course_code = matched_course.get("code") or matched_course.get("course_code") or ""
+        course_number = matched_course.get("course_number") or ""
+        course_name = matched_course.get("name") or matched_course.get("course_name") or ""
+
+        full_code = f"{course_code} {course_number}".strip()
+
         return {
             "intent": "courses",
-            "reply": f"Here are the details for {matched_course['code']} {matched_course['name']}.",
-            "data": matched_course
+            "reply": f"Here are the details for {full_code} {course_name}.",
+            "data": matched_course,
         }
 
     matched_professor = find_professor_by_message(message)
