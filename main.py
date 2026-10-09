@@ -229,6 +229,35 @@ def get_student_event_recommendations(student_id: int):
         "recommended_events": recommended_events
     }
 
+# nothing matched in chat, ask the rag if it is on, if not say we dont know
+# (this is its own function so chat is not too complex for the linter)
+def get_fallback_reply(request: ChatRequest):
+    if RAG_ENABLED:
+        from services.rag.pipeline import query_RAG
+
+        answer, sources = query_RAG(
+            request.message,
+            history=[]
+        )
+
+        return {
+            "intent": "rag",
+            "reply": answer,
+            "sources": sources
+        }
+
+    return {
+        "intent": "unknown",
+        "reply": (
+            "I could not understand that request. "
+            "I can help with campus events, dining, courses, "
+            "professors, deadlines, and student recommendations. "
+            "Try asking something like 'What events are happening?' "
+            "or 'Tell me about CS 560.'"
+        )
+    }
+
+
 @app.post("/chat")
 def chat(request: ChatRequest):
     message = request.message.lower().strip()
@@ -353,27 +382,4 @@ def chat(request: ChatRequest):
         }
 
     else:
-        if RAG_ENABLED:
-            from services.rag.pipeline import query_RAG
-
-            answer, sources = query_RAG(
-                request.message,
-                history=[]
-            )
-
-            return {
-                "intent": "rag",
-                "reply": answer,
-                "sources": sources
-            }
-
-        return {
-            "intent": "unknown",
-            "reply": (
-                "I could not understand that request. "
-                "I can help with campus events, dining, courses, "
-                "professors, deadlines, and student recommendations. "
-                "Try asking something like 'What events are happening?' "
-                "or 'Tell me about CS 560.'"
-            )
-        }
+        return get_fallback_reply(request)
