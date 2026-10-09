@@ -10,7 +10,7 @@ RAG_ENABLED = os.getenv("RAG_ENABLED", "true").lower() == "true"
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 EMBEDDING_DIM = 384
 
-GENERATION_MODEL = "qwen3:4b"
+GENERATION_MODEL = "qwen3-direct"
 OLLAMA_URL = "http://host.docker.internal:11434"
 
 # paths

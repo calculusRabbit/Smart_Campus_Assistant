@@ -44,9 +44,31 @@ def generate_with_ollama(messages: list[dict]) -> str:
     return content.strip()
 
 def is_bad_generation(answer: str) -> bool:
-    if not answer:
+    if not answer or not answer.strip():
         return True
 
+    normalized = answer.strip().lower()
+
+    # Reject incomplete Qwen3 thinking output.
+    if "<think>" in normalized or "</think>" in normalized:
+        return True
+
+    # Detect common reasoning-style openings.
+    reasoning_prefixes = (
+        "okay, let me",
+        "let me think",
+        "let me analyze",
+        "the user is asking",
+        "the user wants",
+        "i need to check",
+        "looking at the documents",
+        "first, i need to",
+    )
+
+    if normalized.startswith(reasoning_prefixes):
+        return True
+
+    # Preserve the existing repetition detection.
     most_common_count = max(answer.count(char) for char in set(answer))
     repetition_ratio = most_common_count / len(answer)
 
@@ -71,13 +93,16 @@ def query_RAG(user_input: str, history: list) -> tuple[str, str]:
 
     today = datetime.now().strftime("%B %d, %Y")
     system_instruction = (
-        f"You are a helpful assistant for Wichita State University students. "
+        "You are a helpful assistant for Wichita State University students. "
         f"Today is {today}. "
         "Answer using only the relevant documents provided. "
         "Give a direct and concise answer, usually 2 to 4 sentences. "
         "Do not describe your reasoning process or discuss irrelevant documents. "
         "If the documents do not contain enough information to answer the question, "
-        "say you don't know based on the available information."
+        "clearly say that the information was not found in the available documents. "
+        "Do not claim that a club, event, service, or resource does not exist "
+        "just because it is not mentioned in the documents. "
+        "Never invent information that is not supported by the documents."
     )
 
     messages = [{"role": "system", "content": system_instruction}]
@@ -101,7 +126,35 @@ def query_RAG(user_input: str, history: list) -> tuple[str, str]:
         answer = generate_with_ollama(messages)
 
         if is_bad_generation(answer):
-            answer = generate_with_ollama(messages)
+            print("First RAG generation was unreliable. Retrying with a focused prompt.")
+
+            retry_messages = [
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a Wichita State University campus assistant. "
+                        "Provide only the final answer. "
+                        "Do not include reasoning, analysis, or thinking tags. "
+                        "Use only the supplied campus documents. "
+                        "If the documents do not contain enough information, "
+                        "say that the information was not found in the available documents. "
+                        "Do not claim that a club, event, service, or resource does not exist "
+                        "just because it is not mentioned in the documents. "
+                        "Never invent information that is not supported by the documents."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        f"Campus documents:\n{relevant_documents}\n\n"
+                        f"Student question: {user_input}\n\n"
+                        "Write a concise answer in 2 to 4 sentences. "
+                        "Output only the answer."
+                    ),
+                },
+            ]
+
+            answer = generate_with_ollama(retry_messages)
 
             if is_bad_generation(answer):
                 answer = (

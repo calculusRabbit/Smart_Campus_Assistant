@@ -203,3 +203,97 @@ def test_conversation_history_is_included(monkeypatch):
 
     assert answer == "The Japan Festival is a WSU event."
     assert "[1]" in sources
+
+def test_reasoning_without_closing_tag_is_bad():
+    answer = (
+        "Okay, let me tackle this question. "
+        "The user is asking about the Japan Festival. "
+        "I need to check the relevant documents provided "
+        "to find the answer."
+    )
+
+    assert is_bad_generation(answer) is True
+
+def test_ollama_successful_generation(monkeypatch):
+    from services.rag import pipeline
+
+    class FakeResponse:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {
+                "message": {
+                    "content": "The Japan Festival is a WSU event."
+                }
+            }
+
+    def fake_post(url, json, timeout):
+        assert url.endswith("/api/chat")
+        assert json["model"] == pipeline.GENERATION_MODEL
+        assert json["stream"] is False
+        assert json["think"] is False
+        assert json["options"]["temperature"] == 0
+        assert json["options"]["num_predict"] == 512
+        assert timeout == 120.0
+        return FakeResponse()
+
+    monkeypatch.setattr(pipeline.httpx, "post", fake_post)
+
+    answer = pipeline.generate_with_ollama(
+        [{"role": "user", "content": "What is the Japan Festival?"}]
+    )
+
+    assert answer == "The Japan Festival is a WSU event."
+
+
+def test_ollama_removes_qwen3_reasoning(monkeypatch):
+    from services.rag import pipeline
+
+    class FakeResponse:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {
+                "message": {
+                    "content": (
+                        "<think>Internal reasoning</think>"
+                        "\nThe Japan Festival is a WSU event."
+                    )
+                }
+            }
+
+    monkeypatch.setattr(
+        pipeline.httpx,
+        "post",
+        lambda *args, **kwargs: FakeResponse(),
+    )
+
+    answer = pipeline.generate_with_ollama(
+        [{"role": "user", "content": "What is the Japan Festival?"}]
+    )
+
+    assert answer == "The Japan Festival is a WSU event."
+
+
+def test_ollama_http_failure(monkeypatch):
+    import pytest
+
+    from services.rag import pipeline
+
+    request = httpx.Request(
+        "POST",
+        "http://host.docker.internal:11434/api/chat",
+    )
+    response = httpx.Response(status_code=500, request=request)
+
+    def fake_post(*args, **kwargs):
+        return response
+
+    monkeypatch.setattr(pipeline.httpx, "post", fake_post)
+
+    with pytest.raises(httpx.HTTPStatusError):
+        pipeline.generate_with_ollama(
+            [{"role": "user", "content": "Hello"}]
+        )

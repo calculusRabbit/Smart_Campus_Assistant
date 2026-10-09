@@ -1,0 +1,13 @@
+﻿FROM qwen3:4b
+
+TEMPLATE """{{ if .System }}<|im_start|>system
+{{ .System }}<|im_end|>
+{{ end }}{{ range .Messages }}<|im_start|>{{ .Role }}
+{{ .Content }}<|im_end|>
+{{ end }}<|im_start|>assistant
+"""
+
+SYSTEM """You are a helpful Wichita State University campus assistant. Answer questions directly and concisely. Do not include reasoning, analysis, or internal thoughts. Use only the provided campus information when answering questions about WSU."""
+
+PARAMETER temperature 0
+PARAMETER num_predict 512
