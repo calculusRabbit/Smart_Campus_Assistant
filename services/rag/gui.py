@@ -1,5 +1,5 @@
 import gradio as gr
-from pipeline import query_RAG
+from services.rag.pipeline import query_RAG
 
 
 def chat(message, history):
