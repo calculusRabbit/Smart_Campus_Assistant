@@ -256,7 +256,7 @@ ChatGPT help me write pytest tests for the FastAPI backend and the database func
 * **Associated Git Issue:** #11, #12, #20, #34
 * **Associated Feature Branch:** `feature/dabase`
 
-## Exact promot submitted
+## Exact prompt submitted
 > besides the missing inserts for the remaining tables, is there anything wrong with the dummy data populator? Find any and all errors in the script and explain them, and suggest any major improvements to be made to the code. (initial prompt)
 
 ### Shared conversation:
@@ -286,7 +286,7 @@ Perplexity reviewed my code for various errors, and gave those errors and sugges
 * **Associated Git Issue:** 35
 * **Associated Feature Branch:** `main` (various branches used to merge)
 
-## Exact promot submitted
+## Exact prompt submitted
 > update the docker-compose.yml file to suit the project. Note: backend is fastapi, frontend is react, database is postgres. if any supporting files are needed, tell me (initial prompt)
 
 ### Shared conversation:
@@ -317,7 +317,7 @@ Perplexity improved the robustness of my Docker configuration files and generate
 * **Associated Git Issue:** #45, #48
 * **Associated Feature Branch:** `main` (various branches used to merge)
 
-## Exact promot submitted
+## Exact prompt submitted
 > Help me complete the implementations of linting, static code analysis, CI/CD, security secret scanning, etc for this repository according to the requirements (up to prototype 2) in the deliverables.
 
 Repo tree: (note: the python files related to data like seed.py and database.py are temporary and can be ignored, the actual DB schema is there, called sca-database_v0.3.0.sql)
@@ -342,13 +342,109 @@ Perplexity suggested improvements to the current Ruff setup, suggested MyPy, fro
 * Compared CI configuration files to defaults
 * Implemented CIs locally and tested if they could identify errors and went away as expected, then implemented workflows and did the same.
 
+---
 
+## Entry 10: Prototype 2 - Backend and RAG Integration, Event Routing, Automated Testing, and CI/CD Improvements
 
+* **Date:** September–October 2026
+* **Team Member:** Teng Fai Leong
+* **Tool Used:** ChatGPT
+* **Associated Git Issue:** Not specified
+* **Associated Feature Branch:** `fix/prototype2-live-integration`
 
+### Exact Prompt Submitted:
+
+> Original prompts were submitted across multiple ChatGPT conversations. Exact prompt wording and conversation links should be added before final submission.
+
+### AI Output Summary & Code Generated:
+
+ChatGPT assisted with backend development, RAG integration, campus event scraping, chatbot event routing, automated testing, and CI/CD improvements for Prototype 2.
+
+The AI provided implementation guidance, code examples, debugging suggestions, terminal commands, and explanations of test results.
+
+The AI-assisted work included:
+
+- **Backend and RAG Integration:**
+  - Assisted with integrating the FastAPI backend with the local Ollama language model and RAG pipeline.
+  - Helped review document retrieval, embeddings, and response generation.
+  - Suggested debugging steps to improve retrieval reliability and response handling.
+
+- **Campus Event Scraping:**
+  - Helped identify issues with extracting event information from the Wichita State University calendar.
+  - Suggested improvements to BeautifulSoup HTML parsing and event location extraction.
+  - Assisted with creating regression tests for the scraper.
+
+- **Chatbot Event Routing:**
+  - Suggested implementing an `is_event_listing_request()` helper function.
+  - Helped modify the event-routing logic in `main.py`.
+  - Improved the chatbot's ability to distinguish general event-listing requests from questions about specific events.
+  - Allowed specific event questions to reach the RAG pipeline instead of returning a general list of upcoming events.
+
+- **Automated Testing and Coverage:**
+  - Suggested pytest and pytest-cov commands for testing inside Docker.
+  - Explained test coverage results and warnings.
+  - Assisted with generating JUnit XML, coverage XML, and HTML reports.
+
+- **GitHub Actions CI/CD:**
+  - Assisted with updating `.github/workflows/ci.yml`.
+  - Suggested enforcing the minimum 60% code coverage requirement.
+  - Helped configure automated test reporting and artifact uploads.
+  - Assisted with YAML formatting and workflow debugging.
+
+- **Git and Collaboration:**
+  - Explained Git commands for reviewing changes, comparing branches, and preparing commits.
+  - Assisted with pull request descriptions and interpreting CI results.
+  - Helped avoid committing unrelated frontend changes.
+
+### Human Review, Refactoring & Modifications Made:
+
+- Reviewed AI-generated suggestions before implementing changes in the existing FastAPI backend.
+- Modified the RAG integration and chatbot routing logic to match the project's architecture.
+- Updated event scraping logic to correctly extract event locations from the WSU calendar.
+- Added the `is_event_listing_request()` helper function to distinguish general event requests from specific event questions.
+- Added regression tests for the updated event scraper.
+- Updated the GitHub Actions workflow while preserving the team's existing CI configuration.
+- Configured pytest coverage enforcement and automated report generation.
+- Reviewed YAML formatting, Git differences, and staged files before committing changes.
+- Manually executed suggested terminal commands and verified the results.
+- Reviewed AI recommendations rather than automatically accepting generated solutions.
+
+### Verification & Testing Method:
+
+- Tested the FastAPI `/chat` endpoint and confirmed successful backend responses.
+- Verified that the RAG pipeline could answer questions using retrieved Wichita State University event information.
+- Compared extracted event information against the official WSU calendar.
+- Ran automated regression tests to verify scraper behavior.
+- Tested the `is_event_listing_request()` helper function using the following inputs:
+  - "Show me upcoming events" → `True`
+  - "What events are happening?" → `True`
+  - "What is the Love Data Week event about?" → `False`
+  - "Where is the Cabaret event held?" → `False`
+- Sent a live request to `/chat` asking about Love Data Week and confirmed:
+  - HTTP status `200`.
+  - Intent classified as `rag`.
+  - Response included an explanation of Love Data Week.
+  - Five relevant WSU calendar sources were retrieved.
+- Ran automated backend tests using pytest inside Docker.
+- Confirmed that **41 tests passed with 0 failures**.
+- Measured **62.15% total code coverage**, exceeding the required 60% threshold.
+- Generated the following test and coverage reports:
+  - `test-results.xml`
+  - `coverage.xml`
+  - `htmlcov/`
+- Reviewed a non-failing Starlette deprecation warning.
+- Validated the GitHub Actions workflow YAML syntax.
+- Confirmed that the GitHub Actions `lint-and-test` workflow completed successfully.
+- Verified that test and coverage report artifacts were uploaded successfully.
+- Confirmed that the CI workflow enforces the 60% minimum coverage requirement.
+
+**Relevant Commit:** `b20f570` — Improve event question routing and automate CI coverage reports
+
+**Repository:** https://github.com/calculusRabbit/Smart_Campus_Assistant
+
+---
 
 ## Audit Certification
 I certify as Team Lead that all entries above accurately represent AI usage within this project phase, all prompts have been recorded, and all code has been validated by human review and automated testing.
 
 **Team Lead Signature:** *Arpan Dey* — **Date:** October 08, 2026
-
-
