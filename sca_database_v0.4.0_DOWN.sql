@@ -1,5 +1,4 @@
--- Migration rollback (down) file for sca_database_v0.3.0.sql
--- Naming for this file will follow the naming for its corresponding UP file
+-- Migration rollback (down) file for sca_database_v0.4.0.sql
 
 BEGIN;
 
@@ -21,6 +20,8 @@ DROP INDEX idx_dining_location;
 DROP INDEX idx_dining_items_dining;
 
 DROP TABLE IF EXISTS Attendance;
+
+DROP TABLE IF EXISTS Event_embeddings;
 
 DROP TABLE IF EXISTS Scraped_information;
 
@@ -48,13 +49,13 @@ DROP TABLE IF EXISTS Reviews_dining;
 
 DROP TABLE IF EXISTS Reviews_educational;
 
-DROP TABLE IF EXISTS Review_replies;
-
 DROP TRIGGER trg_update_review_votes ON Review_votes;
 
 DROP FUNCTION update_review_votes;
 
 DROP TABLE IF EXISTS Review_votes;
+
+DROP TABLE IF EXISTS Review_replies;
 
 DROP TABLE IF EXISTS Reviews_generic;
 

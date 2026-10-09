@@ -1,7 +1,7 @@
 # requires: psycopg, bcrypt
-# populates existing postgres DB according to sca_database_v0.3.0.sql with dummy data
+# populates existing postgres DB according to sca_database_v0.4.0.sql with dummy data
 
-# run command: python <this_script_name> <DSN>
+# run command: python <this_script_name> <DSN> --reset
     #DSN format: postgresql://[user[:password]@][netloc][:port][/dbname][?param1=value1&...]
 
 
@@ -10,10 +10,13 @@ import argparse
 #import os
 import random
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
+from typing import LiteralString
 
 import bcrypt
 import psycopg
+
+# from psycopg.rows import TupleRow
 from psycopg.types.json import Jsonb
 
 #=================================Static Values=================================
@@ -29,7 +32,7 @@ password_hash = bcrypt.hashpw(dummy_password.encode("utf-8"), salt).decode("utf-
 #script creates this many admin users and this many student users
 user_count = 20
 
-now = datetime.now(timezone.utc)
+now = datetime.now(UTC)
 
 anon_username_fields = ["student","campus","uni","college","whistleblower","reviewer","critic"]
 
@@ -37,27 +40,27 @@ anon_username_fields = ["student","campus","uni","college","whistleblower","revi
 
 
 #wipes any existing dummy data from all tables for a fresh re-population
-def erase_data(cur):
+def erase_data(cur: psycopg.Cursor) -> None:
     cur.execute("""
         TRUNCATE Schools, Users, Departments, Locations, Events, Dining, 
         Courses, Sessions, Enrolments, Offerings, Students, Deadlines, Instructors, 
         Reviews_generic, Review_votes, Review_replies, Reviews_educational, 
         Reviews_dining, Dining_items, Reviews_resources, Authentications, Notifications,
         Groups, Memberships, Registrations, Event_responses, Scraped_information, 
-        Attendance
+        Attendance, Event_embeddings
         RESTART IDENTITY CASCADE""")
 
 
 # runs an insert operation and returns the serials created
-def insert(cur, query, params):
+def insert(cur: psycopg.Cursor, query: LiteralString, params:tuple) -> int | str:
     cur.execute(query, params)
-    return cur.fetchone()[0]
+    return cur.fetchone()[0] # type: ignore
 
 #inserts dummy data into all tables
-def insert_all(cur):
+def insert_all(cur: psycopg.Cursor):  # noqa: C901 - done since this is a dev script that just inserts data into many tables
     
     school_ids = []
-    for i in range(10):
+    for i in range(min(10, user_count)):
         school_id = insert(cur, "INSERT INTO Schools (school_name) VALUES (%s) RETURNING school_id",
         (f"{random.choice(('University', 'College'))} of Test {i+1}",)
         )
@@ -94,12 +97,13 @@ def insert_all(cur):
         cur.execute("UPDATE Schools SET location_id = %s WHERE school_id = %s", 
                     (location_id, school_id))
 
-
+    usernames = []
 
     for i in range(user_count):
+        admin_username = f"test_admin{i}"
         insert(cur, "INSERT INTO Users (username, account_type, hashed_password) "
-        "VALUES (%s,%s,%s) RETURNING username", (f"test_admin{i}","admin",password_hash))
-
+        "VALUES (%s,%s,%s) RETURNING username", (admin_username,"admin",password_hash))
+        usernames.append(admin_username)
 
     student_ids = []
     usernames_by_student = {}
@@ -112,7 +116,7 @@ def insert_all(cur):
         "email, edu_email, zipcode, account_status, created_at, interests) "
         "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING student_id", (username, 
         f"TestFirstName{i}", f"Test last Names{i}", datetime(random.randint(1970,2009),
-        random.randint(1,12), random.randint(1,28), tzinfo=timezone.utc).date(),
+        random.randint(1,12), random.randint(1,28), tzinfo=UTC).date(),
         f"student_personal-email{i}@test.com",
         f"test_edu_email-{username}@test.edu", f"{random.randint(0, 99999):05d}", 
         random.choice(["pending", "open", "denied", "closed"]), 
@@ -121,6 +125,7 @@ def insert_all(cur):
         "geography", "music"], ["travelling", "art", "languages"]))))
         student_ids.append(student_id)
         usernames_by_student[student_id] = username
+        usernames.append(username)
 
 
 
@@ -197,8 +202,8 @@ def insert_all(cur):
             "offering_session, class_timings, school_id, primary_instructor) " 
             "VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING offering_id",
             (f"{course_id+1234}",course_id, location_id, session_id, 
-            Jsonb([{'days': [0,2], 'times': [['11:00','12:15']]}, 
-                   {'days': [1,3,4,5,6], 'times': []}]), 
+            Jsonb([{'days': [2,4], 'times': [['11:00','12:15']]}, 
+                   {'days': [0,1,3,5,6], 'times': []}]), 
             school_id,
             random.choice(dept_instructors)))
         offering_ids.append((offering_id, course_id, dept_id, school_id, session_id))
@@ -215,7 +220,7 @@ def insert_all(cur):
     
     
     dining_items = []
-    for dining_id, school_id, location_id in dining_locations:
+    for dining_id, school_id, _location_id in dining_locations:
         # pick a random student from the school for review item added by
         student = random.choice(students_by_school[school_id])
         for i in range(10):
@@ -234,7 +239,7 @@ def insert_all(cur):
     review_times = {}
     for student_id in student_ids:
         school_id = school_by_student[student_id]
-        review_time = now - timedelta(hours=random.randint(1,100))
+        review_time = now - timedelta(hours=random.randint(1,10))
         
         #splitting reviews into categories
         review_state = random.choice(("excellent", "very good", 
@@ -270,9 +275,9 @@ def insert_all(cur):
         anonymous_username = None
         if is_anonymous:
             anonymous_username = (
-                f"{random.choice(anon_username_fields).title()}_"
-                f"{random.choice(anon_username_fields).title()}"
-                f"{random.randint(0,9)}{random.randint(0,9)}"
+            f"{random.choice(anon_username_fields).title()}_"
+            f"{random.choice(anon_username_fields).title()}"
+            f"{random.randint(0,9)}{random.randint(0,9)}"
             )
         
         review_id = insert(cur, "INSERT INTO Reviews_generic (student_id, school_id, rating, "
@@ -285,7 +290,7 @@ def insert_all(cur):
         review_times[review_id] = review_time
 
 
-    for review_id, student_id, school_id in reviews_generic:
+    for review_id, student_id, _school_id in reviews_generic:
         if random.choice((True, False)):
             random_student = random.choice(student_ids)
             #ensure voter is not the review author
@@ -294,7 +299,8 @@ def insert_all(cur):
             insert(cur, "INSERT INTO Review_votes (review_id, voter_id, is_upvote, "
             "vote_time) VALUES (%s,%s,%s,%s) RETURNING review_id", 
             (review_id, random_student, random.choice((True, False)), 
-            review_times[review_id] + timedelta(minutes=random.randint(1, 7 * 24 * 60))))
+            review_times[review_id] + timedelta(seconds=random.randint(
+                0, int((now - review_times[review_id]).total_seconds())))))
 
 
 
@@ -308,11 +314,11 @@ def insert_all(cur):
             (offering_id, course_id, dept_id, session_id)
         )
 
-    for dining_id, school_id, location_id in dining_locations:
+    for dining_id, school_id, _location_id in dining_locations:
         dining_by_school[school_id].append(dining_id)
         items_by_dining[dining_id] = []
 
-    for dining_id, item_id, item_name in dining_items:
+    for dining_id, _item_id, item_name in dining_items:
         items_by_dining[dining_id].append(item_name)
 
 
@@ -321,73 +327,224 @@ def insert_all(cur):
 
     #Review_replies
     
-    #Reviews_educational
+    review_replies = []
+    for review_id, student_id, _school_id in reviews_generic:
+        if random.choice((True, False)):
+            
+            random_student = random.choice(student_ids)
+            #ensure voter is not the review author
+            while random_student == student_id:
+                random_student = random.choice(student_ids)
+            
+            reply_type = random.choice(("agree", "disagree", "add-details", "question"))
+            match reply_type:
+                case "agree":
+                    reply_content = "I agree with your review!"
+                    #action = "upvote"
+                case "disagree":
+                    reply_content = "I disagree with your review!"
+                    #action = "downvote"
+                case "add-details":
+                    reply_content = "Adding on more info!"
+                case "question":
+                    reply_content = "I'm asking a question!"
+
+            is_anonymous = random.choice([True, False])
+            anonymous_username = None
+            if is_anonymous:
+                anonymous_username = (
+                f"{random.choice(anon_username_fields).title()}_"
+                f"{random.choice(anon_username_fields).title()}"
+                f"{random.randint(0,9)}{random.randint(0,9)}"
+            )            
+            reply_id = insert(cur, "INSERT INTO Review_replies (review_id, "
+                              "replier_id, anonymous_reply, anonymous_username, "
+                              "reply_content, reply_time) "
+                              "VALUES (%s,%s,%s,%s,%s,%s) RETURNING reply_id",
+                              (review_id, random_student, is_anonymous, anonymous_username,
+                               reply_content, 
+                               review_times[review_id]+
+                               timedelta(seconds=random.randint(
+                                   0, int((now - review_times[review_id]).total_seconds()))
+                                   )
+                                )
+                        )
+            review_replies.append((reply_id, review_id, random_student))
+
     
-    #Reviews_dining
+    #Reviews_educational, Reviews_dining, Reviews_resources
+    for i, (review_id, student_id, school_id) in enumerate(reviews_generic):
+        if i % 3 == 0:
+            offering_id, _course_id, dept_id, _session_id = random.choice(
+            offerings_by_school[school_id])
+            instructor_id = random.choice([ instructor_id for instructor_id, department_id, 
+                                           _school_id in instructor_ids if department_id == dept_id
+            ])
+
+            insert(cur, "INSERT INTO Reviews_educational (review_id, student_id, offering_id, "
+                   "instructor_id, department_id, class_method, student_tips) "
+                   "VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING review_id",
+                   (review_id, student_id, offering_id, instructor_id, dept_id,
+                    "in-person", "start on homework early and go to lectures!"))
+
+        elif i % 3 == 1:
+            dining_id = random.choice(dining_by_school[school_id])
+            ordered_items = random.sample(items_by_dining[dining_id], random.randint(1,3))
+            spent_min = random.randint(5,30)
+
+            insert(cur, "INSERT INTO Reviews_dining (review_id, dining_id, ordered_items, "
+                   "diner_count, spent_range, order_method, cleanliness_rating, service_rating, "
+                   "spiciness_rating, recommended_food, avoid_food, accommodates_diets) "
+                   "VALUES (%s,%s,%s,%s,%s::int4range,%s,%s,%s,%s,%s,%s,%s) RETURNING review_id",
+                   (review_id, dining_id, ordered_items, random.randint(1,4),
+                    f"[{spent_min},{spent_min+11})",
+                    random.choice(("dine-in","drive-through","pickup","delivery",
+                                   "other app delivery")), random.randint(2,10)/2,
+                                   random.randint(2,10)/2, random.randint(2,10)/2,
+                                   ordered_items[:1], [], []))
+
+        else:
+            insert(cur, "INSERT INTO Reviews_resources (review_id, resource_type, campus_staff) "
+                   "VALUES (%s,%s,%s) RETURNING review_id", (review_id, random.choice((
+                       "academic", "campus facilities", "tech support", "parking", "internet/WiFi",
+                         "management", "club/org", "fundraising")), ["test staff"]))
     
-    #Reviews_resources
     
-    # Events
-    # Populate test events for PostgreSQL integration and API tests.
+    
+    
+    #Events
     event_ids = []
-    for i, (dept_id, school_id) in enumerate(department_ids):
-        location_id = location_by_school[school_id]
+    for location_id, school_id in location_ids:
+        event_creator = random.choice(usernames)
+        event_name = random.choice(("Test club", "Test department", 
+                                    "Test school", "Test org")) + " " + random.choice(("Party",
+                                    "Social","Game night","Mixer","Hackathon")) 
+        event_start = now + timedelta(days=random.randint(1,14))
+        event_end = event_start + timedelta(hours=random.randint(1,5))
 
-        event_start = now + timedelta(days=i + 1)
-        event_end = event_start + timedelta(hours=2)
+        event_time = ('{["' + event_start.isoformat()+ '","'+ event_end.isoformat() +'")}')
 
-        event_id = insert(
-            cur,
-            """
-            INSERT INTO Events (
-                event_name,
-                event_time,
-                event_location,
-                event_description,
-                event_creator,
-                event_tags,
-                event_department
-            )
-            VALUES (
-                %s,
-                tstzmultirange(tstzrange(%s, %s, '[)')),
-                %s,
-                %s,
-                %s,
-                %s,
-                %s
-            )
-            RETURNING event_id
-            """,
-            (
-                f"Test Campus Event {i + 1}",
-                event_start,
-                event_end,
-                location_id,
-                f"Test event for department {dept_id}.",
-                f"test_admin{i % user_count}",
-                ["campus", "student"],
-                dept_id
-            )
-        )
-
+        event_id = insert(cur,"INSERT INTO Events (event_name, event_time, event_location, "
+                          "event_description,event_creator, event_tags, public_cost, student_cost) "
+                          "VALUES (%s,%s::tstzmultirange,%s,%s,%s,%s,%s,%s) RETURNING event_id",
+                          (event_name, event_time, location_id,
+                           "Test campus event", event_creator, ["test", "campus"], 10.00, 0.00))
         event_ids.append((event_id, school_id))
     
     #Event_responses
+    for event_id, school_id in event_ids:
+        for student_id in students_by_school[school_id]:
+            insert(cur, "INSERT INTO Event_responses (username, event_id, response_time, "
+                   "user_action) VALUES (%s,%s,%s,%s) RETURNING response_id",
+                    (usernames_by_student[student_id], event_id, now, 
+                    random.choice(("saved", "dismissed", "opened"))))
     
     #Deadlines
+    for student_id in student_ids:
+        insert(cur, "INSERT INTO Deadlines (student_id, deadline_action, deadline_datetime, "
+               "deadline_description) VALUES (%s,%s,%s,%s) RETURNING deadline_id",
+               (student_id, "assignment due", now + timedelta(days=random.randint(1,14)),
+                "test assignment deadline"))
+
     
     #Authentications
+    #pending status inserted, then updated to denied/approved so trigger runs as normal
+    for student_id in student_ids:
+        cur.execute("SELECT account_status, created_at FROM Students WHERE student_id = %s",
+                    (student_id,))
+        account_status, created_at = cur.fetchone() # pyright: ignore[reportGeneralTypeIssues]
+        auth_id = insert(cur, "INSERT INTO Authentications (student_id, status, documents, "
+                         "submitted_time) VALUES (%s,%s,%s,%s) RETURNING authentication_id",
+            (student_id, "pending",[f"dummy://documents/{student_id}.pdf"], created_at))
+        if account_status != "pending":
+            if account_status == "denied":
+                status = "denied"
+            else:
+                status = "approved"
+            cur.execute("UPDATE Authentications SET status=%s, reviewed_time=%s, admin_message=%s "
+                        "WHERE authentication_id = %s",(status, now, "dummy decision", auth_id))
+    
+    
     
     #Notifications
+    for username in usernames:
+        sent_time = now - timedelta(hours=random.randint(1,48))
+        read_time = None
+        if random.choice((True,False)):
+            read_time = now - timedelta(seconds=random.randint(1,300))
+        insert(cur, "INSERT INTO Notifications (username, notification_title,notification_message, "
+               "sent_time, read_time) VALUES (%s,%s,%s,%s,%s) RETURNING notification_id",
+               (username, "test notification", "test notification message", sent_time, read_time))
+
     
     #Groups
-    
+    group_ids = []
+    for dept_id, school_id in department_ids:
+        group_owner = usernames_by_student[students_by_school[school_id][0]]
+        group_id = insert(cur, "INSERT INTO Groups (group_name, group_description, group_owner, "
+                "is_verified, created_at, school_id, department_id, group_type, "
+                 "group_contact, group_links) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) "
+                 "RETURNING group_id", (f"test group {school_id}", "test campus club", group_owner, 
+                                        True, (now - timedelta(days=random.randint(5,120))).date(), 
+                                        school_id, dept_id, "club",
+                                        Jsonb({"email": f"club{school_id}@test.edu"}),
+                                        Jsonb({"website": f"test.edu/orgs/{school_id}"})))
+        group_ids.append((group_id, school_id, group_owner))
+
+
+
     #Memberships
+    for group_id, school_id, group_owner in group_ids:
+        for student_id in students_by_school[school_id]:
+            username = usernames_by_student[student_id]
+            if username == group_owner:
+                membership_status = "active"
+            else:
+                membership_status= random.choice(("active", "pending", "denied", "cancelled"))
+
+            roles = ["member"]
+            if username == group_owner:
+                roles.append("owner")
+            membership_end = None
+            if membership_status == "cancelled":
+                membership_end = now
+            
+            insert(cur,"INSERT INTO Memberships (username, group_id, roles, membership_start, " 
+            "membership_end, membership_status) VALUES (%s,%s,%s,%s,%s,%s) "
+            "RETURNING username", (username, group_id, roles, 
+                                        now - timedelta(days=random.randint(1,4)),
+            membership_end, membership_status))
+        
     
     #Registrations
+    registrations = []
+    for student_id in student_ids:
+        school_id = school_by_student[student_id]
+        for offering_id, _course_id, _dept_id, session_id in offerings_by_school[school_id]:
+            insert(cur,"INSERT INTO Registrations (student_id, offering_id, study_group, auditing) "
+                "VALUES (%s,%s,%s,%s) RETURNING student_id", 
+                (student_id,offering_id, random.choice((True,False)),False))
+            registrations.append((student_id, offering_id, session_id))
+
     
     #Attendance
+
+    session_dates = {}
+    for session_id, _school_id in session_ids:
+        cur.execute("SELECT session_start, session_end FROM Sessions WHERE session_id = %s",
+                    (session_id,))
+        session_dates[session_id] = cur.fetchone()
+
+    for student_id, offering_id, session_id in registrations:
+        session_start, session_end = session_dates[session_id]
+        for i in range(14):
+            attendance_date = session_start + timedelta(days=i)
+            class_day = (attendance_date.weekday() + 1) % 7
+            if attendance_date<= min(session_end,now.date()) and class_day in (2,4):
+                cur.execute("INSERT INTO Attendance (student_id, offering_id, attendance_date, " \
+                "student_present) VALUES (%s,%s,%s,%s)", (student_id, offering_id, attendance_date,
+                                                          random.choice((True,True,False))))
+
 
 
 def main():
@@ -425,13 +582,14 @@ def main():
                 erase_data(cur)
             
             insert_all(cur)
-            print("Fresh dummy data inserted into database")
             conn.commit()
+            print("Fresh dummy data inserted into database")
+
 
     except psycopg.errors.OperationalError as ex:
         sys.exit(f"Failed to connect to / write to database: {ex}")
     except psycopg.errors.UniqueViolation as ex:
-        print(f"Failed to write to field due to unique constraint: {ex}")
+        sys.exit(f"Failed to write to field due to unique constraint: {ex}")
     except psycopg.DatabaseError as ex:
         sys.exit(f"A stopping database failure ocurred: {ex}")
 
