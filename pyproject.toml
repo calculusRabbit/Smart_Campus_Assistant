@@ -6,7 +6,7 @@ extend-exclude = [
     "database.py",
     "seed.py",
     "dummy_data_populator_v0.4.0.py",
-    "services/rag/data",
+    "services/rag/",
 ]
 
 [tool.ruff.lint]
@@ -33,7 +33,7 @@ files = [
     "main.py",
     "models.py",
     "services/recommendation_service.py",
-    "services/rag",
+  #  "services/rag",
 ]
 exclude = [
     "^services/rag/tests/",
