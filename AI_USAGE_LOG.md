@@ -217,11 +217,138 @@ ChatGPT also provided example test cases for the RAG data-processing functions, 
 * Reviewed failed tests to distinguish between incorrect test expectations and issues in the implementation.
 * Manually reviewed the final test cases to confirm that each test represented the intended behavior of the RAG pipeline.
 
---
+---
+
+
+## Entry 6: Prototype 2 - Automated tests for the backend API and database
+
+* **Date:** October 8 2026
+* **Team Member:** Vu Nguyen
+* **Tool Used:** Claude (Claude Code)
+* **Associated Git Issue:** `#55` - Test results: backend API and database tests
+* **Associated Feature Branch:** `feature/tests-api-database` (PR #54)
+
+### Shared conversation:
+
+* https://chatgpt.com/share/6ac86677-2100-83ea-acfd-d6cf9a4025e9
+
+
+### AI Output Summary & Code Generated:
+
+ChatGPT help me write pytest tests for the FastAPI backend and the database functions:  They check the status code and response shape of every endpoind
+
+### Human Review, Refactoring & Modifications Made:
+
+* Read the tests file by file and asked for explanations of fixtures, `conftest.py`, `monkeypatch` and `assert` until I understood them.
+
+### Verification & Testing Method:
+
+* Ran `docker compose exec backend python -m pytest -v --cov` against the seeded PostgreSQL database: 98 tests passed, 84% coverage (target 60%).
+* The tests run in GitHub Actions (`CI / lint-and-test`) on PR #54, and the check passed.
+* Test log and coverage numbers are posted in Issue `#57`.
+
+
+## Entry 7: Prototype 2 - Fixing and improving DB schema, DOWN script, and dummy data populator
+
+* **Date:** September 8, 2026 (started chat)
+* **Team Member:** Arpan Dey
+* **Tool Used:** Perplexity
+* **Associated Git Issue:** #11, #12, #20, #34
+* **Associated Feature Branch:** `feature/dabase`
+
+## Exact promot submitted
+> besides the missing inserts for the remaining tables, is there anything wrong with the dummy data populator? Find any and all errors in the script and explain them, and suggest any major improvements to be made to the code. (initial prompt)
+
+### Shared conversation:
+* [https://www.perplexity.ai/search/6aba9d07-3074-4955-a6d9-da4c6ec235bd](https://www.perplexity.ai/search/6aba9d07-3074-4955-a6d9-da4c6ec235bd)
+
+
+### AI Output Summary & Code Generated:
+
+Perplexity reviewed my code for various errors, and gave those errors and suggested corrections and improvements.
+
+### Human Review, Refactoring & Modifications Made:
+
+* Read the errors and decided which mattered, evaluated solutions, and implemented them. Did cross-research using the web to verify solutions and find better ones.
+
+### Verification & Testing Method:
+
+* Checked using linters (Ruff, Supabase, etc).
+* Implemented and pushed to Supabase (dev environment), and checked for errors and inspected tables and data.
+
+---
+
+## Entry 8: Prototype 2 - Configuring and improving Docker setup
+
+* **Date:** September 10, 2026 (started chat)
+* **Team Member:** Arpan Dey
+* **Tool Used:** Perplexity
+* **Associated Git Issue:** 35
+* **Associated Feature Branch:** `main` (various branches used to merge)
+
+## Exact promot submitted
+> update the docker-compose.yml file to suit the project. Note: backend is fastapi, frontend is react, database is postgres. if any supporting files are needed, tell me (initial prompt)
+
+### Shared conversation:
+
+*[ https://www.perplexity.ai/search/2a000a10-ac22-4d18-97e2-c8b29706b83f](https://www.perplexity.ai/search/2a000a10-ac22-4d18-97e2-c8b29706b83f)
+
+
+### AI Output Summary & Code Generated:
+
+Perplexity improved the robustness of my Docker configuration files and generated corresponding Dockerfiles and .dockerignore files for the backend and frontend after further prompting. 
+
+### Human Review, Refactoring & Modifications Made:
+
+* Read through docker files and asked Perplexity about the configurations, looked up sections on the web, and implemented docker file and ran test and build commands to confirm setup was working. 
+
+### Verification & Testing Method:
+
+* Ran test and build commands to confirm setup was working
+* Troubleshooted resource consumption (time and RAM) by setting RAG_ENABLED to False
+
+---
+
+## Entry 9: Prototype 2 - Configuring and improving CI workflows
+
+* **Date:** October 7, 2026 (started chat)
+* **Team Member:** Arpan Dey
+* **Tool Used:** Perplexity
+* **Associated Git Issue:** #45, #48
+* **Associated Feature Branch:** `main` (various branches used to merge)
+
+## Exact promot submitted
+> Help me complete the implementations of linting, static code analysis, CI/CD, security secret scanning, etc for this repository according to the requirements (up to prototype 2) in the deliverables.
+
+Repo tree: (note: the python files related to data like seed.py and database.py are temporary and can be ignored, the actual DB schema is there, called sca-database_v0.3.0.sql)
+<repository \tree in markdown format>
+(initial prompt)
+
+### Shared conversation:
+
+*[https://www.perplexity.ai/search/5e7ee750-24d9-4f54-aea2-27ab4ca853a2](https://www.perplexity.ai/search/5e7ee750-24d9-4f54-aea2-27ab4ca853a2)
+
+
+### AI Output Summary & Code Generated:
+
+Perplexity suggested improvements to the current Ruff setup, suggested MyPy, frontend tsc CI workflows, and a quality CI workflow.
+
+### Human Review, Refactoring & Modifications Made:
+
+* Read through configuration .yml files and looked up sections, and asked Perplexity to explain its decisions. Made changes for robustness based on recommendations and defaults from the web.
+
+### Verification & Testing Method:
+
+* Compared CI configuration files to defaults
+* Implemented CIs locally and tested if they could identify errors and went away as expected, then implemented workflows and did the same.
+
+
+
+
 
 ## Audit Certification
 I certify as Team Lead that all entries above accurately represent AI usage within this project phase, all prompts have been recorded, and all code has been validated by human review and automated testing.
 
-**Team Lead Signature:** *Arpan Dey* — **Date:** September 10, 2026
+**Team Lead Signature:** *Arpan Dey* — **Date:** October 08, 2026
 
 
