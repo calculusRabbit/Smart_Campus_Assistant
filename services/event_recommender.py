@@ -98,7 +98,9 @@ class EventRecommender:
 
         return cls(events, index, embed)
 
-    def recommend(self, likes_text, dislikes=None, top_k=10, today=None):
+    def recommend(self, likes_text, dislikes=None, top_k=10, today=None, now=None):
+        if now is None:
+            now = datetime.now(ZoneInfo("America/Chicago"))
         if dislikes is None:
             dislikes = []
         if today is None:
@@ -113,6 +115,11 @@ class EventRecommender:
             if i == -1:
                 continue
             event = self.events[i]
+
+            # Exclude events that have already ended, including earlier today.
+            end_text = event.get("end_datetime")
+            if end_text and datetime.fromisoformat(end_text) <= now:
+                continue
 
             # old events and events the student said they dont like
             when = next_date(event, today)
