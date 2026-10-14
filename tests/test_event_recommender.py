@@ -1,9 +1,9 @@
-﻿from datetime import date
+﻿from datetime import date, datetime
+from zoneinfo import ZoneInfo
 
 import numpy as np
 
 from services.event_recommender import EventRecommender, next_date
-
 
 TODAY = date(2026, 10, 13)
 
@@ -74,8 +74,6 @@ def test_event_beyond_lookahead_excluded():
         "programming", today=TODAY
     )
     assert results == []
-from datetime import datetime
-from zoneinfo import ZoneInfo
 
 
 def test_completed_event_excluded():

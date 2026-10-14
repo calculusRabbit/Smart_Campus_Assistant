@@ -274,15 +274,56 @@ def get_fallback_reply(request: ChatRequest):
     }
 
 
-@app.post("/chat")
-def chat(request: ChatRequest):
-    message = request.message.lower().strip()
+def _is_shockersync_event_request(message):
+    event_terms = ("event", "events", "activity", "activities", "club meeting", "workshop")
+    interest_terms = (
+        "computer science", "programming", "coding", "python",
+        "artificial intelligence", "machine learning", "ai club",
+    )
+    return any(term in message for term in event_terms) and (
+        "event" in message or "events" in message
+        or any(term in message for term in interest_terms)
+    )
 
+
+def _get_shockersync_event_reply(message):
+    try:
+        from services.interest_expansion import extract_event_interests
+
+        search_interests = extract_event_interests(message)
+        upcoming_events = get_recommender().recommend(search_interests, top_k=5)
+        return {
+            "intent": "recommendations",
+            "reply": (
+                "Here are some upcoming Wichita State campus events "
+                "related to your question."
+                if upcoming_events else
+                "I couldn't find matching upcoming campus events in the current index."
+            ),
+            "data": upcoming_events,
+        }
+    except Exception as error:
+        print("Chat event recommendation error:", error)
+        return {
+            "intent": "recommendations",
+            "reply": "Campus event recommendations are temporarily unavailable.",
+            "data": [],
+        }
+
+
+def _validate_chat_message(message):
     if not message:
         raise HTTPException(
             status_code=400,
             detail="Message cannot be empty."
         )
+
+
+@app.post("/chat")
+def chat(request: ChatRequest):
+    message = request.message.lower().strip()
+
+    _validate_chat_message(message)
 
     event_keywords = ["event", "events", "activity", "activities", "career fair", "competition"]
     dining_keywords = ["dining", "food", "eat", "cafeteria", "restaurant", "hungry"]
@@ -309,36 +350,8 @@ def chat(request: ChatRequest):
     ]
 
     # Use indexed ShockerSync events for event-related chatbot questions.
-    event_terms = ("event", "events", "activity", "activities", "club meeting", "workshop")
-    interest_terms = (
-        "computer science", "programming", "coding", "python",
-        "artificial intelligence", "machine learning", "ai club",
-    )
-    if any(term in message for term in event_terms) and (
-        "event" in message or "events" in message
-        or any(term in message for term in interest_terms)
-    ):
-        try:
-            from services.interest_expansion import extract_event_interests
-            search_interests = extract_event_interests(message)
-            upcoming_events = get_recommender().recommend(search_interests, top_k=5)
-            return {
-                "intent": "recommendations",
-                "reply": (
-                    "Here are some upcoming Wichita State campus events "
-                    "related to your question."
-                    if upcoming_events else
-                    "I couldn't find matching upcoming campus events in the current index."
-                ),
-                "data": upcoming_events,
-            }
-        except Exception as error:
-            print("Chat event recommendation error:", error)
-            return {
-                "intent": "recommendations",
-                "reply": "Campus event recommendations are temporarily unavailable.",
-                "data": [],
-            }
+    if _is_shockersync_event_request(message):
+        return _get_shockersync_event_reply(message)
 
     matched_course = find_course_by_message(message)
     if matched_course:

@@ -8,7 +8,10 @@ INTEREST_ACTIVITIES = {
     "python": "Python programming workshops and software development events",
     "artificial intelligence": "AI club meetings and artificial intelligence workshops",
     "machine learning": "machine learning workshops and AI club meetings",
-    "computer science": "computer science clubs, technology workshops, and software development events",
+    "computer science": (
+        "computer science clubs, technology workshops, "
+        "and software development events"
+    ),
     "career": "career fairs, internship opportunities, and professional networking events",
     "internship": "internship opportunities, career fairs, and employer networking events",
 }
@@ -21,7 +24,10 @@ def expand_interests(text):
     seen = set()
 
     for interest, description in INTEREST_ACTIVITIES.items():
-        if re.search(r"(?<!\w)" + re.escape(interest) + r"(?!\w)", normalized) and description not in seen:
+        if (
+            re.search(r"(?<!\w)" + re.escape(interest) + r"(?!\w)", normalized)
+            and description not in seen
+        ):
             activities.append(description)
             seen.add(description)
 

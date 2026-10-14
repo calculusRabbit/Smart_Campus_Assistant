@@ -4,8 +4,8 @@ from zoneinfo import ZoneInfo
 
 import numpy as np
 
-from services.rag.config import ALL_EVENTS_PATH, EVENTS_EMBEDDING_MODEL, EVENTS_INDEX_PATH
 from services.interest_expansion import expand_interests
+from services.rag.config import ALL_EVENTS_PATH, EVENTS_EMBEDDING_MODEL, EVENTS_INDEX_PATH
 from services.recommender_config import (
     LOOKAHEAD_DAYS,
     LOOKBACK_DAYS,
@@ -115,31 +115,13 @@ class EventRecommender:
         for score, i in zip(scores[0], ids[0], strict=True):
             if i == -1:
                 continue
+
             event = self.events[i]
-
-            # Exclude events that have already ended, including earlier today.
-            end_text = event.get("end_datetime")
-            if end_text and datetime.fromisoformat(end_text) <= now:
+            scored = _score_upcoming_event(event, score, dislikes, today, now)
+            if scored is None:
                 continue
 
-            # old events and events the student said they dont like
-            when = next_date(event, today)
-            if when is None or mentions_dislike(event, dislikes):
-                continue
-
-            # the cutoff is for how well the event matches, the rules below only change the order
-            final_score = float(score)
-            if final_score < MIN_SCORE:
-                continue
-
-            # too far away
-            days = (date.fromisoformat(when) - today).days
-            if days > LOOKAHEAD_DAYS:
-                continue
-
-            if days < SOON_DAYS:
-                final_score += SOON_BOOST
-            final_score = min(1.0, final_score)
+            when, final_score = scored
 
             categories = event["categories"]
             results.append({
@@ -156,6 +138,30 @@ class EventRecommender:
 
         results.sort(key=get_score, reverse=True)
         return results[:top_k]
+
+
+def _score_upcoming_event(event, score, dislikes, today, now):
+    # Exclude events that have already ended, including earlier today.
+    end_text = event.get("end_datetime")
+    if end_text and datetime.fromisoformat(end_text) <= now:
+        return None
+
+    when = next_date(event, today)
+    if when is None or mentions_dislike(event, dislikes):
+        return None
+
+    final_score = float(score)
+    if final_score < MIN_SCORE:
+        return None
+
+    days = (date.fromisoformat(when) - today).days
+    if days > LOOKAHEAD_DAYS:
+        return None
+
+    if days < SOON_DAYS:
+        final_score += SOON_BOOST
+
+    return when, min(1.0, final_score)
 
 
 def get_score(result):
