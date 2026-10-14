@@ -95,3 +95,27 @@ def test_ongoing_event_recommended():
 
     assert len(results) == 1
     assert results[0]["event_name"] == "Programming Workshop"
+
+
+def test_duplicate_event_recommended_once():
+    class DuplicateIndex:
+        ntotal = 2
+
+        def search(self, vector, count):
+            return (
+                np.array([[0.9, 0.8]], dtype=np.float32),
+                np.array([[0, 1]], dtype=np.int64),
+            )
+
+    event = make_event("2026-10-20")
+    recommender = EventRecommender(
+        [event, event.copy()],
+        DuplicateIndex(),
+        lambda text: np.zeros((1, 384), dtype=np.float32),
+    )
+
+    results = recommender.recommend("programming", today=TODAY)
+
+    assert len(results) == 1
+    assert results[0]["event_id"] == "shockersync-123"
+    assert results[0]["score"] == 90

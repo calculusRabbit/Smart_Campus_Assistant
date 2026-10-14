@@ -137,7 +137,19 @@ class EventRecommender:
             })
 
         results.sort(key=get_score, reverse=True)
-        return results[:top_k]
+
+        unique_results = []
+        seen_events = set()
+
+        for result in results:
+            event_key = (result["event_id"], result["event_date"])
+            if event_key in seen_events:
+                continue
+
+            seen_events.add(event_key)
+            unique_results.append(result)
+
+        return unique_results[:top_k]
 
 
 def _score_upcoming_event(event, score, dislikes, today, now):
