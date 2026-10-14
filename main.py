@@ -308,6 +308,38 @@ def chat(request: ChatRequest):
     "interest",
     ]
 
+    # Use indexed ShockerSync events for event-related chatbot questions.
+    event_terms = ("event", "events", "activity", "activities", "club meeting", "workshop")
+    interest_terms = (
+        "computer science", "programming", "coding", "python",
+        "artificial intelligence", "machine learning", "ai club",
+    )
+    if any(term in message for term in event_terms) and (
+        "event" in message or "events" in message
+        or any(term in message for term in interest_terms)
+    ):
+        try:
+            from services.interest_expansion import extract_event_interests
+            search_interests = extract_event_interests(message)
+            upcoming_events = get_recommender().recommend(search_interests, top_k=5)
+            return {
+                "intent": "recommendations",
+                "reply": (
+                    "Here are some upcoming Wichita State campus events "
+                    "related to your question."
+                    if upcoming_events else
+                    "I couldn't find matching upcoming campus events in the current index."
+                ),
+                "data": upcoming_events,
+            }
+        except Exception as error:
+            print("Chat event recommendation error:", error)
+            return {
+                "intent": "recommendations",
+                "reply": "Campus event recommendations are temporarily unavailable.",
+                "data": [],
+            }
+
     matched_course = find_course_by_message(message)
     if matched_course:
         course_code = matched_course.get("code") or matched_course.get("course_code") or ""

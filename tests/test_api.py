@@ -157,11 +157,33 @@ def test_chat_without_a_message_is_422():
 
 def test_chat_events(monkeypatch):
     no_matches(monkeypatch)
-    response = client.post("/chat", json={"message": "what events are happening"})
+
+    sample_event = {
+        "event_name": "AI Club Meeting",
+        "event_date": "2026-10-28",
+        "event_time": "17:00",
+        "event_location": "Wichita State University",
+    }
+
+    class FakeRecommender:
+        def recommend(self, message, top_k=5):
+            assert message == "what events are happening"
+            assert top_k == 5
+            return [sample_event]
+
+    monkeypatch.setattr("main.get_recommender", lambda: FakeRecommender())
+
+    response = client.post(
+        "/chat",
+        json={"message": "what events are happening"},
+    )
     data = response.json()
 
-    assert data["intent"] == "events"
-    assert isinstance(data["data"], list)
+    assert response.status_code == 200
+    assert data["intent"] == "recommendations"
+    assert len(data["data"]) == 1
+    assert data["data"][0]["event_name"] == "AI Club Meeting"
+    assert data["data"][0]["event_date"] == "2026-10-28"
 
 
 def test_chat_dining(monkeypatch):

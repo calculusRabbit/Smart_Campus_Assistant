@@ -5,6 +5,7 @@ from zoneinfo import ZoneInfo
 import numpy as np
 
 from services.rag.config import ALL_EVENTS_PATH, EVENTS_EMBEDDING_MODEL, EVENTS_INDEX_PATH
+from services.interest_expansion import expand_interests
 from services.recommender_config import (
     LOOKAHEAD_DAYS,
     LOOKBACK_DAYS,
@@ -108,7 +109,7 @@ class EventRecommender:
         if likes_text.strip() == "":
             return []
 
-        scores, ids = self.index.search(self.embed(likes_text), SEARCH_SIZE)
+        scores, ids = self.index.search(self.embed(expand_interests(likes_text)), SEARCH_SIZE)
 
         results = []
         for score, i in zip(scores[0], ids[0], strict=True):
