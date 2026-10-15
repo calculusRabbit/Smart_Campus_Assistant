@@ -68,6 +68,48 @@ def mentions_dislike(event, dislikes):
     return False
 
 
+TOPIC_KEYWORDS = {
+    "programming": (
+        "programming", "coding", "software development", "python",
+        "github", "hackathon", "computer science", "developer",
+    ),
+    "career": (
+        "career", "networking", "internship", "job fair",
+        "employment", "employer", "recruiting", "resume",
+        "r?sum?", "professional development",
+    ),
+    "soccer": ("soccer", "football", "futbol"),
+}
+
+
+def matches_event_topic(event, interests):
+    """Require explicit topic evidence for recognized interests."""
+    import re
+
+    query = interests.casefold()
+    selected_topics = [
+        topic
+        for topic in TOPIC_KEYWORDS
+        if re.search(r"(?<!\\w)" + re.escape(topic) + r"(?!\\w)", query)
+    ]
+
+    if not selected_topics:
+        return True
+
+    text = " ".join([
+        str(event.get("title", "")),
+        str(event.get("description", "")),
+        str(event.get("organization", "")),
+        " ".join(event.get("categories", [])),
+    ]).casefold()
+
+    return any(
+        re.search(r"(?<!\\w)" + re.escape(keyword) + r"(?!\\w)", text)
+        for topic in selected_topics
+        for keyword in TOPIC_KEYWORDS[topic]
+    )
+
+
 class EventRecommender:
     def __init__(self, events, index, embed):
         # embed turns a text into a normalized vector
@@ -113,7 +155,9 @@ class EventRecommender:
                 continue
 
             event = self.events[i]
-            scored = _score_upcoming_event(event, score, dislikes, today, now)
+            scored = _score_matching_event(
+                event, score, dislikes, today, now, likes_text
+            )
             if scored is None:
                 continue
 
@@ -146,6 +190,12 @@ class EventRecommender:
             unique_results.append(result)
 
         return unique_results[:top_k]
+
+
+def _score_matching_event(event, score, dislikes, today, now, likes_text):
+    if not matches_event_topic(event, likes_text):
+        return None
+    return _score_upcoming_event(event, score, dislikes, today, now)
 
 
 def _score_upcoming_event(event, score, dislikes, today, now):
