@@ -275,7 +275,19 @@ def get_fallback_reply(request: ChatRequest):
 
 
 def _is_shockersync_event_request(message):
-    message = message.lower()
+    message = message.lower().strip()
+
+    explanation_prefixes = (
+        "what is the purpose of",
+        "what's the purpose of",
+        "explain what",
+        "explain how",
+        "explain why",
+        "describe the purpose of",
+    )
+    if message.startswith(explanation_prefixes):
+        return False
+
     event_terms = (
         "event", "activity", "activities", "club meeting",
         "workshop", "networking",
