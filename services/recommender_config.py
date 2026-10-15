@@ -1,8 +1,7 @@
 # settings for the event recommendations (services/event_recommender.py)
 
-# events that started up to this many days ago still count, 0 means only events that are not over
-# one year for now because the event data is old, go back to 0 when the events are fresh
-LOOKBACK_DAYS = 365
+# only consider events dated today or later
+LOOKBACK_DAYS = 0
 
 # events that are more than this many days away are not shown
 LOOKAHEAD_DAYS = 30
