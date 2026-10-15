@@ -307,6 +307,8 @@ def test_shockersync_event_request_ignores_unrelated_questions():
         "what is the weather today",
         "tell me about cs 560",
         "where can i get lunch",
+        "what is the purpose of the hpc training event",
+        "explain what students learn in the hpc workshop",
     )
 
     for question in questions:
