@@ -55,11 +55,11 @@ def extract_event_interests(question):
     interests = []
 
     for interest in INTEREST_ACTIVITIES:
-        if re.search(r"(?<!\\w)" + re.escape(interest) + r"(?!\\w)", normalized):
+        if re.search(r"(?<!\w)" + re.escape(interest) + r"(?!\w)", normalized):
             interests.append(interest)
 
     for alias, interest in INTEREST_ALIASES.items():
-        if re.search(r"(?<!\\w)" + re.escape(alias) + r"(?!\\w)", normalized):
+        if re.search(r"(?<!\w)" + re.escape(alias) + r"(?!\w)", normalized):
             if interest not in interests:
                 interests.append(interest)
 

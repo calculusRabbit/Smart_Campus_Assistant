@@ -95,3 +95,50 @@ def test_ongoing_event_recommended():
 
     assert len(results) == 1
     assert results[0]["event_name"] == "Programming Workshop"
+
+
+def test_duplicate_event_recommended_once():
+    class DuplicateIndex:
+        ntotal = 2
+
+        def search(self, vector, count):
+            return (
+                np.array([[0.9, 0.8]], dtype=np.float32),
+                np.array([[0, 1]], dtype=np.int64),
+            )
+
+    event = make_event("2026-10-20")
+    recommender = EventRecommender(
+        [event, event.copy()],
+        DuplicateIndex(),
+        lambda text: np.zeros((1, 384), dtype=np.float32),
+    )
+
+    results = recommender.recommend("programming", today=TODAY)
+
+    assert len(results) == 1
+    assert results[0]["event_id"] == "shockersync-123"
+    assert results[0]["score"] == 90
+
+def test_multi_day_event_uses_next_upcoming_date():
+    event = make_event("2026-10-14")
+    event["dates"] = ["2026-10-12", "2026-10-14", "2026-10-16"]
+    event["end_date"] = "2026-10-16"
+
+    assert next_date(event, date(2026, 10, 15)) == "2026-10-16"
+
+def test_multi_day_event_does_not_invent_todays_occurrence():
+    recommender = make_recommender("2026-08-24")
+    event = recommender.events[0]
+    event["end_date"] = "2026-10-24"
+    event["end_datetime"] = "2026-10-24T21:00:00-05:00"
+    event["description"] = "Soccer practice every Monday and Wednesday."
+
+    now = datetime(2026, 10, 15, 12, 0, tzinfo=ZoneInfo("America/Chicago"))
+    results = recommender.recommend(
+        "soccer", today=date(2026, 10, 15), now=now
+    )
+
+    assert len(results) == 1
+    assert results[0]["event_date"] == "Ongoing through 2026-10-24"
+    assert results[0]["event_name"] == "Programming Workshop"

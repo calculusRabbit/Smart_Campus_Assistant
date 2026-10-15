@@ -275,15 +275,12 @@ def get_fallback_reply(request: ChatRequest):
 
 
 def _is_shockersync_event_request(message):
-    event_terms = ("event", "events", "activity", "activities", "club meeting", "workshop")
-    interest_terms = (
-        "computer science", "programming", "coding", "python",
-        "artificial intelligence", "machine learning", "ai club",
+    message = message.lower()
+    event_terms = (
+        "event", "activity", "activities", "club meeting",
+        "workshop", "networking",
     )
-    return any(term in message for term in event_terms) and (
-        "event" in message or "events" in message
-        or any(term in message for term in interest_terms)
-    )
+    return any(term in message for term in event_terms)
 
 
 def _get_shockersync_event_reply(message):

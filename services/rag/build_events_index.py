@@ -1,6 +1,5 @@
 import json
-from datetime import datetime, timedelta, timezone
-from pathlib import Path
+from datetime import UTC, datetime
 from zoneinfo import ZoneInfo
 
 import faiss
@@ -29,7 +28,7 @@ def local_datetime(value):
 def fetch_events():
     events = []
     skip = 0
-    cutoff = datetime.now(timezone.utc).isoformat()
+    cutoff = datetime.now(UTC).isoformat()
 
     while True:
         response = requests.get(
@@ -74,12 +73,9 @@ def transform_event(raw):
     organization = raw.get("organizationName") or ""
     title = raw.get("name") or ""
 
-    dates = []
-    current = start.date()
-    last = end.date() if end else current
-    while current <= last:
-        dates.append(current.isoformat())
-        current += timedelta(days=1)
+    # Preserve the event's date range without inventing daily occurrences.
+    last = end.date() if end else start.date()
+    dates = [start.date().isoformat()]
 
     text = (
         f"{title}. Hosted by {organization}. "
