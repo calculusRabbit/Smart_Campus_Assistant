@@ -283,3 +283,31 @@ def test_find_course_and_professor_return_none_for_other_text():
 
     assert find_course_by_message("qwertyuiop") is None
     assert find_professor_by_message("qwertyuiop") is None
+
+
+def test_shockersync_event_request_recognizes_natural_questions():
+    from main import _is_shockersync_event_request
+
+    questions = (
+        "are there any soccer activities this week",
+        "what career workshops are available",
+        "show me upcoming sports activities",
+        "are there any internship networking events",
+        "what ai events are happening",
+    )
+
+    for question in questions:
+        assert _is_shockersync_event_request(question), question
+
+
+def test_shockersync_event_request_ignores_unrelated_questions():
+    from main import _is_shockersync_event_request
+
+    questions = (
+        "what is the weather today",
+        "tell me about cs 560",
+        "where can i get lunch",
+    )
+
+    for question in questions:
+        assert not _is_shockersync_event_request(question), question

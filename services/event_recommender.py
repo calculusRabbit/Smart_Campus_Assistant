@@ -1,5 +1,5 @@
 import json
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
 import numpy as np
@@ -8,7 +8,6 @@ from services.interest_expansion import expand_interests
 from services.rag.config import ALL_EVENTS_PATH, EVENTS_EMBEDDING_MODEL, EVENTS_INDEX_PATH
 from services.recommender_config import (
     LOOKAHEAD_DAYS,
-    LOOKBACK_DAYS,
     MAX_TAG_WORDS,
     MIN_SCORE,
     SEARCH_SIZE,
@@ -46,8 +45,7 @@ def profile_to_text(interests):
 
 def next_date(event, today):
     # the first date of the event that is in the window, None if they are all too old
-    today_text = today.isoformat()
-    oldest_text = (today - timedelta(days=LOOKBACK_DAYS)).isoformat()
+    oldest_text = today.isoformat()
 
     upcoming = []
     for d in event["dates"]:
@@ -56,10 +54,8 @@ def next_date(event, today):
     if len(upcoming) > 0:
         return min(upcoming)
 
-    # an event over many days that is still going on
-    if event["end_date"] and event["end_date"] >= today_text:
-        return today_text
-
+    # Do not invent occurrences within a multi-day event's date range.
+    # The source may describe a recurring schedule without providing exact dates.
     return None
 
 
@@ -159,18 +155,36 @@ def _score_upcoming_event(event, score, dislikes, today, now):
         return None
 
     when = next_date(event, today)
-    if when is None or mentions_dislike(event, dislikes):
+    if mentions_dislike(event, dislikes):
         return None
+
+    ongoing_range = False
+    if when is None:
+        start_date = event.get("start_date")
+        if start_date is None:
+            dates = event.get("dates") or []
+            start_date = min(dates) if dates else None
+
+        end_date = event.get("end_date")
+        if (
+            start_date
+            and end_date
+            and start_date < today.isoformat() <= end_date
+        ):
+            when = f"Ongoing through {end_date}"
+            ongoing_range = True
+        else:
+            return None
 
     final_score = float(score)
     if final_score < MIN_SCORE:
         return None
 
-    days = (date.fromisoformat(when) - today).days
+    days = 0 if ongoing_range else (date.fromisoformat(when) - today).days
     if days > LOOKAHEAD_DAYS:
         return None
 
-    if days < SOON_DAYS:
+    if not ongoing_range and days < SOON_DAYS:
         final_score += SOON_BOOST
 
     return when, min(1.0, final_score)
