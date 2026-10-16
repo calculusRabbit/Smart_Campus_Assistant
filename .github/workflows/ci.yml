@@ -101,26 +101,17 @@ jobs:
             --cov-fail-under=60 \
             --junitxml=test-results.xml
 
-      - name: Upload test and coverage reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-test-coverage-reports
-          path: |
-            test-results.xml
-            coverage.xml
-            htmlcov/
-          if-no-files-found: warn
-      - name: Upload quality and test evidence
+      - name: Upload backend quality and test evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: backend-quality-test-evidence
           path: |
             reports/
+            test-results.xml
             coverage.xml
             htmlcov/
-            test-results.xml
+          if-no-files-found: warn
           retention-days: 30
 
   frontend-quality:
