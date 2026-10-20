@@ -27,7 +27,7 @@ def generate_with_ollama(messages: list[dict]) -> str:
             "think": False,
             "options": {
                 "temperature": 0,
-                "num_predict": 512,
+                "num_predict": 2048,
             },
         },
         timeout=120.0,

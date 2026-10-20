@@ -157,11 +157,33 @@ def test_chat_without_a_message_is_422():
 
 def test_chat_events(monkeypatch):
     no_matches(monkeypatch)
-    response = client.post("/chat", json={"message": "what events are happening"})
+
+    sample_event = {
+        "event_name": "AI Club Meeting",
+        "event_date": "2026-10-28",
+        "event_time": "17:00",
+        "event_location": "Wichita State University",
+    }
+
+    class FakeRecommender:
+        def recommend(self, message, top_k=5):
+            assert message == "what events are happening"
+            assert top_k == 5
+            return [sample_event]
+
+    monkeypatch.setattr("main.get_recommender", lambda: FakeRecommender())
+
+    response = client.post(
+        "/chat",
+        json={"message": "what events are happening"},
+    )
     data = response.json()
 
-    assert data["intent"] == "events"
-    assert isinstance(data["data"], list)
+    assert response.status_code == 200
+    assert data["intent"] == "recommendations"
+    assert len(data["data"]) == 1
+    assert data["data"][0]["event_name"] == "AI Club Meeting"
+    assert data["data"][0]["event_date"] == "2026-10-28"
 
 
 def test_chat_dining(monkeypatch):
@@ -261,3 +283,31 @@ def test_find_course_and_professor_return_none_for_other_text():
 
     assert find_course_by_message("qwertyuiop") is None
     assert find_professor_by_message("qwertyuiop") is None
+
+
+def test_shockersync_event_request_recognizes_natural_questions():
+    from main import _is_shockersync_event_request
+
+    questions = (
+        "are there any soccer activities this week",
+        "what career workshops are available",
+        "show me upcoming sports activities",
+        "are there any internship networking events",
+        "what ai events are happening",
+    )
+
+    for question in questions:
+        assert _is_shockersync_event_request(question), question
+
+
+def test_shockersync_event_request_ignores_unrelated_questions():
+    from main import _is_shockersync_event_request
+
+    questions = (
+        "what is the weather today",
+        "tell me about cs 560",
+        "where can i get lunch",
+    )
+
+    for question in questions:
+        assert not _is_shockersync_event_request(question), question

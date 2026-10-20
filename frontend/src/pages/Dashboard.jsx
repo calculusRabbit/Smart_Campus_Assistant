@@ -68,7 +68,10 @@ function chatDataToLines(result) {
     let item = items[i];
 
     if (result.intent === "events" || result.intent === "recommendations") {
-      lines.push(item.event_name + " | " + item.event_date + " " + item.event_time + " | " + item.event_location);
+      lines.push({
+        text: item.event_name + " | " + item.event_date + " " + item.event_time + " | " + item.event_location,
+        url: item.url
+      });
     }
     else if (result.intent === "dining") {
       lines.push(item.dining_name + " | " + item.dining_location + " | " + item.opening_time + " - " + item.closing_time + " | " + item.dining_status);
@@ -120,7 +123,25 @@ function ChatPanel() {
     let m = messages[i];
     let lineList = [];
     for (let j = 0; j < m.lines.length; j++) {
-      lineList.push(<p key={j} className={styles.chatLine}>- {m.lines[j]}</p>);
+      const line = m.lines[j];
+      const eventLine = typeof line === "object" && line !== null;
+      const url = eventLine ? line.url : null;
+      const validUrl = typeof url === "string" &&
+        /^https:\/\/wichita\.campuslabs\.com\/engage\/event\/\d+$/.test(url);
+
+      lineList.push(
+        <p key={j} className={styles.chatLine}>
+          - {eventLine ? line.text : line}
+          {validUrl && (
+            <>
+              {" "}
+              <a href={url} target="_blank" rel="noopener noreferrer">
+                View on ShockerSync
+              </a>
+            </>
+          )}
+        </p>
+      );
     }
 
     let isUser = m.from === "user";

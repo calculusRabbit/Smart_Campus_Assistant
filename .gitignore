@@ -138,3 +138,8 @@ pnpm-debug.log*
 postgres-data/
 
 venv-rag/
+
+# Generated AI event recommendation data
+/services/rag/data/all_events.json
+/services/rag/data/events_index.faiss
+/services/rag/data/shockersync_events.json

@@ -234,7 +234,7 @@ def test_ollama_successful_generation(monkeypatch):
         assert json["stream"] is False
         assert json["think"] is False
         assert json["options"]["temperature"] == 0
-        assert json["options"]["num_predict"] == 512
+        assert json["options"]["num_predict"] == 2048
         assert timeout == 120.0
         return FakeResponse()
 
