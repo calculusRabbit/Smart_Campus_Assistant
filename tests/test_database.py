@@ -29,8 +29,8 @@ def test_format_clock_bad_text_stays_the_same():
 
 def test_get_first_times_skips_entries_without_times():
     schedule = [
-        {"days": [0]}, # let see no time given
-        {"days": [1, 3], "times": [["10:00", "11:15"]]}, # tuesday thursday
+        {"days": [0]},  # let see no time given
+        {"days": [1, 3], "times": [["10:00", "11:15"]]},  # tuesday thursday
     ]
     days, times = get_first_times(schedule)
 
@@ -90,8 +90,16 @@ def test_events_have_the_fields_the_frontend_uses():
 
     assert len(events) > 0
     for event in events:
-        for key in ("event_id", "event_name", "event_date", "event_time",
-                    "event_location", "event_description", "event_category", "event_tags"):
+        for key in (
+            "event_id",
+            "event_name",
+            "event_date",
+            "event_time",
+            "event_location",
+            "event_description",
+            "event_category",
+            "event_tags",
+        ):
             assert key in event
         assert isinstance(event["event_tags"], list)
 
