@@ -480,3 +480,61 @@ if __name__ == "__main__":
     insert_sample_professors()
     insert_sample_dining()
     print("Smart Campus database initialized successfully.")
+
+def get_course_details(course_code: str, course_number: str):
+    """Retrieve course details and offerings from PostgreSQL."""
+    with get_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    c.course_id,
+                    c.course_code,
+                    c.course_number,
+                    c.course_name,
+                    c.course_description,
+                    c.course_credits,
+                    o.offering_id,
+                    o.course_crn,
+                    o.class_timings,
+                    s.session_name,
+                    s.academic_year,
+                    i.instructor_fname,
+                    i.instructor_lnames
+                FROM courses AS c
+                LEFT JOIN offerings AS o
+                    ON o.course_id = c.course_id
+                LEFT JOIN sessions AS s
+                    ON s.session_id = o.offering_session
+                LEFT JOIN instructors AS i
+                    ON i.instructor_id = o.primary_instructor
+                WHERE LOWER(c.course_code) = LOWER(%s)
+                  AND LOWER(c.course_number) = LOWER(%s)
+                ORDER BY s.academic_year DESC NULLS LAST,
+                         o.offering_id
+                """,
+                (course_code, course_number),
+            )
+            return cursor.fetchall()
+
+def get_courses_by_professor(professor: str):
+    """Find courses by primary or secondary instructor name."""
+    with get_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT DISTINCT c.*
+                FROM courses AS c
+                JOIN offerings AS o ON o.course_id = c.course_id
+                LEFT JOIN instructors AS i
+                    ON i.instructor_id = o.primary_instructor
+                LEFT JOIN instructors AS i2
+                    ON i2.instructor_id = o.secondary_instructor
+                WHERE CONCAT_WS(' ', i.instructor_fname, i.instructor_lnames)
+                        ILIKE %s
+                   OR CONCAT_WS(' ', i2.instructor_fname, i2.instructor_lnames)
+                        ILIKE %s
+                """,
+                (f"%{professor}%", f"%{professor}%"),
+            )
+            return cursor.fetchall()

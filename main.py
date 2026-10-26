@@ -7,6 +7,8 @@ from fastapi.staticfiles import StaticFiles
 
 from database import (
     get_courses_from_database,
+    get_course_details,
+    get_courses_by_professor,
     get_deadlines_from_database,
     get_dining_from_database,
     get_events_from_database,
@@ -74,14 +76,12 @@ def get_courses(
     if code:
         courses = [
             course for course in courses
-            if code.lower() in course["code"].lower()
+            if code.lower() in str(course.get("course_code") or course.get("code") or "").lower()
         ]
 
     if professor:
-        courses = [
-            course for course in courses
-            if professor.lower() in course["professor"].lower()
-        ]
+        matching_ids = {course["course_id"] for course in get_courses_by_professor(professor)}
+        courses = [course for course in courses if course["course_id"] in matching_ids]
 
     return {"courses": courses}
 
@@ -157,13 +157,12 @@ def get_event_recommendations(interests: list[str]):
     ]
 
     for event in get_events_from_database():
-        category = event["event_category"].lower()
-
-        related_interests = recommendation_service.related_interests(category)
+        event_tags = {str(tag).lower().strip() for tag in (event.get("event_tags") or [])}
 
         if any(
-            interest in related_interests
+            tag in event_tags
             for interest in normalized_interests
+            for tag in [interest, *recommendation_service.related_interests(interest)]
         ):
             recommended_events.append(event)
 
@@ -267,6 +266,12 @@ def chat(request: ChatRequest):
 
     matched_course = find_course_by_message(message)
     if matched_course:
+        code = matched_course.get("code") or matched_course.get("course_code") or ""
+        number = matched_course.get("course_number") or ""
+        if code and number:
+            detailed_reply = build_course_reply(code, number)
+            if detailed_reply:
+                return detailed_reply
         course_code = matched_course.get("code") or matched_course.get("course_code") or ""
         course_number = matched_course.get("course_number") or ""
         course_name = matched_course.get("name") or matched_course.get("course_name") or ""
@@ -383,3 +388,26 @@ def chat(request: ChatRequest):
                 "or 'Tell me about CS 560.'"
             )
         }
+
+def build_course_reply(course_code: str, course_number: str):
+    """Format course details from PostgreSQL."""
+    records = get_course_details(course_code, course_number)
+    if not records:
+        return None
+    course = records[0]
+    code = f"{course['course_code']} {course['course_number']}"
+    reply = f"{code}: {course['course_name']} ({course['course_credits']:g} credits)."
+    if course["course_description"]:
+        reply += f" Description: {course['course_description']}"
+    for row in records:
+        if row["offering_id"] is None:
+            continue
+        instructor = " ".join(str(row[k]) for k in ("instructor_fname", "instructor_lnames") if row[k])
+        if instructor:
+            reply += f" Instructor: {instructor}."
+        if row["session_name"]:
+            reply += f" Semester: {row['session_name']}."
+        break
+    if course_code.upper() == "TEST":
+        reply = "TEST DATA ONLY (not verified WSU information). " + reply
+    return {"intent": "courses", "reply": reply, "data": records}
