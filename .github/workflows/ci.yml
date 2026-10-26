@@ -139,6 +139,23 @@ jobs:
         run: npm run build
 
       - name: Audit frontend dependencies
+        shell: bash
         run: |
           mkdir -p ../reports
-          npm audit --audit-level=low --json > ../reports/npm-audit.json
+
+          audit_status=0
+          npm audit --audit-level=low --json \
+            > ../reports/npm-audit.json || audit_status=$?
+
+          cat ../reports/npm-audit.json
+
+          exit "$audit_status"
+
+      - name: Upload frontend dependency audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dependency-audit-evidence
+          path: reports/npm-audit.json
+          if-no-files-found: warn
+          retention-days: 30
