@@ -212,13 +212,27 @@ def test_chat_finds_a_course_by_its_code():
 
 
 def test_chat_finds_a_professor_by_name():
-    # courses and professors are checked first, so use a name that is not a course name
-    professor = client.get("/professors").json()["professors"][0]
+    # Select a uniquely named professor so the lookup is unambiguous.
+    professors = client.get("/professors").json()["professors"]
 
-    data = client.post("/chat", json={"message": professor["professor_name"].lower()}).json()
+    name_counts = {}
+    for professor in professors:
+        name = professor["professor_name"].lower()
+        name_counts[name] = name_counts.get(name, 0) + 1
 
-    assert data["intent"] in ("professors", "courses")
-    assert data["data"] is not None
+    professor = next(
+        professor
+        for professor in professors
+        if name_counts[professor["professor_name"].lower()] == 1
+    )
+
+    data = client.post(
+        "/chat",
+        json={"message": professor["professor_name"].lower()},
+    ).json()
+
+    assert data["intent"] == "professors"
+    assert data["data"]["professor_id"] == professor["professor_id"]
 
 
 def test_chat_recommendation_for_coding(monkeypatch, fake_events):

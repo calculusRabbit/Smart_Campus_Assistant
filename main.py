@@ -116,11 +116,36 @@ def find_course_by_message(message: str):
     return None
 
 def find_professor_by_message(message: str):
-    for professor in get_professors_from_database():
-        name = professor["professor_name"].lower()
-        last_word = name.split()[-1]
-        if name in message or last_word in message:
-            return professor
+    professors = get_professors_from_database()
+    message = message.lower()
+
+    # Prefer matching a professor's complete name.
+    full_matches = [
+        professor
+        for professor in professors
+        if contains_keyword(message, professor["professor_name"].lower())
+    ]
+
+    if len(full_matches) == 1:
+        return full_matches[0]
+
+    if len(full_matches) > 1:
+        return None
+
+    # Only match surnames as complete words.
+    surname_matches = [
+        professor
+        for professor in professors
+        if contains_keyword(
+            message,
+            professor["professor_name"].lower().split()[-1],
+        )
+    ]
+
+    # Avoid guessing when multiple professors share a surname.
+    if len(surname_matches) == 1:
+        return surname_matches[0]
+
     return None
 
 def contains_keyword(message: str, keyword: str):
