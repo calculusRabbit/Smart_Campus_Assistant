@@ -74,20 +74,87 @@ def is_bad_generation(answer: str) -> bool:
 
     return repetition_ratio > 0.5
 
+
+def prioritize_campus_documents(question, indices, scores):
+    """Prioritize exact campus entities while retaining semantic retrieval."""
+    import re
+
+    normalized = question.casefold()
+
+    priority_urls = []
+
+    if re.search(r"(?<!\\w)wulug(?!\\w)", normalized):
+        priority_urls.append(
+            "https://wichita.campuslabs.com/engage/organization/wulug"
+        )
+
+    if "shockersync" in normalized and any(
+        term in normalized
+        for term in ("what is", "purpose", "used for", "platform", "portal")
+    ):
+        priority_urls.extend([
+            "https://wichita.campuslabs.com/engage/organization/seb",
+            "https://wichita.campuslabs.com/engage/organizations",
+        ])
+
+    prioritized = []
+    seen = set()
+
+    for url in priority_urls:
+        for index, chunk in enumerate(chunks):
+            if chunk.get("url", "").rstrip("/") == url.rstrip("/"):
+                if index not in seen:
+                    prioritized.append((index, 1.0))
+                    seen.add(index)
+                break
+
+    for index, score in zip(indices, scores, strict=True):
+        index = int(index)
+        if index < 0 or index in seen:
+            continue
+
+        prioritized.append((index, float(score)))
+        seen.add(index)
+
+    return prioritized[:TOP_K]
+
 def query_RAG(user_input: str, history: list) -> tuple[str, str]:
     # retrieve relevant chunks
     query_vector = embed_query(user_input)
     distances, indices = search_similar(document_index, query_vector, top_k=TOP_K)
 
-    # build relevant documents
+    # Prioritize known campus entities, then include semantic matches.
+    selected_documents = prioritize_campus_documents(
+        user_input, indices, distances
+    )
+
     relevant_documents = ""
     sources_text = ""
-    for idx, i in enumerate(indices):
-        if i == -1:
-            continue
+
+    # An exact WuLUG question should use its official campus document,
+    # rather than unrelated semantic matches that can confuse generation.
+    import re
+
+    if re.search(r"(?<!\w)wulug(?!\w)", user_input.casefold()) or (
+        "wichita state university linux users group" in user_input.casefold()
+    ):
+        official_documents = [
+            (i, score)
+            for i, score in selected_documents
+            if chunks[i].get("url", "").rstrip("/").endswith(
+                "/engage/organization/wulug"
+            )
+        ]
+        if official_documents:
+            selected_documents = official_documents
+
+    for rank, (i, score) in enumerate(selected_documents, 1):
         relevant_documents += chunks[i]["chunk_text"] + "\n\n"
-        sources_text += f"[{idx+1}] {chunks[i]['title']}\n"
-        sources_text += f" Score: {distances[idx]:.4f}\n"
+        sources_text += f"[{rank}] {chunks[i]['title']}\n"
+        if score == 1.0:
+            sources_text += " Source: Prioritized campus document\n"
+        else:
+            sources_text += f" Score: {score:.4f}\n"
         sources_text += f" URL: {chunks[i]['url']}\n\n"
 
 
@@ -123,7 +190,37 @@ def query_RAG(user_input: str, history: list) -> tuple[str, str]:
 
     # Generate the answer using local Ollama inference
     try:
-        answer = generate_with_ollama(messages)
+        # Use a focused prompt for the official WuLUG document.
+        # The longer general-purpose prompt has produced inconsistent
+        # answers for this organization.
+        is_wulug_question = (
+            "wulug" in user_input.casefold()
+            or "wichita state university linux users group"
+            in user_input.casefold()
+        )
+
+        if is_wulug_question and len(selected_documents) == 1:
+            focused_messages = [
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a Wichita State University campus assistant. "
+                        "Answer directly in 2 or 3 complete sentences. "
+                        "Use only the supplied document. "
+                        "Do not include reasoning or analysis."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        f"Campus document:\n{relevant_documents}\n\n"
+                        f"Question: {user_input}"
+                    ),
+                },
+            ]
+            answer = generate_with_ollama(focused_messages)
+        else:
+            answer = generate_with_ollama(messages)
 
         if is_bad_generation(answer):
             print("First RAG generation was unreliable. Retrying with a focused prompt.")
