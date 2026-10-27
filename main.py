@@ -6,9 +6,9 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from database import (
-    get_courses_from_database,
     get_course_details,
     get_courses_by_professor,
+    get_courses_from_database,
     get_deadlines_from_database,
     get_dining_from_database,
     get_events_from_database,
@@ -273,6 +273,39 @@ def get_fallback_reply(request: ChatRequest):
     }
 
 
+def get_matched_course_reply(message: str):
+    matched_course = find_course_by_message(message)
+    if not matched_course:
+        return None
+    course_code = matched_course.get("course_code") or ""
+    course_number = matched_course.get("course_number") or ""
+    combined_code = matched_course.get("code") or ""
+
+    if not course_code or not course_number:
+        parts = combined_code.strip().split(maxsplit=1)
+        if len(parts) == 2:
+            course_code, course_number = parts
+
+    if course_code and course_number:
+        detailed_reply = build_course_reply(course_code, course_number)
+        if detailed_reply:
+            return {
+                "intent": "courses",
+                "reply": detailed_reply["reply"],
+                "data": matched_course,
+            }
+
+    course_name = matched_course.get("name") or matched_course.get("course_name") or ""
+    full_code = f"{course_code} {course_number}".strip() or combined_code
+
+    return {
+        "intent": "courses",
+        "reply": f"Here are the details for {full_code} {course_name}.",
+        "data": matched_course,
+    }
+
+
+
 @app.post("/chat")
 def chat(request: ChatRequest):
     message = request.message.lower().strip()
@@ -307,34 +340,9 @@ def chat(request: ChatRequest):
     "interest",
     ]
 
-    matched_course = find_course_by_message(message)
-    if matched_course:
-        course_code = matched_course.get("course_code") or ""
-        course_number = matched_course.get("course_number") or ""
-        combined_code = matched_course.get("code") or ""
-
-        if not course_code or not course_number:
-            parts = combined_code.strip().split(maxsplit=1)
-            if len(parts) == 2:
-                course_code, course_number = parts
-
-        if course_code and course_number:
-            detailed_reply = build_course_reply(course_code, course_number)
-            if detailed_reply:
-                return {
-                    "intent": "courses",
-                    "reply": detailed_reply["reply"],
-                    "data": matched_course,
-                }
-
-        course_name = matched_course.get("name") or matched_course.get("course_name") or ""
-        full_code = f"{course_code} {course_number}".strip() or combined_code
-
-        return {
-            "intent": "courses",
-            "reply": f"Here are the details for {full_code} {course_name}.",
-            "data": matched_course,
-        }
+    matched_course_reply = get_matched_course_reply(message)
+    if matched_course_reply:
+        return matched_course_reply
 
     matched_professor = find_professor_by_message(message)
     if matched_professor:
@@ -432,7 +440,11 @@ def build_course_reply(course_code: str, course_number: str):
     for row in records:
         if row["offering_id"] is None:
             continue
-        instructor = " ".join(str(row[k]) for k in ("instructor_fname", "instructor_lnames") if row[k])
+        instructor = " ".join(
+            str(row[k])
+            for k in ("instructor_fname", "instructor_lnames")
+            if row[k]
+        )
         if instructor:
             reply += f" Instructor: {instructor}."
         if row["session_name"]:
