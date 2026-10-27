@@ -200,6 +200,50 @@
   border-color: var(--yellow);
 }
 
+/* tabs above the event list */
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 15px;
+}
+
+.tab {
+  padding: 10px 20px;
+  font-size: 16px;
+  font-weight: bold;
+  color: var(--black);
+  background-color: white;
+  border: 2px solid var(--black);
+  border-radius: 20px;
+  cursor: pointer;
+}
+
+.tab:hover {
+  background-color: #eeeeee;
+}
+
+.tabActive {
+  padding: 10px 20px;
+  font-size: 16px;
+  font-weight: bold;
+  color: var(--yellow);
+  background-color: var(--black);
+  border: 2px solid var(--black);
+  border-radius: 20px;
+  cursor: pointer;
+}
+
+/* save button after the event is saved */
+.savedButton {
+  padding: 8px 14px;
+  font-weight: bold;
+  color: var(--black);
+  background-color: var(--yellow);
+  border: 2px solid var(--black);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
 /* phone and small screens, put everything in one column */
 @media (max-width: 850px) {
   .layout {
