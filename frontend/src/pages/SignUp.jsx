@@ -1,75 +1,77 @@
-import { useState } from "react"
-import { signup } from "../api"
-import shockerImage from "../assets/images/wsu-shocker.png"
-import { interestOptions, MAX_TAG_WORDS } from "../interests"
-import styles from "./Auth.module.css"
+import { useState } from "react";
+import { signup } from "../api";
+import shockerImage from "../assets/images/wsu-shocker.png";
+import { interestOptions, MAX_TAG_WORDS } from "../interests";
+import styles from "./Auth.module.css";
 
 export default function SignUp({ goTo }) {
-  const [username, setUsername] = useState("")
-  const [firstName, setFirstName] = useState("")
-  const [lastName, setLastName] = useState("")
-  const [email, setEmail] = useState("")
-  const [dob, setDob] = useState("")
-  const [zipcode, setZipcode] = useState("")
-  const [password, setPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
-  const [aboutText, setAboutText] = useState("")
-  const [interests, setInterests] = useState([])
-  const [error, setError] = useState("")
+  const [username, setUsername] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [dob, setDob] = useState("");
+  const [zipcode, setZipcode] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [aboutText, setAboutText] = useState("");
+  const [interests, setInterests] = useState([]);
+  const [error, setError] = useState("");
 
   function toggleInterest(name) {
     if (interests.includes(name)) {
-      setInterests(interests.filter(i => i !== name))
+      setInterests(interests.filter((i) => i !== name));
     } else {
-      setInterests([...interests, name])
+      setInterests([...interests, name]);
     }
   }
 
   async function handleSubmit(e) {
-    e.preventDefault()
+    e.preventDefault();
 
     // GUYS!!! this is not enough btw, backend needs to check all this too
     // NEVER TRUST USER INPUTTTTTTTTT
     if (username.length < 5 || username.length > 30) {
-      setError("Username must be between 5 and 30 characters.")
-      return
+      setError("Username must be between 5 and 30 characters.");
+      return;
     }
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match.")
-      return
+      setError("Passwords do not match.");
+      return;
     }
 
     if (!/^\d{5}(-\d{4})?$/.test(zipcode)) {
-      setError("Zipcode must be 5 digits (e.g. 67260).")
-      return
+      setError("Zipcode must be 5 digits (e.g. 67260).");
+      return;
     }
 
     // simple age check, just compares birth year to current year
-    const birthYear = new Date(dob).getFullYear()
-    const currentYear = new Date().getFullYear()
-    const age = currentYear - birthYear
+    const birthYear = new Date(dob).getFullYear();
+    const currentYear = new Date().getFullYear();
+    const age = currentYear - birthYear;
 
     if (age < 14) {
-      setError("You must be at least 14 years old to sign up.")
-      return
+      setError("You must be at least 14 years old to sign up.");
+      return;
     }
 
     // the text is optional but a text with only a few words would be saved like a tag
-    const text = aboutText.trim()
+    const text = aboutText.trim();
     if (text !== "" && text.split(" ").length <= MAX_TAG_WORDS) {
-      setError("Write a bit more about what you like, a full sentence works best.")
-      return
+      setError(
+        "Write a bit more about what you like, a full sentence works best.",
+      );
+      return;
     }
 
     // the text goes first, then the tags (same as the profile page)
-    let interestList = []
+    let interestList = [];
     if (text !== "") {
-      interestList.push(text)
+      interestList.push(text);
     }
-    interestList = interestList.concat(interests)
+    interestList = interestList.concat(interests);
 
-    setError("")
+    setError("");
 
     try {
       await signup({
@@ -81,18 +83,18 @@ export default function SignUp({ goTo }) {
         zipcode: zipcode,
         password: password,
         interests: interestList,
-      })
-      goTo("login")
+      });
+      goTo("login");
     } catch (err) {
-      setError(err.message)
+      setError(err.message);
     }
   }
 
   // each tag is a button that turns yellow when picked
-  let interestButtons = []
+  let interestButtons = [];
   for (let i = 0; i < interestOptions.length; i++) {
-    let name = interestOptions[i]
-    let picked = interests.includes(name)
+    let name = interestOptions[i];
+    let picked = interests.includes(name);
     interestButtons.push(
       <button
         key={name}
@@ -101,8 +103,8 @@ export default function SignUp({ goTo }) {
         className={picked ? styles.pill + " " + styles.pillPicked : styles.pill}
       >
         {name}
-      </button>
-    )
+      </button>,
+    );
   }
 
   return (
@@ -196,7 +198,9 @@ export default function SignUp({ goTo }) {
             required
           />
 
-          <p className={styles.label}>What do you like to do, get involved in or explore?</p>
+          <p className={styles.label}>
+            What do you like to do, get involved in or explore?
+          </p>
           <textarea
             className={styles.input + " " + styles.textarea}
             placeholder="I like going to concerts and hackathons, and I want to join a club about..."
@@ -207,14 +211,18 @@ export default function SignUp({ goTo }) {
           <p className={styles.label}>Pick some tags too</p>
           <div className={styles.pills}>{interestButtons}</div>
 
-          <button type="submit" className={styles.button}>Create Account</button>
+          <button type="submit" className={styles.button}>
+            Create Account
+          </button>
         </form>
 
         <p className={styles.switchText}>
           Already have an account?{" "}
-          <button onClick={() => goTo("login")} className={styles.linkButton}>Sign in</button>
+          <button onClick={() => goTo("login")} className={styles.linkButton}>
+            Sign in
+          </button>
         </p>
       </div>
     </div>
-  )
+  );
 }

@@ -14,9 +14,9 @@ function getAverage(reviews, professorId) {
     }
   }
   if (count === 0) {
-    return {average: null, count: 0};
+    return { average: null, count: 0 };
   }
-  return {average: (total / count).toFixed(1), count: count};
+  return { average: (total / count).toFixed(1), count: count };
 }
 
 export default function Reviews({ goTo, openProfessor }) {
@@ -25,8 +25,8 @@ export default function Reviews({ goTo, openProfessor }) {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    getProfessors().then(data => setProfessors(data));
-    getReviews().then(data => setReviews(data));
+    getProfessors().then((data) => setProfessors(data));
+    getReviews().then((data) => setReviews(data));
   }, []);
 
   // only professors that match the search
@@ -41,7 +41,11 @@ export default function Reviews({ goTo, openProfessor }) {
     let rating = getAverage(reviews, p.professor_id);
 
     professorCards.push(
-      <div key={p.professor_id} className={styles.professorCard} onClick={() => openProfessor(p.professor_id)}>
+      <div
+        key={p.professor_id}
+        className={styles.professorCard}
+        onClick={() => openProfessor(p.professor_id)}
+      >
         <div className={styles.score}>
           {rating.average === null ? "N/A" : rating.average}
         </div>
@@ -53,7 +57,7 @@ export default function Reviews({ goTo, openProfessor }) {
           </p>
         </div>
         <button className={styles.primaryButton}>View</button>
-      </div>
+      </div>,
     );
   }
 
@@ -63,7 +67,9 @@ export default function Reviews({ goTo, openProfessor }) {
 
       <div className={styles.banner}>
         <h1 className={styles.bannerTitle}>Find a Professor</h1>
-        <p className={styles.bannerText}>Search a professor to see their ratings and reviews.</p>
+        <p className={styles.bannerText}>
+          Search a professor to see their ratings and reviews.
+        </p>
       </div>
 
       <div className={styles.content}>
@@ -75,7 +81,9 @@ export default function Reviews({ goTo, openProfessor }) {
         />
 
         {professorCards}
-        {professorCards.length === 0 && <p className={styles.empty}>No professors found.</p>}
+        {professorCards.length === 0 && (
+          <p className={styles.empty}>No professors found.</p>
+        )}
       </div>
     </div>
   );
