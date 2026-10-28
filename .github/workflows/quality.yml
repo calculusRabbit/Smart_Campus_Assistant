@@ -108,11 +108,21 @@ jobs:
         run: mkdir -p reports
 
       - name: Python security analysis
+        shell: bash
         run: |
+          mkdir -p reports
+
+          bandit_status=0
           bandit -r main.py models.py services \
             -x services/rag/tests,services/rag/data \
-            -f json -o reports/bandit.json
+            -f json \
+            -o reports/bandit.json || bandit_status=$?
 
+          if [ -f reports/bandit.json ]; then
+            cat reports/bandit.json
+          fi
+
+          exit "$bandit_status"
       - name: Python dependency vulnerabilities
         if: ${{ !cancelled() }}
         run: |
