@@ -135,7 +135,18 @@ jobs:
       - name: Frontend dependency vulnerabilities
         if: ${{ !cancelled() }}
         working-directory: frontend
-        run: npm audit --audit-level=low --json > ../reports/npm-audit.json
+        shell: bash
+        run: |
+          mkdir -p ../reports
+
+          audit_status=0
+          npm audit --audit-level=low --json \
+            > ../reports/npm-audit.json || audit_status=$?
+
+          if [ -f ../reports/npm-audit.json ]; then
+            cat ../reports/npm-audit.json
+          fi
+          exit "$audit_status"
 
       - name: Upload security reports
         if: always()
