@@ -74,7 +74,17 @@ function chatDataToLines(result) {
       lines.push(item.dining_name + " | " + item.dining_location + " | " + item.opening_time + " - " + item.closing_time + " | " + item.dining_status);
     }
     else if (result.intent === "courses") {
-      lines.push(item.code + " " + item.name + " | " + item.time + " | " + item.room + " | " + item.professor);
+      const code = [item.course_code ?? item.code, item.course_number]
+        .filter(Boolean)
+        .join(" ");
+
+      const name = item.course_name ?? item.name ?? "Unknown course";
+      const credits = item.course_credits ?? item.credits;
+
+      lines.push(
+        `${code || "Unknown code"} - ${name}` +
+        (credits != null ? ` | ${credits} credits` : "")
+      );
     }
     else if (result.intent === "professors") {
       lines.push(item.professor_name + " | " + item.professor_department + " | " + item.professor_email + " | rating " + item.professor_rating);
