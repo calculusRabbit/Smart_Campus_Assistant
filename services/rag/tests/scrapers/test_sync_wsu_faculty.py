@@ -2,11 +2,13 @@
 
 import pytest
 
-from database import get_connection
 from services.rag.scrapers.sync_wsu_faculty import apply_sync, validate_faculty
 
 
-def test_faculty_sync_rolls_back():
+def test_faculty_sync_rolls_back(monkeypatch):
+    """Verify dry-run synchronization rolls back its transaction."""
+    from unittest.mock import MagicMock
+
     faculty = [
         {
             "name": "Integration Test Professor",
@@ -14,28 +16,34 @@ def test_faculty_sync_rolls_back():
         }
     ]
 
+    connection = MagicMock()
+    connection.__enter__.return_value = connection
+
+    cursor = MagicMock()
+    connection.cursor.return_value.__enter__.return_value = cursor
+
+    cursor.fetchone.side_effect = [
+        {"school_id": 1},
+        {"department_id": 2},
+        {"instructor_id": 3},
+    ]
+
+    monkeypatch.setattr(
+        "services.rag.scrapers.sync_wsu_faculty.get_connection",
+        lambda: connection,
+    )
+
     result = apply_sync(faculty, commit=False)
 
     assert result["faculty_total"] == 1
+    assert result["inserted"] == 1
+    assert result["already_existing"] == 0
     assert result["committed"] is False
-
-    with get_connection() as connection:
-        with connection.cursor() as cursor:
-            emails = [person["email"] for person in faculty]
-
-            cursor.execute(
-                """
-                SELECT COUNT(*) AS count
-                FROM instructors
-                WHERE instructor_email = ANY(%s)
-                """,
-                (emails,),
-            )
-
-            assert cursor.fetchone()["count"] == result["already_existing"]
+    connection.rollback.assert_called_once()
 
 
-def test_duplicate_faculty_emails_rejected():
+def test_duplicate_faculty_emails_rejected(monkeypatch):
+    """Duplicate records must fail before opening a database connection."""
     faculty = [
         {
             "name": "Test Professor",
@@ -43,24 +51,18 @@ def test_duplicate_faculty_emails_rejected():
         }
     ]
 
-    with get_connection() as connection:
-        with connection.cursor() as cursor:
-            cursor.execute("SELECT COUNT(*) AS count FROM instructors")
-            before = cursor.fetchone()["count"]
+    def unexpected_connection():
+        raise AssertionError(
+            "Database connection must not occur for duplicate faculty."
+        )
 
-    try:
+    monkeypatch.setattr(
+        "services.rag.scrapers.sync_wsu_faculty.get_connection",
+        unexpected_connection,
+    )
+
+    with pytest.raises(ValueError, match="Duplicate faculty emails"):
         apply_sync(faculty + faculty, commit=False)
-    except ValueError as error:
-        assert "Duplicate faculty emails" in str(error)
-    else:
-        raise AssertionError("Expected duplicate faculty validation error")
-
-    with get_connection() as connection:
-        with connection.cursor() as cursor:
-            cursor.execute("SELECT COUNT(*) AS count FROM instructors")
-            after = cursor.fetchone()["count"]
-
-    assert before == after
 
 
 def test_invalid_faculty_name_rejected():
