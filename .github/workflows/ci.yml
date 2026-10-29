@@ -49,6 +49,7 @@ jobs:
       POSTGRES_PASSWORD: smartcampus_dev
       POSTGRES_HOST: localhost
       POSTGRES_PORT: 5432
+      APP_ENV: test
 
     steps:
       - name: Checkout repository
@@ -62,21 +63,41 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements.txt -r requirements-dev.txt
 
       - name: Run Ruff
         run: ruff check .
 
-      - name: Run migration
+      - name: Create the tables
         run: |
           PGPASSWORD=smartcampus_dev psql \
             -h localhost \
             -U smartcampus \
             -d smart_campus \
-            -f migrations/001_initial_up.sql
+            -f sca_database_v0.4.0.sql
 
       - name: Seed database
         run: python seed.py
 
-      - name: Run tests
-        run: python -m pytest -q
+      - name: Run tests with coverage
+        run: |
+          python -m pytest -q \
+            --cov=main \
+            --cov=database \
+            --cov=services \
+            --cov-report=term-missing \
+            --cov-report=xml:coverage.xml \
+            --cov-report=html:htmlcov \
+            --cov-fail-under=60 \
+            --junitxml=test-results.xml
+
+      - name: Upload test and coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-coverage-reports
+          path: |
+            test-results.xml
+            coverage.xml
+            htmlcov/
+          if-no-files-found: warn

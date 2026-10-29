@@ -5,7 +5,8 @@
   inset: 0;
   display: flex;
   overflow-y: auto;
-  background-image: linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)),
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)),
     url(../assets/images/wsu-campus.jpeg);
   background-size: cover;
   background-position: center;
@@ -66,6 +67,12 @@
   outline: none;
   border-color: var(--yellow);
   box-shadow: 0 0 0 3px rgba(244, 196, 48, 0.35);
+}
+
+.textarea {
+  min-height: 100px;
+  font-family: inherit;
+  resize: vertical;
 }
 
 .nameRow {

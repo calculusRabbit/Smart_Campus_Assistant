@@ -6,6 +6,8 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from database import (
+    get_course_details,
+    get_courses_by_professor,
     get_courses_from_database,
     get_deadlines_from_database,
     get_dining_from_database,
@@ -15,6 +17,7 @@ from database import (
     save_student_interests,
 )
 from models import ChatRequest, RecommendationRequest, StudentInterestsRequest
+from services.event_recommender import get_recommender, profile_to_text
 from services.rag.config import RAG_ENABLED
 from services.recommendation_service import RecommendationService
 
@@ -74,14 +77,12 @@ def get_courses(
     if code:
         courses = [
             course for course in courses
-            if code.lower() in course["code"].lower()
+            if code.lower() in str(course.get("course_code") or course.get("code") or "").lower()
         ]
 
     if professor:
-        courses = [
-            course for course in courses
-            if professor.lower() in course["professor"].lower()
-        ]
+        matching_ids = {course["course_id"] for course in get_courses_by_professor(professor)}
+        courses = [course for course in courses if course["course_id"] in matching_ids]
 
     return {"courses": courses}
 
@@ -96,9 +97,22 @@ def get_deadlines():
     return {"deadlines": get_deadlines_from_database()}
 
 def find_course_by_message(message: str):
+    message = message.lower()
+
     for course in get_courses_from_database():
-        if course["code"].lower() in message or course["name"].lower() in message:
+        # Support both the legacy/CI schema and Prototype 2 schema.
+        course_code = course.get("code") or course.get("course_code") or ""
+        course_number = course.get("course_number") or ""
+        course_name = course.get("name") or course.get("course_name") or ""
+
+        full_code = f"{course_code} {course_number}".strip()
+
+        if (
+            (full_code and full_code.lower() in message)
+            or (course_name and course_name.lower() in message)
+        ):
             return course
+
     return None
 
 def find_professor_by_message(message: str):
@@ -112,6 +126,22 @@ def find_professor_by_message(message: str):
 def contains_keyword(message: str, keyword: str):
     pattern = rf"(?<!\w){re.escape(keyword)}(?!\w)"
     return re.search(pattern, message) is not None
+
+def is_event_listing_request(message: str) -> bool:
+    """Identify requests for a general list of campus events."""
+    listing_phrases = (
+        "show me",
+        "list",
+        "upcoming",
+        "what events",
+        "which events",
+        "any events",
+        "events happening",
+        "events this",
+        "campus events",
+    )
+
+    return any(phrase in message for phrase in listing_phrases)
 
 # FIRST NEW HELPER
 def extract_interests_from_message(message: str) -> list[str]:
@@ -128,13 +158,12 @@ def get_event_recommendations(interests: list[str]):
     ]
 
     for event in get_events_from_database():
-        category = event["event_category"].lower()
-
-        related_interests = recommendation_service.related_interests(category)
+        event_tags = {str(tag).lower().strip() for tag in (event.get("event_tags") or [])}
 
         if any(
-            interest in related_interests
+            tag in event_tags
             for interest in normalized_interests
+            for tag in [interest, *recommendation_service.related_interests(interest)]
         ):
             recommended_events.append(event)
 
@@ -164,7 +193,12 @@ def set_student_interests(
             detail="At least one student interest is required."
         )
         
-    save_student_interests(student_id, request.interests)
+    saved = save_student_interests(student_id, request.interests)
+    if not saved:
+        raise HTTPException(
+            status_code=404,
+            detail="Student not found."
+        )
 
     return {
         "student_id": student_id,
@@ -192,15 +226,85 @@ def get_student_event_recommendations(student_id: int):
             detail="No saved interests found for this student."
         )
 
-    recommended_events = get_event_recommendations(
-        student_interests
-    )
+    # compare the students text with the events, the first time it loads the model
+    try:
+        recommended_events = get_recommender().recommend(
+            profile_to_text(student_interests)
+        )
+    except Exception as error:
+        # the event files are not there, use the old way with the categories
+        print("event recommender not available:", error)
+        recommended_events = get_event_recommendations(
+            student_interests
+        )
 
     return {
         "student_id": student_id,
         "interests": student_interests,
         "recommended_events": recommended_events
     }
+
+# nothing matched in chat, ask the rag if it is on, if not say we dont know
+# (this is its own function so chat is not too complex for the linter)
+def get_fallback_reply(request: ChatRequest):
+    if RAG_ENABLED:
+        from services.rag.pipeline import query_RAG
+
+        answer, sources = query_RAG(
+            request.message,
+            history=[]
+        )
+
+        return {
+            "intent": "rag",
+            "reply": answer,
+            "sources": sources
+        }
+
+    return {
+        "intent": "unknown",
+        "reply": (
+            "I could not understand that request. "
+            "I can help with campus events, dining, courses, "
+            "professors, deadlines, and student recommendations. "
+            "Try asking something like 'What events are happening?' "
+            "or 'Tell me about CS 560.'"
+        )
+    }
+
+
+def get_matched_course_reply(message: str):
+    matched_course = find_course_by_message(message)
+    if not matched_course:
+        return None
+    course_code = matched_course.get("course_code") or ""
+    course_number = matched_course.get("course_number") or ""
+    combined_code = matched_course.get("code") or ""
+
+    if not course_code or not course_number:
+        parts = combined_code.strip().split(maxsplit=1)
+        if len(parts) == 2:
+            course_code, course_number = parts
+
+    if course_code and course_number:
+        detailed_reply = build_course_reply(course_code, course_number)
+        if detailed_reply:
+            return {
+                "intent": "courses",
+                "reply": detailed_reply["reply"],
+                "data": matched_course,
+            }
+
+    course_name = matched_course.get("name") or matched_course.get("course_name") or ""
+    full_code = f"{course_code} {course_number}".strip() or combined_code
+
+    return {
+        "intent": "courses",
+        "reply": f"Here are the details for {full_code} {course_name}.",
+        "data": matched_course,
+    }
+
+
 
 @app.post("/chat")
 def chat(request: ChatRequest):
@@ -236,13 +340,9 @@ def chat(request: ChatRequest):
     "interest",
     ]
 
-    matched_course = find_course_by_message(message)
-    if matched_course:
-        return {
-            "intent": "courses",
-            "reply": f"Here are the details for {matched_course['code']} {matched_course['name']}.",
-            "data": matched_course
-        }
+    matched_course_reply = get_matched_course_reply(message)
+    if matched_course_reply:
+        return matched_course_reply
 
     matched_professor = find_professor_by_message(message)
     if matched_professor:
@@ -269,10 +369,14 @@ def chat(request: ChatRequest):
             "data": recommended_events
         }
 
-    if any(
-    contains_keyword(message, keyword)
-    for keyword in event_keywords
-):
+    if (
+        any(
+            contains_keyword(message, keyword)
+            for keyword in event_keywords
+        )
+        and is_event_listing_request(message)
+    ):
+
         return {
             "intent": "events",
             "reply": "Here are some upcoming campus events.",
@@ -320,27 +424,32 @@ def chat(request: ChatRequest):
         }
 
     else:
-        if RAG_ENABLED:
-            from services.rag.pipeline import query_RAG
+        return get_fallback_reply(request)
 
-            answer, sources = query_RAG(
-                request.message,
-                history=[]
-            )
 
-            return {
-                "intent": "rag",
-                "reply": answer,
-                "sources": sources
-            }
-
-        return {
-            "intent": "unknown",
-            "reply": (
-                "I could not understand that request. "
-                "I can help with campus events, dining, courses, "
-                "professors, deadlines, and student recommendations. "
-                "Try asking something like 'What events are happening?' "
-                "or 'Tell me about CS 560.'"
-            )
-        }
+def build_course_reply(course_code: str, course_number: str):
+    """Format course details from PostgreSQL."""
+    records = get_course_details(course_code, course_number)
+    if not records:
+        return None
+    course = records[0]
+    code = f"{course['course_code']} {course['course_number']}"
+    reply = f"{code}: {course['course_name']} ({course['course_credits']:g} credits)."
+    if course["course_description"]:
+        reply += f" Description: {course['course_description']}"
+    for row in records:
+        if row["offering_id"] is None:
+            continue
+        instructor = " ".join(
+            str(row[k])
+            for k in ("instructor_fname", "instructor_lnames")
+            if row[k]
+        )
+        if instructor:
+            reply += f" Instructor: {instructor}."
+        if row["session_name"]:
+            reply += f" Semester: {row['session_name']}."
+        break
+    if course_code.upper() == "TEST":
+        reply = "TEST DATA ONLY (not verified WSU information). " + reply
+    return {"intent": "courses", "reply": reply, "data": records}

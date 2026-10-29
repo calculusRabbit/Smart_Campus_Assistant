@@ -1,4 +1,25 @@
+import httpx
+import numpy as np
+
 from services.rag.pipeline import is_bad_generation
+
+
+def mock_retrieval(monkeypatch, pipeline):
+    """Avoid loading the real embedding model and running a real FAISS search."""
+    monkeypatch.setattr(
+        pipeline,
+        "embed_query",
+        lambda _: np.zeros((1, 384), dtype=np.float32),
+    )
+
+    monkeypatch.setattr(
+        pipeline,
+        "search_similar",
+        lambda index, vector, top_k: (
+            np.array([0.9]),
+            np.array([0]),
+        ),
+    )
 
 
 def test_empty_generation_is_bad():
@@ -17,57 +38,26 @@ def test_normal_generation_is_good():
     )
     assert is_bad_generation(answer) is False
 
+
 def test_bad_generation_retries_and_uses_second_response(monkeypatch):
-    from types import SimpleNamespace
-
-    import numpy as np
-
     from services.rag import pipeline
 
-    # Avoid running the real embedding model.
-    monkeypatch.setattr(
-        pipeline,
-        "embed_query",
-        lambda _: np.zeros((1, 384), dtype=np.float32),
-    )
+    mock_retrieval(monkeypatch, pipeline)
 
-    # Avoid running the real FAISS search.
-    monkeypatch.setattr(
-        pipeline,
-        "search_similar",
-        lambda index, vector, top_k: (
-            np.array([0.9]),
-            np.array([0]),
-        ),
-    )
-
-    bad_response = SimpleNamespace(
-        choices=[
-            SimpleNamespace(
-                message=SimpleNamespace(content="!!!!!!!!!!!!!!!!!!!!!!!!")
-            )
+    responses = iter(
+        [
+            "!!!!!!!!!!!!!!!!!!!!!!!!",
+            "The Japanese Culture Association is a WSU student organization.",
         ]
     )
 
-    good_response = SimpleNamespace(
-        choices=[
-            SimpleNamespace(
-                message=SimpleNamespace(
-                    content="The Japanese Culture Association is a WSU student organization."
-                )
-            )
-        ]
-    )
-
-    responses = iter([bad_response, good_response])
-
-    def fake_chat_completion(**kwargs):
+    def fake_generate_with_ollama(messages):
         return next(responses)
 
     monkeypatch.setattr(
-        pipeline.client,
-        "chat_completion",
-        fake_chat_completion,
+        pipeline,
+        "generate_with_ollama",
+        fake_generate_with_ollama,
     )
 
     answer, sources = pipeline.query_RAG(
@@ -75,55 +65,26 @@ def test_bad_generation_retries_and_uses_second_response(monkeypatch):
         history=[],
     )
 
-    assert answer == (
-        "The Japanese Culture Association is a WSU student organization."
-    )
+    assert answer == "The Japanese Culture Association is a WSU student organization."
     assert "[1]" in sources
 
+
 def test_two_bad_generations_return_fallback(monkeypatch):
-    from types import SimpleNamespace
-
-    import numpy as np
-
     from services.rag import pipeline
 
-    # Avoid loading the real embedding model.
-    monkeypatch.setattr(
-        pipeline,
-        "embed_query",
-        lambda _: np.zeros((1, 384), dtype=np.float32),
-    )
-
-    # Avoid running the real FAISS search.
-    monkeypatch.setattr(
-        pipeline,
-        "search_similar",
-        lambda index, vector, top_k: (
-            np.array([0.9]),
-            np.array([0]),
-        ),
-    )
+    mock_retrieval(monkeypatch, pipeline)
 
     call_count = 0
 
-    def fake_chat_completion(**kwargs):
+    def fake_generate_with_ollama(messages):
         nonlocal call_count
         call_count += 1
-
-        return SimpleNamespace(
-            choices=[
-                SimpleNamespace(
-                    message=SimpleNamespace(
-                        content="!!!!!!!!!!!!!!!!!!!!!!!!"
-                    )
-                )
-            ]
-        )
+        return "!!!!!!!!!!!!!!!!!!!!!!!!"
 
     monkeypatch.setattr(
-        pipeline.client,
-        "chat_completion",
-        fake_chat_completion,
+        pipeline,
+        "generate_with_ollama",
+        fake_generate_with_ollama,
     )
 
     answer, sources = pipeline.query_RAG(
@@ -138,36 +99,19 @@ def test_two_bad_generations_return_fallback(monkeypatch):
     assert call_count == 2
     assert "[1]" in sources
 
-def test_network_failure_returns_friendly_message(monkeypatch):
-    import httpx
-    import numpy as np
 
+def test_network_failure_returns_friendly_message(monkeypatch):
     from services.rag import pipeline
 
-    # Avoid loading the real embedding model.
+    mock_retrieval(monkeypatch, pipeline)
+
+    def fake_generate_with_ollama(messages):
+        raise httpx.ConnectError("Ollama service unavailable")
+
     monkeypatch.setattr(
         pipeline,
-        "embed_query",
-        lambda _: np.zeros((1, 384), dtype=np.float32),
-    )
-
-    # Avoid running the real FAISS search.
-    monkeypatch.setattr(
-        pipeline,
-        "search_similar",
-        lambda index, vector, top_k: (
-            np.array([0.9]),
-            np.array([0]),
-        ),
-    )
-
-    def fake_chat_completion(**kwargs):
-        raise httpx.ConnectError("AI service unavailable")
-
-    monkeypatch.setattr(
-        pipeline.client,
-        "chat_completion",
-        fake_chat_completion,
+        "generate_with_ollama",
+        fake_generate_with_ollama,
     )
 
     answer, sources = pipeline.query_RAG(
@@ -176,52 +120,65 @@ def test_network_failure_returns_friendly_message(monkeypatch):
     )
 
     assert answer == (
-        "I'm having trouble connecting to the AI service right now. "
-        "Please try again in a moment."
+        "I found relevant campus information, but the AI generation "
+        "service is temporarily unavailable. Please try again in a moment."
     )
     assert "[1]" in sources
 
-def test_conversation_history_is_included(monkeypatch):
-    from types import SimpleNamespace
 
-    import numpy as np
-
+def test_ollama_http_error_returns_friendly_message(monkeypatch):
     from services.rag import pipeline
 
-    monkeypatch.setattr(
-        pipeline,
-        "embed_query",
-        lambda _: np.zeros((1, 384), dtype=np.float32),
-    )
+    mock_retrieval(monkeypatch, pipeline)
 
-    monkeypatch.setattr(
-        pipeline,
-        "search_similar",
-        lambda index, vector, top_k: (
-            np.array([0.9]),
-            np.array([0]),
-        ),
-    )
-
-    captured_messages = []
-
-    def fake_chat_completion(**kwargs):
-        captured_messages.extend(kwargs["messages"])
-
-        return SimpleNamespace(
-            choices=[
-                SimpleNamespace(
-                    message=SimpleNamespace(
-                        content="The Japan Festival is a WSU event."
-                    )
-                )
-            ]
+    def fake_generate_with_ollama(messages):
+        request = httpx.Request(
+            "POST",
+            "http://host.docker.internal:11434/api/chat",
+        )
+        response = httpx.Response(
+            status_code=500,
+            request=request,
+        )
+        raise httpx.HTTPStatusError(
+            "Ollama generation service unavailable",
+            request=request,
+            response=response,
         )
 
     monkeypatch.setattr(
-        pipeline.client,
-        "chat_completion",
-        fake_chat_completion,
+        pipeline,
+        "generate_with_ollama",
+        fake_generate_with_ollama,
+    )
+
+    answer, sources = pipeline.query_RAG(
+        "What is the purpose of ShockerSync?",
+        history=[],
+    )
+
+    assert answer == (
+        "I found relevant campus information, but the AI generation "
+        "service is temporarily unavailable. Please try again in a moment."
+    )
+    assert "[1]" in sources
+
+
+def test_conversation_history_is_included(monkeypatch):
+    from services.rag import pipeline
+
+    mock_retrieval(monkeypatch, pipeline)
+
+    captured_messages = []
+
+    def fake_generate_with_ollama(messages):
+        captured_messages.extend(messages)
+        return "The Japan Festival is a WSU event."
+
+    monkeypatch.setattr(
+        pipeline,
+        "generate_with_ollama",
+        fake_generate_with_ollama,
     )
 
     answer, sources = pipeline.query_RAG(
@@ -246,3 +203,97 @@ def test_conversation_history_is_included(monkeypatch):
 
     assert answer == "The Japan Festival is a WSU event."
     assert "[1]" in sources
+
+def test_reasoning_without_closing_tag_is_bad():
+    answer = (
+        "Okay, let me tackle this question. "
+        "The user is asking about the Japan Festival. "
+        "I need to check the relevant documents provided "
+        "to find the answer."
+    )
+
+    assert is_bad_generation(answer) is True
+
+def test_ollama_successful_generation(monkeypatch):
+    from services.rag import pipeline
+
+    class FakeResponse:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {
+                "message": {
+                    "content": "The Japan Festival is a WSU event."
+                }
+            }
+
+    def fake_post(url, json, timeout):
+        assert url.endswith("/api/chat")
+        assert json["model"] == pipeline.GENERATION_MODEL
+        assert json["stream"] is False
+        assert json["think"] is False
+        assert json["options"]["temperature"] == 0
+        assert json["options"]["num_predict"] == 512
+        assert timeout == 120.0
+        return FakeResponse()
+
+    monkeypatch.setattr(pipeline.httpx, "post", fake_post)
+
+    answer = pipeline.generate_with_ollama(
+        [{"role": "user", "content": "What is the Japan Festival?"}]
+    )
+
+    assert answer == "The Japan Festival is a WSU event."
+
+
+def test_ollama_removes_qwen3_reasoning(monkeypatch):
+    from services.rag import pipeline
+
+    class FakeResponse:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {
+                "message": {
+                    "content": (
+                        "<think>Internal reasoning</think>"
+                        "\nThe Japan Festival is a WSU event."
+                    )
+                }
+            }
+
+    monkeypatch.setattr(
+        pipeline.httpx,
+        "post",
+        lambda *args, **kwargs: FakeResponse(),
+    )
+
+    answer = pipeline.generate_with_ollama(
+        [{"role": "user", "content": "What is the Japan Festival?"}]
+    )
+
+    assert answer == "The Japan Festival is a WSU event."
+
+
+def test_ollama_http_failure(monkeypatch):
+    import pytest
+
+    from services.rag import pipeline
+
+    request = httpx.Request(
+        "POST",
+        "http://host.docker.internal:11434/api/chat",
+    )
+    response = httpx.Response(status_code=500, request=request)
+
+    def fake_post(*args, **kwargs):
+        return response
+
+    monkeypatch.setattr(pipeline.httpx, "post", fake_post)
+
+    with pytest.raises(httpx.HTTPStatusError):
+        pipeline.generate_with_ollama(
+            [{"role": "user", "content": "Hello"}]
+        )

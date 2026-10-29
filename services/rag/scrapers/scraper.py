@@ -126,11 +126,19 @@ def scrape_event(eid):
     print("COST(MONEY):", cost)
 
 
-    # get location
+    # Get location from WSU calendar HTML
     location = ""
-    loc_element = article.find("a", itemprop="location")
-    if loc_element:
-        location = clean_text(loc_element.get_text())
+
+    location_container = article.find(attrs={"itemprop": "location"})
+
+    if location_container:
+        if location_container.name == "a":
+            location = clean_text(location_container.get_text())
+        else:
+            location_link = location_container.find("a")
+            if location_link:
+                location = clean_text(location_link.get_text())
+
     print("LOCATION: ", location)
 
 

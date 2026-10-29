@@ -19,10 +19,18 @@ export default function NavBar({ goTo }) {
       </span>
       <span>
         <span className={styles.userName}>{user.name}</span>
-        <button className={styles.navButton} onClick={() => goTo("dashboard")}>Dashboard</button>
-        <button className={styles.navButton} onClick={() => goTo("reviews")}>Reviews</button>
-        <button className={styles.navButton} onClick={() => goTo("profile")}>Profile</button>
-        <button className={styles.navButton} onClick={handleLogout}>Log out</button>
+        <button className={styles.navButton} onClick={() => goTo("dashboard")}>
+          Dashboard
+        </button>
+        <button className={styles.navButton} onClick={() => goTo("reviews")}>
+          Reviews
+        </button>
+        <button className={styles.navButton} onClick={() => goTo("profile")}>
+          Profile
+        </button>
+        <button className={styles.navButton} onClick={handleLogout}>
+          Log out
+        </button>
       </span>
     </nav>
   );

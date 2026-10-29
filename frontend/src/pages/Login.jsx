@@ -1,22 +1,22 @@
-import { useState } from "react"
-import { login } from "../api"
-import shockerImage from "../assets/images/wsu-shocker.png"
-import styles from "./Auth.module.css"
+import { useState } from "react";
+import { login } from "../api";
+import shockerImage from "../assets/images/wsu-shocker.png";
+import styles from "./Auth.module.css";
 
 export default function Login({ goTo }) {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [error, setError] = useState("")
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
   async function handleSubmit(e) {
-    e.preventDefault()
+    e.preventDefault();
 
     try {
-      await login(email, password)
-      setError("")
-      goTo("dashboard")
+      await login(email, password);
+      setError("");
+      goTo("dashboard");
     } catch (err) {
-      setError(err.message)
+      setError(err.message);
     }
   }
 
@@ -61,5 +61,5 @@ export default function Login({ goTo }) {
         </p>
       </div>
     </div>
-  )
+  );
 }

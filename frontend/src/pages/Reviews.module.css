@@ -58,7 +58,9 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   text-align: left;
   cursor: pointer;
-  transition: transform 0.15s, box-shadow 0.15s;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
 }
 
 .professorCard:hover {

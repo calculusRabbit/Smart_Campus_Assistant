@@ -1,4 +1,4 @@
-import os
+﻿import os
 from pathlib import Path
 
 RAG_DIR = Path(__file__).resolve().parent
@@ -7,21 +7,27 @@ DATA_DIR = RAG_DIR / "data"
 RAG_ENABLED = os.getenv("RAG_ENABLED", "true").lower() == "true"
 
 # models
-EMBEDDING_MODEL  = "Qwen/Qwen3-Embedding-4B"
+EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 EMBEDDING_DIM = 384
-JUDGE_MODEL      = "meta-llama/Llama-3.1-8B-Instruct"
-GENERATION_MODEL = "Qwen/Qwen2.5-14B-Instruct"
+
+GENERATION_MODEL = "qwen3-direct"
+OLLAMA_URL = "http://host.docker.internal:11434"
+
+# model for the event recommendations, small so it runs on cpu
+EVENTS_EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
 # paths
 CHUNKS_PATH = DATA_DIR / "chunks.json"
 INDEX_PATH = DATA_DIR / "document_index.faiss"
 RAW_DATA_PATH     = "data/raw/wsu_pages_new.json"
-FILTERED_DIR      = "data/filtered"
+FILTERED_DIR      = DATA_DIR / "filtered"
 ALL_URLS_PATH     = "data/all_urls.jsonl"
 EVENTS_PATH             = "data/events.json"
 CLUBS_PATH              = "data/clubs.json"
-PAGES_CHUNKS_PATH       = "data/pages_chunks.json"
+PAGES_CHUNKS_PATH       = DATA_DIR / "pages_chunks.json"
 SHOCKERSYNC_EVENTS_PATH = "data/shockersync_events.json"
+ALL_EVENTS_PATH = DATA_DIR / "all_events.json"
+EVENTS_INDEX_PATH = DATA_DIR / "events_index.faiss"
 
 # retrieval
 TOP_K = 5
