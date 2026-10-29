@@ -30,7 +30,7 @@ export default function Profile({ goTo }) {
       setInterests(tags)
       setAboutText(texts.join(" "))
     })
-  }, [])
+  }, [user.id])
 
   function toggleInterest(name) {
     if (interests.includes(name)) {
