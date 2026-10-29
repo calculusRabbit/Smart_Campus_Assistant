@@ -113,7 +113,8 @@ jobs:
           mkdir -p reports
 
           bandit_status=0
-          bandit -r main.py models.py services \
+          bandit -r main.py models.py database.py seed.py \
+          dummy_data_populator_v0.5.0.py services \
             -x services/rag/tests,services/rag/data \
             -f json \
             -o reports/bandit.json || bandit_status=$?
