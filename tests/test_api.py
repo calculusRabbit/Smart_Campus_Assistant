@@ -211,28 +211,30 @@ def test_chat_finds_a_course_by_its_code():
     assert data["intent"] == "courses"
 
 
-def test_chat_finds_a_professor_by_name():
-    # Select a uniquely named professor so the lookup is unambiguous.
-    professors = client.get("/professors").json()["professors"]
+def test_chat_finds_a_professor_by_name(monkeypatch):
+    """Professor lookup should not depend on database seed names."""
+    professor = {
+        "professor_id": 999999,
+        "professor_name": "Ada Exampleton",
+        "professor_department": "School of Computing",
+        "professor_email": "example@wichita.edu",
+        "office_location": "TBA",
+        "professor_rating": None,
+    }
 
-    name_counts = {}
-    for professor in professors:
-        name = professor["professor_name"].lower()
-        name_counts[name] = name_counts.get(name, 0) + 1
-
-    professor = next(
-        professor
-        for professor in professors
-        if name_counts[professor["professor_name"].lower()] == 1
+    monkeypatch.setattr(
+        "main.get_professors_from_database",
+        lambda: [professor],
     )
 
     data = client.post(
         "/chat",
-        json={"message": professor["professor_name"].lower()},
+        json={"message": "tell me about professor Ada Exampleton"},
     ).json()
 
     assert data["intent"] == "professors"
     assert data["data"]["professor_id"] == professor["professor_id"]
+    assert data["data"]["professor_name"] == professor["professor_name"]
 
 
 def test_chat_recommendation_for_coding(monkeypatch, fake_events):

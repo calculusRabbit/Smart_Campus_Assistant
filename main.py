@@ -401,6 +401,31 @@ def get_matched_course_reply(message: str):
 
 
 
+def get_missing_course_reply(message: str):
+    """Report a missing explicitly requested course without listing unrelated courses."""
+    import re
+
+    match = re.search(
+        r"(?<![a-z0-9])([a-z]{2,6})\s*[- ]?\s*(\d{3,4}[a-z]{0,3})(?![a-z0-9])",
+        message,
+        re.IGNORECASE,
+    )
+
+    if not match:
+        return None
+
+    course_code = f"{match.group(1).upper()} {match.group(2).upper()}"
+
+    return {
+        "intent": "courses",
+        "reply": (
+            f"I couldn't find {course_code} in the current course database. "
+            "Please verify the course code or check the official WSU course catalog."
+        ),
+        "data": [],
+    }
+
+
 @app.post("/chat")
 def chat(request: ChatRequest):  # noqa: C901
     message = request.message.lower().strip()
@@ -438,6 +463,10 @@ def chat(request: ChatRequest):  # noqa: C901
     course_response = get_matched_course_reply(message)
     if course_response is not None:
         return course_response
+
+    missing_course_response = get_missing_course_reply(message)
+    if missing_course_response is not None:
+        return missing_course_response
 
     professor_response = get_professor_chat_response(message)
     if professor_response is not None:
