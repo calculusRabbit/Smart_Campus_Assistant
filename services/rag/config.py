@@ -1,4 +1,4 @@
-import os
+﻿import os
 from pathlib import Path
 
 RAG_DIR = Path(__file__).resolve().parent
@@ -20,11 +20,11 @@ EVENTS_EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 CHUNKS_PATH = DATA_DIR / "chunks.json"
 INDEX_PATH = DATA_DIR / "document_index.faiss"
 RAW_DATA_PATH     = "data/raw/wsu_pages_new.json"
-FILTERED_DIR      = "data/filtered"
+FILTERED_DIR      = DATA_DIR / "filtered"
 ALL_URLS_PATH     = "data/all_urls.jsonl"
 EVENTS_PATH             = "data/events.json"
 CLUBS_PATH              = "data/clubs.json"
-PAGES_CHUNKS_PATH       = "data/pages_chunks.json"
+PAGES_CHUNKS_PATH       = DATA_DIR / "pages_chunks.json"
 SHOCKERSYNC_EVENTS_PATH = "data/shockersync_events.json"
 ALL_EVENTS_PATH = DATA_DIR / "all_events.json"
 EVENTS_INDEX_PATH = DATA_DIR / "events_index.faiss"
