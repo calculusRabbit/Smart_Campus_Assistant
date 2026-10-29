@@ -1,4 +1,4 @@
-import json
+﻿import json
 import os
 from config import FILTERED_DIR, PAGES_CHUNKS_PATH, CHUNK_SIZE, CHUNK_OVERLAP
 
@@ -16,7 +16,9 @@ def chunk_text(text: str) -> list[str]:
         chunk = chunk.strip()
         if chunk:
             chunks.append(chunk)
-        start += len(chunk) - CHUNK_OVERLAP
+        if end >= len(text):
+            break
+        start += max(1, len(chunk) - CHUNK_OVERLAP)
     return chunks
 
 
@@ -40,7 +42,7 @@ def main():
     with open(PAGES_CHUNKS_PATH, "w", encoding="utf-8") as f:
         json.dump(result, f, indent=2, ensure_ascii=False)
 
-    print(f"Done: {len(pages)} pages → {len(result)} chunks")
+    print(f"Done: {len(pages)} pages -> {len(result)} chunks")
 
 
 if __name__ == "__main__":

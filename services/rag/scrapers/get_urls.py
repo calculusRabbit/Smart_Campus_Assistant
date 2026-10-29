@@ -7,7 +7,7 @@ site_map = "https://www.wichita.edu/sitemap.xml"
 
 def get_all_urls() -> list:
     print("fetching sitemap...")
-    response = requests.get(site_map)
+    response = requests.get(site_map, timeout=10)
 
     soup = BeautifulSoup(response.text, "xml")
 
