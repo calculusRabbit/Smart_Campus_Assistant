@@ -18,6 +18,7 @@ from database import (
 )
 from models import ChatRequest, RecommendationRequest, StudentInterestsRequest
 from services.event_recommender import get_recommender, profile_to_text
+from services.interest_expansion import extract_event_interests
 from services.rag.config import RAG_ENABLED
 from services.recommendation_service import RecommendationService
 
@@ -116,11 +117,36 @@ def find_course_by_message(message: str):
     return None
 
 def find_professor_by_message(message: str):
-    for professor in get_professors_from_database():
-        name = professor["professor_name"].lower()
-        last_word = name.split()[-1]
-        if name in message or last_word in message:
-            return professor
+    professors = get_professors_from_database()
+    message = message.lower()
+
+    # Prefer matching a professor's complete name.
+    full_matches = [
+        professor
+        for professor in professors
+        if contains_keyword(message, professor["professor_name"].lower())
+    ]
+
+    if len(full_matches) == 1:
+        return full_matches[0]
+
+    if len(full_matches) > 1:
+        return None
+
+    # Only match surnames as complete words.
+    surname_matches = [
+        professor
+        for professor in professors
+        if contains_keyword(
+            message,
+            professor["professor_name"].lower().split()[-1],
+        )
+    ]
+
+    # Avoid guessing when multiple professors share a surname.
+    if len(surname_matches) == 1:
+        return surname_matches[0]
+
     return None
 
 def contains_keyword(message: str, keyword: str):
@@ -273,6 +299,75 @@ def get_fallback_reply(request: ChatRequest):
     }
 
 
+
+def get_live_event_chat_response(message: str):
+    # Route topic-specific event requests to fresh ShockerSync recommendations.
+    # Keep informational questions and existing database routes unchanged.
+    event_request_terms = (
+        "event", "events", "activity", "activities",
+        "workshop", "workshops", "concert", "concerts",
+        "performance", "performances", "meeting", "meetings",
+    )
+
+    identified_interests = extract_event_interests(message)
+
+    known_event_topics = (
+        "artificial intelligence", "machine learning",
+        "ai", "music", "cybersecurity", "career",
+        "internship", "python", "programming", "soccer",
+    )
+
+    has_event_request = any(
+        contains_keyword(message, term)
+        for term in event_request_terms
+    )
+
+    has_topic = any(
+        contains_keyword(message, topic)
+        for topic in known_event_topics
+    )
+
+    if has_event_request and has_topic:
+        try:
+            recommended_events = get_recommender().recommend(
+                message,
+                top_k=5,
+            )
+        except Exception as error:
+            print("Live event recommendation unavailable:", error)
+            return {
+                "intent": "recommendations",
+                "reply": "Live campus event recommendations are temporarily unavailable.",
+                "interests": [identified_interests],
+                "data": [],
+            }
+
+        return {
+            "intent": "recommendations",
+            "reply": (
+                "Here are upcoming ShockerSync events matching your interests."
+                if recommended_events
+                else "I couldn't find matching upcoming ShockerSync events."
+            ),
+            "interests": [identified_interests],
+            "data": recommended_events,
+        }
+
+    return None
+
+
+def get_professor_chat_response(message: str):
+    matched_professor = find_professor_by_message(message)
+    if matched_professor:
+        return {
+            "intent": "professors",
+            "reply": f"Here are the details for {matched_professor['professor_name']}.",
+            "data": matched_professor
+        }
+
+    return None
+
+
 def get_matched_course_reply(message: str):
     matched_course = find_course_by_message(message)
     if not matched_course:
@@ -306,8 +401,33 @@ def get_matched_course_reply(message: str):
 
 
 
+def get_missing_course_reply(message: str):
+    """Report a missing explicitly requested course without listing unrelated courses."""
+    import re
+
+    match = re.search(
+        r"(?<![a-z0-9])([a-z]{2,6})\s*[- ]?\s*(\d{3,4}[a-z]{0,3})(?![a-z0-9])",
+        message,
+        re.IGNORECASE,
+    )
+
+    if not match:
+        return None
+
+    course_code = f"{match.group(1).upper()} {match.group(2).upper()}"
+
+    return {
+        "intent": "courses",
+        "reply": (
+            f"I couldn't find {course_code} in the current course database. "
+            "Please verify the course code or check the official WSU course catalog."
+        ),
+        "data": [],
+    }
+
+
 @app.post("/chat")
-def chat(request: ChatRequest):
+def chat(request: ChatRequest):  # noqa: C901
     message = request.message.lower().strip()
 
     if not message:
@@ -340,17 +460,21 @@ def chat(request: ChatRequest):
     "interest",
     ]
 
-    matched_course_reply = get_matched_course_reply(message)
-    if matched_course_reply:
-        return matched_course_reply
+    course_response = get_matched_course_reply(message)
+    if course_response is not None:
+        return course_response
 
-    matched_professor = find_professor_by_message(message)
-    if matched_professor:
-        return {
-            "intent": "professors",
-            "reply": f"Here are the details for {matched_professor['professor_name']}.",
-            "data": matched_professor
-        }
+    missing_course_response = get_missing_course_reply(message)
+    if missing_course_response is not None:
+        return missing_course_response
+
+    professor_response = get_professor_chat_response(message)
+    if professor_response is not None:
+        return professor_response
+
+    live_event_response = get_live_event_chat_response(message)
+    if live_event_response is not None:
+        return live_event_response
 
     detected_interests = extract_interests_from_message(message)
 

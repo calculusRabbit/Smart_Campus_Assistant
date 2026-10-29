@@ -211,14 +211,30 @@ def test_chat_finds_a_course_by_its_code():
     assert data["intent"] == "courses"
 
 
-def test_chat_finds_a_professor_by_name():
-    # courses and professors are checked first, so use a name that is not a course name
-    professor = client.get("/professors").json()["professors"][0]
+def test_chat_finds_a_professor_by_name(monkeypatch):
+    """Professor lookup should not depend on database seed names."""
+    professor = {
+        "professor_id": 999999,
+        "professor_name": "Ada Exampleton",
+        "professor_department": "School of Computing",
+        "professor_email": "example@wichita.edu",
+        "office_location": "TBA",
+        "professor_rating": None,
+    }
 
-    data = client.post("/chat", json={"message": professor["professor_name"].lower()}).json()
+    monkeypatch.setattr(
+        "main.get_professors_from_database",
+        lambda: [professor],
+    )
 
-    assert data["intent"] in ("professors", "courses")
-    assert data["data"] is not None
+    data = client.post(
+        "/chat",
+        json={"message": "tell me about professor Ada Exampleton"},
+    ).json()
+
+    assert data["intent"] == "professors"
+    assert data["data"]["professor_id"] == professor["professor_id"]
+    assert data["data"]["professor_name"] == professor["professor_name"]
 
 
 def test_chat_recommendation_for_coding(monkeypatch, fake_events):
