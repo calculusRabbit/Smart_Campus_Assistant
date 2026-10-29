@@ -109,6 +109,7 @@ def test_student_recommendations_fall_back_when_the_recommender_breaks(
 ):
     monkeypatch.setattr("main.get_student_interests", get_coding_interests)
     monkeypatch.setattr("main.get_recommender", get_broken_recommender)
+
     def fake_get_events():
         return fake_events
 

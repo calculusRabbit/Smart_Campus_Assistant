@@ -1,5 +1,12 @@
 import { useEffect, useState } from "react";
-import { getUser, getReviews, addReview, voteReview, getProfessors, getCourses } from "../api";
+import {
+  getUser,
+  getReviews,
+  addReview,
+  voteReview,
+  getProfessors,
+  getCourses,
+} from "../api";
 import NavBar from "../components/NavBar";
 import styles from "./ProfessorPage.module.css";
 
@@ -23,13 +30,19 @@ function countWords(text) {
   return trimmed.split(/\s+/).length;
 }
 
-function ReviewCard({review, myVote, onVote}) {
+function ReviewCard({ review, myVote, onVote }) {
   // anonymous students still show up as Verified Student
-  const who = review.anonymous ? "Verified Student" : review.author + " (Verified Student)";
+  const who = review.anonymous
+    ? "Verified Student"
+    : review.author + " (Verified Student)";
 
   let tagList = [];
   for (let i = 0; i < review.tags.length; i++) {
-    tagList.push(<span key={i} className={styles.tag}>{review.tags[i]}</span>);
+    tagList.push(
+      <span key={i} className={styles.tag}>
+        {review.tags[i]}
+      </span>,
+    );
   }
 
   return (
@@ -46,13 +59,21 @@ function ReviewCard({review, myVote, onVote}) {
         <span className={styles.who}>{who}</span>
         <span>
           <button
-            className={myVote === 1 ? styles.voteButton + " " + styles.voteUp : styles.voteButton}
+            className={
+              myVote === 1
+                ? styles.voteButton + " " + styles.voteUp
+                : styles.voteButton
+            }
             onClick={() => onVote(review.id, 1)}
           >
             ▲ {review.upvotes}
           </button>
           <button
-            className={myVote === -1 ? styles.voteButton + " " + styles.voteDown : styles.voteButton}
+            className={
+              myVote === -1
+                ? styles.voteButton + " " + styles.voteDown
+                : styles.voteButton
+            }
             onClick={() => onVote(review.id, -1)}
           >
             ▼ {review.downvotes}
@@ -62,7 +83,6 @@ function ReviewCard({review, myVote, onVote}) {
     </div>
   );
 }
-
 
 export default function ProfessorPage({ goTo, professorId }) {
   const user = getUser();
@@ -83,9 +103,9 @@ export default function ProfessorPage({ goTo, professorId }) {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    getReviews().then(data => setReviews(data));
+    getReviews().then((data) => setReviews(data));
 
-    getProfessors().then(data => {
+    getProfessors().then((data) => {
       for (let i = 0; i < data.length; i++) {
         if (data[i].professor_id === professorId) {
           setProfessor(data[i]);
@@ -93,14 +113,19 @@ export default function ProfessorPage({ goTo, professorId }) {
       }
     });
 
-    getCourses().then(data => setCourses(data));
+    getCourses().then((data) => setCourses(data));
   }, [professorId]);
 
   // classes this professor teaches, show all classes if none match
   function getClassOptions() {
     let mine = [];
     for (let i = 0; i < courses.length; i++) {
-      if (professor && courses[i].professor.toLowerCase().includes(professor.professor_name.toLowerCase())) {
+      if (
+        professor &&
+        courses[i].professor
+          .toLowerCase()
+          .includes(professor.professor_name.toLowerCase())
+      ) {
         mine.push(courses[i]);
       }
     }
@@ -116,7 +141,7 @@ export default function ProfessorPage({ goTo, professorId }) {
 
   function toggleTag(name) {
     if (tags.includes(name)) {
-      setTags(tags.filter(t => t !== name));
+      setTags(tags.filter((t) => t !== name));
     } else {
       setTags([...tags, name]);
     }
@@ -210,14 +235,18 @@ export default function ProfessorPage({ goTo, professorId }) {
         review={mine[i]}
         myVote={mine[i].voters[user.name] || 0}
         onVote={handleVote}
-      />
+      />,
     );
   }
 
   let classOptions = [];
   let options = getClassOptions();
   for (let i = 0; i < options.length; i++) {
-    classOptions.push(<option key={options[i].id} value={options[i].code}>{options[i].code} - {options[i].name}</option>);
+    classOptions.push(
+      <option key={options[i].id} value={options[i].code}>
+        {options[i].code} - {options[i].name}
+      </option>,
+    );
   }
 
   let tagPills = [];
@@ -231,7 +260,7 @@ export default function ProfessorPage({ goTo, professorId }) {
         className={picked ? styles.pill + " " + styles.pillPicked : styles.pill}
       >
         {allTags[i]}
-      </button>
+      </button>,
     );
   }
 
@@ -242,7 +271,9 @@ export default function ProfessorPage({ goTo, professorId }) {
       <NavBar goTo={goTo} />
 
       <div className={styles.content}>
-        <button className={styles.backButton} onClick={() => goTo("reviews")}>← Back to search</button>
+        <button className={styles.backButton} onClick={() => goTo("reviews")}>
+          ← Back to search
+        </button>
 
         {/* professor info and big score */}
         <div className={styles.header}>
@@ -252,36 +283,55 @@ export default function ProfessorPage({ goTo, professorId }) {
           </div>
           <div>
             <h1 className={styles.name}>{professor.professor_name}</h1>
-            <p className={styles.meta}>{professor.professor_department} | {professor.office_location}</p>
+            <p className={styles.meta}>
+              {professor.professor_department} | {professor.office_location}
+            </p>
             <p className={styles.meta}>Based on {mine.length} ratings</p>
           </div>
         </div>
 
         <div className={styles.toolbar}>
-          <select className={styles.select} value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+          <select
+            className={styles.select}
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+          >
             <option value="newest">Newest</option>
             <option value="highest">Highest rating</option>
             <option value="lowest">Lowest rating</option>
             <option value="upvotes">Most upvoted</option>
           </select>
-          <button className={styles.primaryButton} onClick={() => showForm ? setShowForm(false) : openForm()}>
+          <button
+            className={styles.primaryButton}
+            onClick={() => (showForm ? setShowForm(false) : openForm())}
+          >
             {showForm ? "Cancel" : "Write a Review"}
           </button>
         </div>
 
         {/* write review form */}
-        {showForm &&
+        {showForm && (
           <form className={styles.form} onSubmit={handleSubmit}>
-            <h3 className={styles.formTitle}>Rate {professor.professor_name}</h3>
+            <h3 className={styles.formTitle}>
+              Rate {professor.professor_name}
+            </h3>
             {error && <p className={styles.error}>{error}</p>}
 
             <p className={styles.label}>Choose class</p>
-            <select className={styles.input} value={course} onChange={(e) => setCourse(e.target.value)}>
+            <select
+              className={styles.input}
+              value={course}
+              onChange={(e) => setCourse(e.target.value)}
+            >
               {classOptions}
             </select>
 
             <p className={styles.label}>Rating</p>
-            <select className={styles.input} value={rating} onChange={(e) => setRating(e.target.value)}>
+            <select
+              className={styles.input}
+              value={rating}
+              onChange={(e) => setRating(e.target.value)}
+            >
               <option value={5}>5 - Excellent</option>
               <option value={4}>4 - Good</option>
               <option value={3}>3 - Okay</option>
@@ -298,7 +348,9 @@ export default function ProfessorPage({ goTo, professorId }) {
               onChange={(e) => setTitle(e.target.value)}
             />
 
-            <p className={styles.label}>Your review ({words}/{maxWords} words)</p>
+            <p className={styles.label}>
+              Your review ({words}/{maxWords} words)
+            </p>
             <textarea
               className={styles.input + " " + styles.textarea}
               placeholder="What was the class like?"
@@ -310,17 +362,27 @@ export default function ProfessorPage({ goTo, professorId }) {
             <div className={styles.pills}>{tagPills}</div>
 
             <label className={styles.checkbox}>
-              <input type="checkbox" checked={anonymous} onChange={(e) => setAnonymous(e.target.checked)} />
+              <input
+                type="checkbox"
+                checked={anonymous}
+                onChange={(e) => setAnonymous(e.target.checked)}
+              />
               Post anonymously (shows as "Verified Student")
             </label>
 
-            <button type="submit" className={styles.primaryButton}>Submit Review</button>
+            <button type="submit" className={styles.primaryButton}>
+              Submit Review
+            </button>
           </form>
-        }
+        )}
 
         {/* review list */}
         {reviewCards}
-        {mine.length === 0 && <p className={styles.empty}>No reviews yet. Be the first to write one!</p>}
+        {mine.length === 0 && (
+          <p className={styles.empty}>
+            No reviews yet. Be the first to write one!
+          </p>
+        )}
       </div>
     </div>
   );

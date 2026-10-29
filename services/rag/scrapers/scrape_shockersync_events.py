@@ -77,8 +77,9 @@ def parse_event(raw: dict) -> dict:
         try:
             dt = datetime.fromisoformat(start)
             time_text = dt.strftime("%-I:%M %p")
-        except Exception:
-            pass
+        except ValueError:
+            # the date text could not be read, so the time stays empty
+            time_text = ""
 
     event_id = raw.get("id", "")
     url = f"https://wichita.campuslabs.com/engage/event/{event_id}" if event_id else ""
