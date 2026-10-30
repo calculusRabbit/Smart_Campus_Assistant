@@ -23,7 +23,7 @@ def test_shockersync_prioritizes_platform_sources():
         [],
     )
 
-     urls = [pipeline.chunks[index]["url"] for index, _ in selected]
+    urls = [pipeline.chunks[index]["url"] for index, _ in selected]
 
     assert urls[0].endswith("/organization/seb")
     assert urls[1].endswith("/engage/organizations")
