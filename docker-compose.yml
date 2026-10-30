@@ -11,7 +11,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - type: bind
-        source: ./sca_database_v0.3.0.sql
+        source: ./sca_database_v0.4.0.sql
         target: /docker-entrypoint-initdb.d/001-schema.sql
         read_only: true
         bind:
@@ -89,8 +89,8 @@ services:
             user=os.environ["POSTGRES_USER"],
             password=os.environ["POSTGRES_PASSWORD"],
         )
-        sys.argv = ["dummy_data_populator_v0.4.0.py", "--dsn", dsn, "--reset"]
-        runpy.run_path("/app/dummy_data_populator_v0.4.0.py", run_name="__main__")
+        sys.argv = ["dummy_data_populator_v0.5.0.py", "--dsn", dsn, "--reset"]
+        runpy.run_path("/app/dummy_data_populator_v0.5.0.py", run_name="__main__")
     depends_on:
       db:
         condition: service_healthy

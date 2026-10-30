@@ -1,13 +1,13 @@
 import json
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
 import numpy as np
 
+from services.interest_expansion import expand_interests
 from services.rag.config import ALL_EVENTS_PATH, EVENTS_EMBEDDING_MODEL, EVENTS_INDEX_PATH
 from services.recommender_config import (
     LOOKAHEAD_DAYS,
-    LOOKBACK_DAYS,
     MAX_TAG_WORDS,
     MIN_SCORE,
     SEARCH_SIZE,
@@ -45,8 +45,7 @@ def profile_to_text(interests):
 
 def next_date(event, today):
     # the first date of the event that is in the window, None if they are all too old
-    today_text = today.isoformat()
-    oldest_text = (today - timedelta(days=LOOKBACK_DAYS)).isoformat()
+    oldest_text = today.isoformat()
 
     upcoming = []
     for d in event["dates"]:
@@ -55,10 +54,8 @@ def next_date(event, today):
     if len(upcoming) > 0:
         return min(upcoming)
 
-    # an event over many days that is still going on
-    if event["end_date"] and event["end_date"] >= today_text:
-        return today_text
-
+    # Do not invent occurrences within a multi-day event's date range.
+    # The source may describe a recurring schedule without providing exact dates.
     return None
 
 
@@ -69,6 +66,131 @@ def mentions_dislike(event, dislikes):
         if word.lower().strip() in text:
             return True
     return False
+
+
+TOPIC_KEYWORDS = {
+    "programming": (
+        "programming",
+        "coding",
+        "software development",
+        "python",
+        "github",
+        "hackathon",
+        "computer science",
+        "developer",
+    ),
+    "career": (
+        "career",
+        "internship",
+        "job fair",
+        "employment",
+        "employer",
+        "recruiting",
+        "resume",
+        "professional development",
+        "professional networking",
+    ),
+    "soccer": ("soccer", "football", "futbol"),
+    "artificial intelligence": (
+        "ai club",
+        "artificial intelligence",
+        "machine learning",
+        "ai workshop",
+        "ai 101",
+    ),
+    "music": (
+        "music",
+        "musical",
+        "concert",
+        "songfest",
+        "singing",
+        "choir",
+        "orchestra",
+        "live performance",
+    ),
+    "cybersecurity": (
+        "cybersecurity",
+        "cyber security",
+        "information security",
+        "infosec",
+        "wicys",
+        "cyber defense",
+    ),
+}
+
+TOPIC_QUERY_ALIASES = {
+    "programming": (
+        "programming",
+        "coding",
+        "software development",
+        "python",
+        "computer science",
+    ),
+    "career": (
+        "career",
+        "careers",
+        "internship",
+        "internships",
+        "jobs",
+        "job fair",
+        "networking",
+    ),
+    "soccer": ("soccer", "futbol"),
+    "artificial intelligence": (
+        "artificial intelligence",
+        "machine learning",
+        "ai",
+        "ai club",
+    ),
+    "music": (
+        "music",
+        "musical",
+        "concert",
+        "concerts",
+        "singing",
+    ),
+    "cybersecurity": (
+        "cybersecurity",
+        "cyber security",
+        "information security",
+        "infosec",
+    ),
+}
+
+
+def matches_event_topic(event, interests):
+    """Require topic evidence for recognized student interests."""
+    import re
+
+    query = interests.casefold()
+
+    def contains_phrase(text, phrase):
+        pattern = r"(?<!\w)" + re.escape(phrase) + r"(?!\w)"
+        return re.search(pattern, text) is not None
+
+    selected_topics = [
+        topic
+        for topic, aliases in TOPIC_QUERY_ALIASES.items()
+        if any(contains_phrase(query, alias) for alias in aliases)
+    ]
+
+    if not selected_topics:
+        return True
+
+    text = " ".join(
+        [
+            str(event.get("title", "")),
+            str(event.get("description", "")),
+            str(event.get("organization", "")),
+            " ".join(event.get("categories", [])),
+        ]
+    ).casefold()
+
+    return any(
+        contains_phrase(text, keyword)
+        for topic in selected_topics
+        for keyword in TOPIC_KEYWORDS[topic]
+    )
 
 
 class EventRecommender:
@@ -98,7 +220,9 @@ class EventRecommender:
 
         return cls(events, index, embed)
 
-    def recommend(self, likes_text, dislikes=None, top_k=10, today=None):
+    def recommend(self, likes_text, dislikes=None, top_k=10, today=None, now=None):
+        if now is None:
+            now = datetime.now(ZoneInfo("America/Chicago"))
         if dislikes is None:
             dislikes = []
         if today is None:
@@ -106,48 +230,140 @@ class EventRecommender:
         if likes_text.strip() == "":
             return []
 
-        scores, ids = self.index.search(self.embed(likes_text), SEARCH_SIZE)
+        scores, ids = self.index.search(self.embed(expand_interests(likes_text)), SEARCH_SIZE)
 
         results = []
         for score, i in zip(scores[0], ids[0], strict=True):
             if i == -1:
                 continue
+
             event = self.events[i]
-
-            # old events and events the student said they dont like
-            when = next_date(event, today)
-            if when is None or mentions_dislike(event, dislikes):
+            scored = _score_matching_event(event, score, dislikes, today, now, likes_text)
+            if scored is None:
                 continue
 
-            # the cutoff is for how well the event matches, the rules below only change the order
-            final_score = float(score)
-            if final_score < MIN_SCORE:
-                continue
-
-            # too far away
-            days = (date.fromisoformat(when) - today).days
-            if days > LOOKAHEAD_DAYS:
-                continue
-
-            if days < SOON_DAYS:
-                final_score += SOON_BOOST
-            final_score = min(1.0, final_score)
+            when, final_score = scored
 
             categories = event["categories"]
-            results.append({
-                "event_id": event["source"] + "-" + event["id"],
-                "event_name": event["title"],
-                "event_date": when,
-                "event_time": event["time"],
-                "event_location": event["location"],
-                "event_description": event["description"],
-                "event_category": categories[0] if len(categories) > 0 else "general",
-                "url": event["url"],
-                "score": round(final_score * 100)
-            })
+            results.append(
+                {
+                    "event_id": event["source"] + "-" + event["id"],
+                    "event_name": event["title"],
+                    "event_date": when,
+                    "event_time": event["time"],
+                    "event_location": event["location"],
+                    "event_description": event["description"],
+                    "event_category": categories[0] if len(categories) > 0 else "general",
+                    "url": event["url"],
+                    "score": round(final_score * 100),
+                }
+            )
 
         results.sort(key=get_score, reverse=True)
-        return results[:top_k]
+
+        unique_results = []
+        seen_events = set()
+
+        for result in results:
+            event_key = (result["event_id"], result["event_date"])
+            if event_key in seen_events:
+                continue
+
+            seen_events.add(event_key)
+            unique_results.append(result)
+
+        return unique_results[:top_k]
+
+
+def matches_requested_activity(event, query):
+    """Filter explicit activity requests without restricting broad interests."""
+    import re
+
+    query = query.casefold()
+
+    title = str(event.get("title", "")).casefold()
+    description = str(event.get("description", "")).casefold()
+    organization = str(event.get("organization", "")).casefold()
+
+    def contains(text, terms):
+        return any(re.search(r"(?<!\\w)" + re.escape(term) + r"(?!\\w)", text) for term in terms)
+
+    if contains(query, ("soccer", "futbol")):
+        return (
+            contains(title, ("soccer", "football", "futbol", "practice", "match", "game"))
+            or (
+                contains(organization, ("soccer",))
+                and contains(title + " " + description, ("practice", "match", "game", "tournament"))
+            )
+        ) and not contains(title + " " + description, ("rave", "edm party", "dance party"))
+
+    if contains(query, ("concert", "concerts", "performances", "performance")):
+        performance_terms = (
+            "concert",
+            "songfest",
+            "recital",
+            "showcase",
+            "live performance",
+            "live music",
+            "lip sync",
+            "singing competition",
+        )
+        if contains(query, ("music", "musical", "concert", "concerts")):
+            return contains(title + " " + description, performance_terms)
+
+    if contains(query, ("workshop", "workshops")):
+        return contains(
+            title + " " + description,
+            ("workshop", "workshops", "training", "hands-on"),
+        )
+
+    return True
+
+
+def _score_matching_event(event, score, dislikes, today, now, likes_text):
+    if not matches_event_topic(event, likes_text):
+        return None
+    if not matches_requested_activity(event, likes_text):
+        return None
+    return _score_upcoming_event(event, score, dislikes, today, now)
+
+
+def _score_upcoming_event(event, score, dislikes, today, now):
+    # Exclude events that have already ended, including earlier today.
+    end_text = event.get("end_datetime")
+    if end_text and datetime.fromisoformat(end_text) <= now:
+        return None
+
+    when = next_date(event, today)
+    if mentions_dislike(event, dislikes):
+        return None
+
+    ongoing_range = False
+    if when is None:
+        start_date = event.get("start_date")
+        if start_date is None:
+            dates = event.get("dates") or []
+            start_date = min(dates) if dates else None
+
+        end_date = event.get("end_date")
+        if start_date and end_date and start_date < today.isoformat() <= end_date:
+            when = f"Ongoing through {end_date}"
+            ongoing_range = True
+        else:
+            return None
+
+    final_score = float(score)
+    if final_score < MIN_SCORE:
+        return None
+
+    days = 0 if ongoing_range else (date.fromisoformat(when) - today).days
+    if days > LOOKAHEAD_DAYS:
+        return None
+
+    if not ongoing_range and days < SOON_DAYS:
+        final_score += SOON_BOOST
+
+    return when, min(1.0, final_score)
 
 
 def get_score(result):
