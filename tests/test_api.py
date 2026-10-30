@@ -38,6 +38,7 @@ def test_courses_endpoint():
     assert isinstance(data["courses"], list)
     assert len(data["courses"]) > 0
 
+
 def test_chat_uses_rag_for_unmatched_question(monkeypatch):
     from services.rag import pipeline
 
@@ -63,19 +64,16 @@ def test_chat_uses_rag_for_unmatched_question(monkeypatch):
 
     response = client.post(
         "/chat",
-        json={
-            "message": "What is the Japanese Culture Association?"
-        },
+        json={"message": "What is the Japanese Culture Association?"},
     )
 
     data = response.json()
 
     assert response.status_code == 200
     assert data["intent"] == "rag"
-    assert data["reply"] == (
-        "The Japanese Culture Association is a WSU student organization."
-    )
+    assert data["reply"] == ("The Japanese Culture Association is a WSU student organization.")
     assert "[1] Japanese Culture Association" in data["sources"]
+
 
 def test_dining_endpoint():
     response = client.get("/dining")
@@ -239,6 +237,7 @@ def test_chat_finds_a_professor_by_name(monkeypatch):
 
 def test_chat_recommendation_for_coding(monkeypatch, fake_events):
     no_matches(monkeypatch)
+
     def fake_get_events():
         return fake_events
 
