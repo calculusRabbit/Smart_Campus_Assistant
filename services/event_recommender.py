@@ -70,53 +70,90 @@ def mentions_dislike(event, dislikes):
 
 TOPIC_KEYWORDS = {
     "programming": (
-        "programming", "coding", "software development",
-        "python", "github", "hackathon",
-        "computer science", "developer",
+        "programming",
+        "coding",
+        "software development",
+        "python",
+        "github",
+        "hackathon",
+        "computer science",
+        "developer",
     ),
     "career": (
-        "career", "internship", "job fair", "employment",
-        "employer", "recruiting", "resume",
-        "professional development", "professional networking",
+        "career",
+        "internship",
+        "job fair",
+        "employment",
+        "employer",
+        "recruiting",
+        "resume",
+        "professional development",
+        "professional networking",
     ),
     "soccer": ("soccer", "football", "futbol"),
     "artificial intelligence": (
-        "ai club", "artificial intelligence",
-        "machine learning", "ai workshop", "ai 101",
+        "ai club",
+        "artificial intelligence",
+        "machine learning",
+        "ai workshop",
+        "ai 101",
     ),
     "music": (
-        "music", "musical", "concert", "songfest",
-        "singing", "choir", "orchestra",
+        "music",
+        "musical",
+        "concert",
+        "songfest",
+        "singing",
+        "choir",
+        "orchestra",
         "live performance",
     ),
     "cybersecurity": (
-        "cybersecurity", "cyber security",
-        "information security", "infosec",
-        "wicys", "cyber defense",
+        "cybersecurity",
+        "cyber security",
+        "information security",
+        "infosec",
+        "wicys",
+        "cyber defense",
     ),
 }
 
 TOPIC_QUERY_ALIASES = {
     "programming": (
-        "programming", "coding", "software development",
-        "python", "computer science",
+        "programming",
+        "coding",
+        "software development",
+        "python",
+        "computer science",
     ),
     "career": (
-        "career", "careers", "internship",
-        "internships", "jobs", "job fair", "networking",
+        "career",
+        "careers",
+        "internship",
+        "internships",
+        "jobs",
+        "job fair",
+        "networking",
     ),
     "soccer": ("soccer", "futbol"),
     "artificial intelligence": (
-        "artificial intelligence", "machine learning",
-        "ai", "ai club",
+        "artificial intelligence",
+        "machine learning",
+        "ai",
+        "ai club",
     ),
     "music": (
-        "music", "musical", "concert",
-        "concerts", "singing",
+        "music",
+        "musical",
+        "concert",
+        "concerts",
+        "singing",
     ),
     "cybersecurity": (
-        "cybersecurity", "cyber security",
-        "information security", "infosec",
+        "cybersecurity",
+        "cyber security",
+        "information security",
+        "infosec",
     ),
 }
 
@@ -140,12 +177,14 @@ def matches_event_topic(event, interests):
     if not selected_topics:
         return True
 
-    text = " ".join([
-        str(event.get("title", "")),
-        str(event.get("description", "")),
-        str(event.get("organization", "")),
-        " ".join(event.get("categories", [])),
-    ]).casefold()
+    text = " ".join(
+        [
+            str(event.get("title", "")),
+            str(event.get("description", "")),
+            str(event.get("organization", "")),
+            " ".join(event.get("categories", [])),
+        ]
+    ).casefold()
 
     return any(
         contains_phrase(text, keyword)
@@ -199,26 +238,26 @@ class EventRecommender:
                 continue
 
             event = self.events[i]
-            scored = _score_matching_event(
-                event, score, dislikes, today, now, likes_text
-            )
+            scored = _score_matching_event(event, score, dislikes, today, now, likes_text)
             if scored is None:
                 continue
 
             when, final_score = scored
 
             categories = event["categories"]
-            results.append({
-                "event_id": event["source"] + "-" + event["id"],
-                "event_name": event["title"],
-                "event_date": when,
-                "event_time": event["time"],
-                "event_location": event["location"],
-                "event_description": event["description"],
-                "event_category": categories[0] if len(categories) > 0 else "general",
-                "url": event["url"],
-                "score": round(final_score * 100)
-            })
+            results.append(
+                {
+                    "event_id": event["source"] + "-" + event["id"],
+                    "event_name": event["title"],
+                    "event_date": when,
+                    "event_time": event["time"],
+                    "event_location": event["location"],
+                    "event_description": event["description"],
+                    "event_category": categories[0] if len(categories) > 0 else "general",
+                    "url": event["url"],
+                    "score": round(final_score * 100),
+                }
+            )
 
         results.sort(key=get_score, reverse=True)
 
@@ -236,7 +275,6 @@ class EventRecommender:
         return unique_results[:top_k]
 
 
-
 def matches_requested_activity(event, query):
     """Filter explicit activity requests without restricting broad interests."""
     import re
@@ -248,10 +286,7 @@ def matches_requested_activity(event, query):
     organization = str(event.get("organization", "")).casefold()
 
     def contains(text, terms):
-        return any(
-            re.search(r"(?<!\\w)" + re.escape(term) + r"(?!\\w)", text)
-            for term in terms
-        )
+        return any(re.search(r"(?<!\\w)" + re.escape(term) + r"(?!\\w)", text) for term in terms)
 
     if contains(query, ("soccer", "futbol")):
         return (
@@ -260,15 +295,17 @@ def matches_requested_activity(event, query):
                 contains(organization, ("soccer",))
                 and contains(title + " " + description, ("practice", "match", "game", "tournament"))
             )
-        ) and not contains(
-            title + " " + description,
-            ("rave", "edm party", "dance party")
-        )
+        ) and not contains(title + " " + description, ("rave", "edm party", "dance party"))
 
     if contains(query, ("concert", "concerts", "performances", "performance")):
         performance_terms = (
-            "concert", "songfest", "recital", "showcase",
-            "live performance", "live music", "lip sync",
+            "concert",
+            "songfest",
+            "recital",
+            "showcase",
+            "live performance",
+            "live music",
+            "lip sync",
             "singing competition",
         )
         if contains(query, ("music", "musical", "concert", "concerts")):
@@ -281,6 +318,7 @@ def matches_requested_activity(event, query):
         )
 
     return True
+
 
 def _score_matching_event(event, score, dislikes, today, now, likes_text):
     if not matches_event_topic(event, likes_text):
@@ -308,11 +346,7 @@ def _score_upcoming_event(event, score, dislikes, today, now):
             start_date = min(dates) if dates else None
 
         end_date = event.get("end_date")
-        if (
-            start_date
-            and end_date
-            and start_date < today.isoformat() <= end_date
-        ):
+        if start_date and end_date and start_date < today.isoformat() <= end_date:
             when = f"Ongoing through {end_date}"
             ongoing_range = True
         else:
