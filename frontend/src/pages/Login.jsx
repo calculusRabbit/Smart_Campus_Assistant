@@ -32,7 +32,8 @@ export default function Login({ goTo }) {
         <form onSubmit={handleSubmit}>
           <input
             className={styles.input}
-            autoComplete="off"
+            autoComplete="username"
+            autoComplete="current-password"
             autoFocus
             placeholder="Email"
             type="email"

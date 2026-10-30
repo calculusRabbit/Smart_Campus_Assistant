@@ -1,12 +1,21 @@
 import re
 
-from fastapi import FastAPI, HTTPException, Query
+from typing import Annotated
+
+from fastapi import Depends, FastAPI, HTTPException, Query
+
+from auth import get_current_user, require_student_owner
+
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.exceptions import RequestValidationError
 from fastapi.staticfiles import StaticFiles
+
+from routers.auth import router as auth_router
 
 from database import (
     get_course_details,
+    get_connection,
     get_courses_by_professor,
     get_courses_from_database,
     get_deadlines_from_database,
@@ -31,6 +40,8 @@ INTEREST_GROUPS = {
 
 app = FastAPI()
 
+app.include_router(auth_router)
+
 # let the react app (vite runs on 5173) call this backend
 app.add_middleware(
     CORSMiddleware,
@@ -42,9 +53,45 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
+@app.exception_handler(RequestValidationError)
+async def validation_error_handler(_request, exc: RequestValidationError):
+    return JSONResponse(
+        status_code=422,
+        content={
+            "detail": [
+                {
+                    "loc": list(error["loc"]),
+                    "msg": error["msg"],
+                    "type": error["type"],
+                }
+                for error in exc.errors()
+            ]
+        },
+    )
+
+
+
 @app.get("/")
 def home():
     return FileResponse("static/index.html")
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
+@app.get("/ready")
+def ready():
+    try:
+        with get_connection() as connection:
+            connection.execute("SELECT 1").fetchone()
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Database unavailable",
+        ) from exc
+
+    return {"status": "ready"}
 
 
 @app.get("/events")
@@ -84,8 +131,10 @@ def get_professors():
 
 
 @app.get("/deadlines")
-def get_deadlines():
-    return {"deadlines": get_deadlines_from_database()}
+def get_deadlines(
+    user: Annotated[dict, Depends(get_current_user)],
+):
+    return {"deadlines": get_deadlines_from_database(user["student_id"])}
 
 
 def find_course_by_message(message: str):
@@ -195,7 +244,9 @@ def recommend_events(request: RecommendationRequest):
     return {"interests": request.interests, "recommended_events": recommended_events}
 
 
-@app.post("/students/{student_id}/interests")
+@app.post(
+    "/students/{student_id}/interests",
+    dependencies=[Depends(require_student_owner)],)
 def set_student_interests(student_id: int, request: StudentInterestsRequest):
     if not request.interests:
         raise HTTPException(status_code=400, detail="At least one student interest is required.")
@@ -206,19 +257,23 @@ def set_student_interests(student_id: int, request: StudentInterestsRequest):
 
     return {
         "student_id": student_id,
-        "interests": request.interests,
+        "interests": get_student_interests(student_id),
         "message": "Student interests saved successfully.",
     }
 
 
-@app.get("/students/{student_id}/interests")
+@app.get(
+    "/students/{student_id}/interests",
+    dependencies=[Depends(require_student_owner)],)
 def get_saved_student_interests(student_id: int):
     interests = get_student_interests(student_id)
 
     return {"student_id": student_id, "interests": interests}
 
 
-@app.get("/students/{student_id}/recommendations/events")
+@app.get(
+    "/students/{student_id}/recommendations/events",
+    dependencies=[Depends(require_student_owner)],)
 def get_student_event_recommendations(student_id: int):
     student_interests = get_student_interests(student_id)
 
@@ -398,7 +453,10 @@ def get_missing_course_reply(message: str):
 
 
 @app.post("/chat")
-def chat(request: ChatRequest):  # noqa: C901
+def chat(  # noqa: C901
+    request: ChatRequest,
+    user: Annotated[dict, Depends(get_current_user)],
+):
     message = request.message.lower().strip()
 
     if not message:
@@ -492,7 +550,7 @@ def chat(request: ChatRequest):  # noqa: C901
         return {
             "intent": "deadlines",
             "reply": "Here are some important academic deadlines.",
-            "data": get_deadlines_from_database(),
+            "data": get_deadlines_from_database(user["student_id"])
         }
 
     else:

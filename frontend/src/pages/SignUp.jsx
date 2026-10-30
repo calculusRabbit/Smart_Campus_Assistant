@@ -46,9 +46,21 @@ export default function SignUp({ goTo }) {
     }
 
     // simple age check, just compares birth year to current year
-    const birthYear = new Date(dob).getFullYear();
-    const currentYear = new Date().getFullYear();
-    const age = currentYear - birthYear;
+    const [birthYear, birthMonth, birthDay] = dob
+      .split("-")
+      .map(Number);
+
+    const today = new Date();
+    let age = today.getFullYear() - birthYear;
+
+    const birthdayNotReached =
+      today.getMonth() + 1 < birthMonth ||
+      (today.getMonth() + 1 === birthMonth &&
+        today.getDate() < birthDay);
+
+    if (birthdayNotReached) {
+      age -= 1;
+    }
 
     if (age < 14) {
       setError("You must be at least 14 years old to sign up.");

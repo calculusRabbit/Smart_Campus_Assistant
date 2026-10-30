@@ -1,4 +1,4 @@
--- please see database schema document for detailed specifications and some examples
+-- please see schema in the repository's Wiki for more details
 
 BEGIN;
 

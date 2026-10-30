@@ -16,3 +16,9 @@ python-dotenv
 huggingface_hub
 sentence-transformers
 faiss-cpu
+
+
+# authentication
+PyJWT
+pwdlib[argon2,bcrypt]
+email-validator

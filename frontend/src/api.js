@@ -1,8 +1,81 @@
 // all the backend calls are in this file
-const BASE_URL = "http://localhost:8000";
+const BASE_URL =
+  import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
-// TODO: set this to false when the real /login and /signup endpoints are done
-const FAKE_AUTH = true;
+let accessToken = null;
+let currentUser = null;
+
+// Remove obsolete credentials left by the demonstration implementation.
+localStorage.removeItem("token");
+localStorage.removeItem("user");
+
+export function getUser() {
+  return currentUser;
+}
+
+export async function apiFetch(path, options = {}) {
+  const headers = new Headers(options.headers);
+
+  if (accessToken !== null) {
+    headers.set("Authorization", `Bearer ${accessToken}`);
+  }
+
+  const response = await fetch(BASE_URL + path, {
+    ...options,
+    headers,
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      accessToken = null;
+      currentUser = null;
+    }
+
+    const body = await response.json().catch(() => null);
+    const message =
+      typeof body?.detail === "string"
+        ? body.detail
+        : `Request failed (${response.status})`;
+
+    throw new Error(message);
+  }
+
+  return response;
+}
+
+export async function login(email, password) {
+  const response = await apiFetch("/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+
+  const data = await response.json();
+  accessToken = data.access_token;
+  currentUser = data.user;
+  return currentUser;
+}
+
+export async function signup(form) {
+  const response = await apiFetch("/signup", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(form),
+  });
+
+  return response.json();
+}
+
+export async function logout() {
+  try {
+    if (accessToken !== null) {
+      await apiFetch("/logout", { method: "POST" });
+    }
+  } finally {
+    accessToken = null;
+    currentUser = null;
+  }
+}
 
 export function getUser() {
   const saved = localStorage.getItem("user");
@@ -108,41 +181,40 @@ export async function getCourses() {
 
 // recommended events for a student, empty if no interests
 export async function getRecommendedEvents(studentId) {
-  const res = await fetch(
-    BASE_URL + "/students/" + studentId + "/recommendations/events",
+  const response = await apiFetch(
+    `/students/${studentId}/recommendations/events`,
   );
-  if (!res.ok) {
-    return [];
-  }
-  const data = await res.json();
+  const data = await response.json();
   return data.recommended_events;
 }
 
 export async function getInterests(studentId) {
-  const res = await fetch(BASE_URL + "/students/" + studentId + "/interests");
-  const data = await res.json();
+  const response = await apiFetch(
+    `/students/${studentId}/interests`,
+  );
+  const data = await response.json();
   return data.interests;
 }
 
 export async function saveInterests(studentId, interests) {
-  const res = await fetch(BASE_URL + "/students/" + studentId + "/interests", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ interests }),
-  });
-  if (!res.ok) {
-    throw new Error("Could not save interests.");
-  }
-  return res.json();
+  const response = await apiFetch(
+    `/students/${studentId}/interests`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ interests }),
+    },
+  );
+  return response.json();
 }
 
 export async function sendChat(message) {
-  const res = await fetch(BASE_URL + "/chat", {
+  const response = await apiFetch("/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ message }),
   });
-  return res.json();
+  return response.json();
 }
 
 export async function getProfessors() {

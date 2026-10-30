@@ -20,6 +20,22 @@ function App() {
 
   // pages that need a logged in user
   const loggedIn = getUser() !== null;
+  const user = getUser();
+
+  if (
+    user !== null &&
+    user.account_status !== "open" &&
+    (page === "reviews" || page === "professor")
+  ) {
+    return (
+      <main>
+        <p>Student verification is required to access reviews.</p>
+        <button onClick={() => setPage("dashboard")}>
+          Back to dashboard
+        </button>
+      </main>
+    );
+  }
   if (
     !loggedIn &&
     (page === "dashboard" ||

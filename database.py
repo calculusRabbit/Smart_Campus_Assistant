@@ -36,12 +36,10 @@ def get_connection():
 
 
 def fetch_all(query, params=None):
-    connection = get_connection()
-    cursor = connection.cursor()
-    cursor.execute(query, params)
-    rows = cursor.fetchall()
-    connection.close()
-    return rows
+    with get_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(query, params)
+            return cursor.fetchall()
 
 
 def format_clock(text):
@@ -123,7 +121,8 @@ def get_events_from_database():
 
 def get_student_interests(student_id: int):
     rows = fetch_all(
-        "SELECT interests FROM students WHERE student_id = %s",
+        "SELECT interests FROM students "
+        "WHERE student_id = %s AND deleted_timestamp IS NULL AND account_status <> 'closed'",
         (student_id,)
     )
     if len(rows) == 0 or rows[0]["interests"] is None:
@@ -132,29 +131,29 @@ def get_student_interests(student_id: int):
 
 
 def save_student_interests(student_id: int, interests: list[str]):
-    cleaned = []
-    for interest in interests:
-        cleaned.append(interest.lower().strip())
+    cleaned = [interest.lower().strip() for interest in interests]
 
-    connection = get_connection()
-    cursor = connection.cursor()
-    cursor.execute(
-        "UPDATE students SET interests = %s WHERE student_id = %s",
-        (cleaned, student_id)
-    )
-    # no row changed means there is no student with this id
-    found = cursor.rowcount > 0
-    connection.commit()
-    connection.close()
-    return found
+    with get_connection() as connection:
+        cursor = connection.execute(
+            """
+            UPDATE students
+            SET interests = %s
+            WHERE student_id = %s
+              AND deleted_timestamp IS NULL
+              AND account_status <> 'closed'
+            """,
+            (cleaned, student_id),
+        )
+        return cursor.rowcount > 0
 
 
-def get_deadlines_from_database():
-    rows = fetch_all("""
-        SELECT deadline_id, deadline_action, deadline_datetime, deadline_description
+def get_deadlines_from_database(student_id: int):
+    rows = fetch_all("""SELECT deadline_id, deadline_action, deadline_datetime, deadline_description
         FROM deadlines
+        WHERE student_id = %s
         ORDER BY deadline_datetime
-    """)
+        """,(student_id,),
+    )
 
     deadlines = []
     for row in rows:

@@ -6,10 +6,17 @@ import styles from "./NavBar.module.css";
 export default function NavBar({ goTo }) {
   const user = getUser();
 
-  function handleLogout() {
-    logout();
+async function handleLogout() {
+  try {
+    await logout();
+  } catch (error) {
+    window.alert(
+      `Local login cleared, but server logout was not confirmed: ${error.message}`,
+    );
+  } finally {
     goTo("login");
   }
+}
 
   return (
     <nav className={styles.nav}>
