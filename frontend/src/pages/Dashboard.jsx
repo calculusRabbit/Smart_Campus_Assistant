@@ -88,7 +88,8 @@ function chatDataToLines(result) {
           " " +
           item.event_time +
           " | " +
-          item.event_location,
+          item.event_location +
+          (item.url ? " | " + item.url : ""),
       );
     } else if (result.intent === "dining") {
       lines.push(
@@ -182,7 +183,15 @@ function ChatPanel() {
     for (let j = 0; j < m.lines.length; j++) {
       lineList.push(
         <p key={j} className={styles.chatLine}>
-          - {m.lines[j]}
+          - {m.lines[j].split(/(https?:\/\/[^\s|]+)/g).map((part, index) =>
+            /^https?:\/\//.test(part) ? (
+              <a key={index} href={part} target="_blank" rel="noopener noreferrer">
+                View on ShockerSync
+              </a>
+            ) : (
+              part
+            ),
+          )}
         </p>,
       );
     }
