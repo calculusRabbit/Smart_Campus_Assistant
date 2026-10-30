@@ -27,10 +27,10 @@ export default function Profile({ goTo }) {
           tags.push(saved[i]);
         }
       }
-      setInterests(tags);
-      setAboutText(texts.join(" "));
-    });
-  }, []);
+      setInterests(tags)
+      setAboutText(texts.join(" "))
+    })
+  }, [user.id])
 
   function toggleInterest(name) {
     if (interests.includes(name)) {

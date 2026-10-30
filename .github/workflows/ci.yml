@@ -54,8 +54,29 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt -r requirements-dev.txt
 
-      - name: Run Ruff
+      - name: Run Ruff linter
         run: ruff check .
+
+      - name: Check Ruff formatting
+        run: ruff format --check .
+      
+      - name: Type check
+        run: mypy
+      
+      - name: Check cognitive complexity
+        run: complexipy main.py models.py services --max-complexity-allowed 15
+      
+      - name: Static security analysis
+        run: bandit -r main.py models.py services -x services/rag/tests,services/rag/data
+      
+      - name: Audit Python dependencies
+        run: |
+          mkdir -p reports
+          pip-audit --strict \
+            -r requirements.txt \
+            --format json \
+            --output reports/python-dependencies.json
+
 
       - name: Create the tables
         run: |
@@ -80,13 +101,61 @@ jobs:
             --cov-fail-under=60 \
             --junitxml=test-results.xml
 
-      - name: Upload test and coverage reports
+      - name: Upload backend quality and test evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: backend-test-coverage-reports
+          name: backend-quality-test-evidence
           path: |
+            reports/
             test-results.xml
             coverage.xml
             htmlcov/
           if-no-files-found: warn
+          retention-days: 30
+
+  frontend-quality:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint frontend
+        run: npm run lint
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Audit frontend dependencies
+        shell: bash
+        run: |
+          mkdir -p ../reports
+
+          audit_status=0
+          npm audit --audit-level=low --json \
+            > ../reports/npm-audit.json || audit_status=$?
+
+          cat ../reports/npm-audit.json
+
+          exit "$audit_status"
+
+      - name: Upload frontend dependency audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dependency-audit-evidence
+          path: reports/npm-audit.json
+          if-no-files-found: warn
+          retention-days: 30
