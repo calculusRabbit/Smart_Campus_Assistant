@@ -1,10 +1,10 @@
 # AI Usage Log — Smart Campus Assistant
 
-**Project:** Smart Campus Assistant  
-**Team:** The Three Musketeer  
-**Development Phase:** Prototype 2 — Backend and AI Integration  
-**Role:** Backend Developer / AI Integration  
-**AI Tool:** ChatGPT (OpenAI)  
+**Project:** Smart Campus Assistant
+**Team:** The Three Musketeer
+**Development Phase:** Prototype 2 — Backend and AI Integration
+**Role:** Backend Developer / AI Integration
+**AI Tool:** ChatGPT (OpenAI)
 **Reporting Period:** September–October 2026
 
 ## 1. Purpose of AI Assistance
