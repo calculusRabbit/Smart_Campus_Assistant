@@ -1,4 +1,5 @@
 import re
+from typing import Any
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -43,17 +44,17 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 @app.get("/")
-def home():
+def home() -> FileResponse:
     return FileResponse("static/index.html")
 
 
 @app.get("/events")
-def get_events():
+def get_events() -> dict[str, Any]:
     return {"events": get_events_from_database()}
 
 
 @app.get("/dining")
-def get_dining():
+def get_dining() -> dict[str, Any]:
     return {"dining": get_dining_from_database()}
 
 
@@ -61,7 +62,7 @@ def get_dining():
 def get_courses(
     code: str | None = Query(default=None),
     professor: str | None = Query(default=None),
-):
+) -> dict[str, Any]:
     courses = get_courses_from_database()
 
     if code:
@@ -79,16 +80,16 @@ def get_courses(
 
 
 @app.get("/professors")
-def get_professors():
+def get_professors() -> dict[str, Any]:
     return {"professors": get_professors_from_database()}
 
 
 @app.get("/deadlines")
-def get_deadlines():
+def get_deadlines() -> dict[str, Any]:
     return {"deadlines": get_deadlines_from_database()}
 
 
-def find_course_by_message(message: str):
+def find_course_by_message(message: str) -> dict[str, Any] | None:
     message = message.lower()
 
     for course in get_courses_from_database():
@@ -107,7 +108,7 @@ def find_course_by_message(message: str):
     return None
 
 
-def find_professor_by_message(message: str):
+def find_professor_by_message(message: str) -> dict[str, Any] | None:
     professors = get_professors_from_database()
     message = message.lower()
 
@@ -141,7 +142,7 @@ def find_professor_by_message(message: str):
     return None
 
 
-def contains_keyword(message: str, keyword: str):
+def contains_keyword(message: str, keyword: str) -> bool:
     pattern = rf"(?<!\w){re.escape(keyword)}(?!\w)"
     return re.search(pattern, message) is not None
 
@@ -170,7 +171,7 @@ def extract_interests_from_message(message: str) -> list[str]:
 
 
 # SECOND NEW HELPER
-def get_event_recommendations(interests: list[str]):
+def get_event_recommendations(interests: list[str]) -> list[dict[str, Any]]:
     recommended_events = []
 
     normalized_interests = [interest.lower().strip() for interest in interests]
@@ -189,14 +190,14 @@ def get_event_recommendations(interests: list[str]):
 
 
 @app.post("/recommendations/events")
-def recommend_events(request: RecommendationRequest):
+def recommend_events(request: RecommendationRequest) -> dict[str, Any]:
     recommended_events = get_event_recommendations(request.interests)
 
     return {"interests": request.interests, "recommended_events": recommended_events}
 
 
 @app.post("/students/{student_id}/interests")
-def set_student_interests(student_id: int, request: StudentInterestsRequest):
+def set_student_interests(student_id: int, request: StudentInterestsRequest) -> dict[str, Any]:
     if not request.interests:
         raise HTTPException(status_code=400, detail="At least one student interest is required.")
 
@@ -212,14 +213,14 @@ def set_student_interests(student_id: int, request: StudentInterestsRequest):
 
 
 @app.get("/students/{student_id}/interests")
-def get_saved_student_interests(student_id: int):
+def get_saved_student_interests(student_id: int) -> dict[str, Any]:
     interests = get_student_interests(student_id)
 
     return {"student_id": student_id, "interests": interests}
 
 
 @app.get("/students/{student_id}/recommendations/events")
-def get_student_event_recommendations(student_id: int):
+def get_student_event_recommendations(student_id: int) -> dict[str, Any]:
     student_interests = get_student_interests(student_id)
 
     if not student_interests:
@@ -242,7 +243,7 @@ def get_student_event_recommendations(student_id: int):
 
 # nothing matched in chat, ask the rag if it is on, if not say we dont know
 # (this is its own function so chat is not too complex for the linter)
-def get_fallback_reply(request: ChatRequest):
+def get_fallback_reply(request: ChatRequest) -> dict[str, Any]:
     if RAG_ENABLED:
         from services.rag.pipeline import query_RAG
 
@@ -262,7 +263,7 @@ def get_fallback_reply(request: ChatRequest):
     }
 
 
-def get_live_event_chat_response(message: str):
+def get_live_event_chat_response(message: str) -> dict[str, Any] | None:
     # Route topic-specific event requests to fresh ShockerSync recommendations.
     # Keep informational questions and existing database routes unchanged.
     event_request_terms = (
@@ -328,7 +329,7 @@ def get_live_event_chat_response(message: str):
     return None
 
 
-def get_professor_chat_response(message: str):
+def get_professor_chat_response(message: str) -> dict[str, Any] | None:
     matched_professor = find_professor_by_message(message)
     if matched_professor:
         return {
@@ -340,7 +341,7 @@ def get_professor_chat_response(message: str):
     return None
 
 
-def get_matched_course_reply(message: str):
+def get_matched_course_reply(message: str) -> dict[str, Any] | None:
     matched_course = find_course_by_message(message)
     if not matched_course:
         return None
@@ -372,7 +373,7 @@ def get_matched_course_reply(message: str):
     }
 
 
-def get_missing_course_reply(message: str):
+def get_missing_course_reply(message: str) -> dict[str, Any] | None:
     """Report a missing explicitly requested course without listing unrelated courses."""
     import re
 
@@ -397,13 +398,8 @@ def get_missing_course_reply(message: str):
     }
 
 
-@app.post("/chat")
-def chat(request: ChatRequest):  # noqa: C901
-    message = request.message.lower().strip()
-
-    if not message:
-        raise HTTPException(status_code=400, detail="Message cannot be empty.")
-
+def get_general_chat_response(message: str) -> dict[str, Any] | None:
+    """Handle general campus information and interest recommendations."""
     event_keywords = ["event", "events", "activity", "activities", "career fair", "competition"]
     dining_keywords = ["dining", "food", "eat", "cafeteria", "restaurant", "hungry"]
     course_keywords = ["course", "courses", "class", "classes", "cs 560", "cs 598"]
@@ -428,29 +424,12 @@ def chat(request: ChatRequest):  # noqa: C901
         "interest",
     ]
 
-    course_response = get_matched_course_reply(message)
-    if course_response is not None:
-        return course_response
-
-    missing_course_response = get_missing_course_reply(message)
-    if missing_course_response is not None:
-        return missing_course_response
-
-    professor_response = get_professor_chat_response(message)
-    if professor_response is not None:
-        return professor_response
-
-    live_event_response = get_live_event_chat_response(message)
-    if live_event_response is not None:
-        return live_event_response
-
     detected_interests = extract_interests_from_message(message)
 
     if detected_interests and any(
         contains_keyword(message, keyword) for keyword in recommendation_keywords
     ):
         recommended_events = get_event_recommendations(detected_interests)
-
         return {
             "intent": "recommendations",
             "reply": "Here are some campus events based on your interests.",
@@ -467,39 +446,68 @@ def chat(request: ChatRequest):  # noqa: C901
             "data": get_events_from_database(),
         }
 
-    elif any(contains_keyword(message, keyword) for keyword in dining_keywords):
+    if any(contains_keyword(message, keyword) for keyword in dining_keywords):
         return {
             "intent": "dining",
             "reply": "Here are some dining options on campus.",
             "data": get_dining_from_database(),
         }
 
-    elif any(contains_keyword(message, keyword) for keyword in course_keywords):
+    if any(contains_keyword(message, keyword) for keyword in course_keywords):
         return {
             "intent": "courses",
             "reply": "Here are some course details.",
             "data": get_courses_from_database(),
         }
 
-    elif any(contains_keyword(message, keyword) for keyword in professor_keywords):
+    if any(contains_keyword(message, keyword) for keyword in professor_keywords):
         return {
             "intent": "professors",
             "reply": "Here are some professor details.",
             "data": get_professors_from_database(),
         }
 
-    elif any(contains_keyword(message, keyword) for keyword in deadline_keywords):
+    if any(contains_keyword(message, keyword) for keyword in deadline_keywords):
         return {
             "intent": "deadlines",
             "reply": "Here are some important academic deadlines.",
             "data": get_deadlines_from_database(),
         }
 
-    else:
-        return get_fallback_reply(request)
+    return None
 
 
-def build_course_reply(course_code: str, course_number: str):
+@app.post("/chat")
+def chat(request: ChatRequest) -> dict[str, Any]:
+    message = request.message.lower().strip()
+
+    if not message:
+        raise HTTPException(status_code=400, detail="Message cannot be empty.")
+
+    course_response = get_matched_course_reply(message)
+    if course_response is not None:
+        return course_response
+
+    missing_course_response = get_missing_course_reply(message)
+    if missing_course_response is not None:
+        return missing_course_response
+
+    professor_response = get_professor_chat_response(message)
+    if professor_response is not None:
+        return professor_response
+
+    live_event_response = get_live_event_chat_response(message)
+    if live_event_response is not None:
+        return live_event_response
+
+    general_response = get_general_chat_response(message)
+    if general_response is not None:
+        return general_response
+
+    return get_fallback_reply(request)
+
+
+def build_course_reply(course_code: str, course_number: str) -> dict[str, Any] | None:
     """Format course details from PostgreSQL."""
     records = get_course_details(course_code, course_number)
     if not records:
