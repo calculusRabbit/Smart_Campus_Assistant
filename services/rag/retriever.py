@@ -1,4 +1,5 @@
 import json
+from typing import Any, cast
 
 import faiss
 import numpy as np
@@ -13,7 +14,7 @@ from services.rag.config import (
 
 model = None
 
-def get_embedding_model():
+def get_embedding_model() -> SentenceTransformer:
     global model
 
     if model is None:
@@ -36,15 +37,19 @@ def embed_query(user_input: str) -> np.ndarray:
     vector = vector.reshape(1, -1)  # reshape to 2D for FAISS
     # Normalize because document vectors are also normalized.
     faiss.normalize_L2(vector)
-    return vector
+    return cast(np.ndarray, vector)
 
-def search_similar(index_document, query_vector, top_k=5):
+def search_similar(
+    index_document: Any,
+    query_vector: np.ndarray,
+    top_k: int = 5,
+) -> tuple[Any, Any]:
     # use cosine similarity here:
     distances, indices = index_document.search(query_vector, k=top_k)
     return distances[0], indices[0] # get flat list 
 
 
-def main():
+def main() -> None:
     index = faiss.read_index(str(INDEX_PATH))
 
     with open(CHUNKS_PATH, encoding="utf-8") as f:

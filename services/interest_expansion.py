@@ -19,7 +19,7 @@ INTEREST_ACTIVITIES = {
 }
 
 
-def expand_interests(text):
+def expand_interests(text: str) -> str:
     """Preserve the original interests and add matching activity descriptions."""
     normalized = text.casefold()
     activities = []
@@ -57,7 +57,7 @@ INTEREST_ALIASES = {
 }
 
 
-def extract_event_interests(question):
+def extract_event_interests(question: str) -> str:
     """Extract interests from a student question for event searching."""
     normalized = question.casefold()
     interests = []

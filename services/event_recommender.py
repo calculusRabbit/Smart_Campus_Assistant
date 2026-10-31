@@ -1,5 +1,7 @@
 import json
+from collections.abc import Callable
 from datetime import date, datetime
+from typing import Any
 from zoneinfo import ZoneInfo
 
 import numpy as np
@@ -20,11 +22,11 @@ from services.recommender_config import (
 # the numbers like the date window and the cutoff are in recommender_config.py
 
 
-def today_in_wichita():
+def today_in_wichita() -> date:
     return datetime.now(ZoneInfo("America/Chicago")).date()
 
 
-def profile_to_text(interests):
+def profile_to_text(interests: list[str]) -> str:
     # tags are short items like "coding"
     # the text the student wrote is one long item (there is no text column yet)
     tags = []
@@ -43,23 +45,24 @@ def profile_to_text(interests):
     return text.strip()
 
 
-def next_date(event, today):
-    # the first date of the event that is in the window, None if they are all too old
+def next_date(event: dict[str, Any], today: date) -> str | None:
+    # The first upcoming event date, or None if none is available.
     oldest_text = today.isoformat()
 
-    upcoming = []
+    upcoming: list[str] = []
+
     for d in event["dates"]:
-        if d and d >= oldest_text:
+        if isinstance(d, str) and d >= oldest_text:
             upcoming.append(d)
-    if len(upcoming) > 0:
+
+    if upcoming:
         return min(upcoming)
 
     # Do not invent occurrences within a multi-day event's date range.
-    # The source may describe a recurring schedule without providing exact dates.
     return None
 
 
-def mentions_dislike(event, dislikes):
+def mentions_dislike(event: dict[str, Any], dislikes: list[str]) -> bool:
     text = event["title"] + " " + " ".join(event["categories"]) + " " + event["organization"]
     text = text.lower()
     for word in dislikes:
@@ -158,13 +161,13 @@ TOPIC_QUERY_ALIASES = {
 }
 
 
-def matches_event_topic(event, interests):
+def matches_event_topic(event: dict[str, Any], interests: str) -> bool:
     """Require topic evidence for recognized student interests."""
     import re
 
     query = interests.casefold()
 
-    def contains_phrase(text, phrase):
+    def contains_phrase(text: str, phrase: str) -> bool:
         pattern = r"(?<!\w)" + re.escape(phrase) + r"(?!\w)"
         return re.search(pattern, text) is not None
 
@@ -194,7 +197,12 @@ def matches_event_topic(event, interests):
 
 
 class EventRecommender:
-    def __init__(self, events, index, embed):
+    def __init__(
+        self,
+        events: list[dict[str, Any]],
+        index: Any,
+        embed: Callable[[str], np.ndarray],
+    ) -> None:
         # embed turns a text into a normalized vector
         if index.ntotal != len(events):
             raise ValueError("index and all_events.json do not match, build the index again")
@@ -203,7 +211,7 @@ class EventRecommender:
         self.embed = embed
 
     @classmethod
-    def load(cls):
+    def load(cls) -> "EventRecommender":
         # imported here so importing this file is fast
         import faiss
         from sentence_transformers import SentenceTransformer
@@ -213,14 +221,21 @@ class EventRecommender:
         index = faiss.read_index(str(EVENTS_INDEX_PATH))
         model = SentenceTransformer(EVENTS_EMBEDDING_MODEL)
 
-        def embed(text):
+        def embed(text: str) -> np.ndarray:
             vector = model.encode([text]).astype(np.float32)
             faiss.normalize_L2(vector)
             return vector
 
         return cls(events, index, embed)
 
-    def recommend(self, likes_text, dislikes=None, top_k=10, today=None, now=None):
+    def recommend(
+        self,
+        likes_text: str,
+        dislikes: list[str] | None = None,
+        top_k: int = 10,
+        today: date | None = None,
+        now: datetime | None = None,
+    ) -> list[dict[str, Any]]:
         if now is None:
             now = datetime.now(ZoneInfo("America/Chicago"))
         if dislikes is None:
@@ -275,7 +290,7 @@ class EventRecommender:
         return unique_results[:top_k]
 
 
-def matches_requested_activity(event, query):
+def matches_requested_activity(event: dict[str, Any], query: str) -> bool:
     """Filter explicit activity requests without restricting broad interests."""
     import re
 
@@ -285,8 +300,8 @@ def matches_requested_activity(event, query):
     description = str(event.get("description", "")).casefold()
     organization = str(event.get("organization", "")).casefold()
 
-    def contains(text, terms):
-        return any(re.search(r"(?<!\\w)" + re.escape(term) + r"(?!\\w)", text) for term in terms)
+    def contains(text: str, terms: tuple[str, ...]) -> bool:
+        return any(re.search(r"(?<!\w)" + re.escape(term) + r"(?!\w)", text) for term in terms)
 
     if contains(query, ("soccer", "futbol")):
         return (
@@ -320,7 +335,14 @@ def matches_requested_activity(event, query):
     return True
 
 
-def _score_matching_event(event, score, dislikes, today, now, likes_text):
+def _score_matching_event(
+    event: dict[str, Any],
+    score: Any,
+    dislikes: list[str],
+    today: date,
+    now: datetime,
+    likes_text: str,
+) -> tuple[str, float] | None:
     if not matches_event_topic(event, likes_text):
         return None
     if not matches_requested_activity(event, likes_text):
@@ -328,29 +350,46 @@ def _score_matching_event(event, score, dislikes, today, now, likes_text):
     return _score_upcoming_event(event, score, dislikes, today, now)
 
 
-def _score_upcoming_event(event, score, dislikes, today, now):
-    # Exclude events that have already ended, including earlier today.
+def get_event_display_date(event: dict[str, Any], today: date) -> tuple[str, bool] | None:
+    """Return an upcoming date or an ongoing-event label."""
+    when = next_date(event, today)
+
+    if when is not None:
+        return when, False
+
+    start_date = event.get("start_date")
+    if start_date is None:
+        dates = event.get("dates") or []
+        start_date = min(dates) if dates else None
+
+    end_date = event.get("end_date")
+
+    if start_date and end_date and start_date < today.isoformat() <= end_date:
+        return f"Ongoing through {end_date}", True
+
+    return None
+
+
+def _score_upcoming_event(
+    event: dict[str, Any],
+    score: Any,
+    dislikes: list[str],
+    today: date,
+    now: datetime,
+) -> tuple[str, float] | None:
+    # Exclude events that have already ended.
     end_text = event.get("end_datetime")
     if end_text and datetime.fromisoformat(end_text) <= now:
         return None
 
-    when = next_date(event, today)
     if mentions_dislike(event, dislikes):
         return None
 
-    ongoing_range = False
-    if when is None:
-        start_date = event.get("start_date")
-        if start_date is None:
-            dates = event.get("dates") or []
-            start_date = min(dates) if dates else None
+    display_date = get_event_display_date(event, today)
+    if display_date is None:
+        return None
 
-        end_date = event.get("end_date")
-        if start_date and end_date and start_date < today.isoformat() <= end_date:
-            when = f"Ongoing through {end_date}"
-            ongoing_range = True
-        else:
-            return None
+    when, ongoing_range = display_date
 
     final_score = float(score)
     if final_score < MIN_SCORE:
@@ -366,15 +405,15 @@ def _score_upcoming_event(event, score, dislikes, today, now):
     return when, min(1.0, final_score)
 
 
-def get_score(result):
-    return result["score"]
+def get_score(result: dict[str, Any]) -> float:
+    return float(result["score"])
 
 
 # loading takes a few seconds so only do it the first time
 _recommender = None
 
 
-def get_recommender():
+def get_recommender() -> EventRecommender:
     global _recommender
     if _recommender is None:
         _recommender = EventRecommender.load()
