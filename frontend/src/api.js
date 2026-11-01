@@ -4,6 +4,9 @@ const BASE_URL = "http://localhost:8000";
 // TODO: set this to false when the real /login and /signup endpoints are done
 const FAKE_AUTH = true;
 
+// a deleted account can come back if you log in within this many days
+const DELETE_DAYS = 30;
+
 export function getUser() {
   const saved = localStorage.getItem("user");
   if (saved === null) {
@@ -17,8 +20,37 @@ export function logout() {
   localStorage.removeItem("token");
 }
 
+// soft delete, the account is only marked as deleted (not removed)
+export async function deleteAccount(studentId, password, reason, comment) {
+  if (FAKE_AUTH) {
+    const user = getUser();
+    localStorage.setItem("deleted_" + user.email, String(Date.now()));
+    return { message: "fake delete ok" };
+  }
+
+  const res = await fetch(BASE_URL + "/students/" + studentId, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password, reason, comment }),
+  });
+  if (!res.ok) {
+    throw new Error("Wrong password.");
+  }
+  return res.json();
+}
+
 export async function login(email, password) {
   if (FAKE_AUTH) {
+    // logging in again within 30 days brings a deleted account back
+    const deletedAt = localStorage.getItem("deleted_" + email);
+    if (deletedAt !== null) {
+      const days = (Date.now() - Number(deletedAt)) / (1000 * 60 * 60 * 24);
+      if (days > DELETE_DAYS) {
+        throw new Error("This account was deleted.");
+      }
+      localStorage.removeItem("deleted_" + email);
+    }
+
     const user = { id: 1, name: email.split("@")[0], email: email };
     localStorage.setItem("user", JSON.stringify(user));
     localStorage.setItem("token", "fake-token");
