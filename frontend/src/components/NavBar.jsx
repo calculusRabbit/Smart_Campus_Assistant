@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { getUser, logout } from "../api";
-import shockerImage from "../assets/images/wsu-shocker.png";
+import shockerImage from "../assets/images/babyboo-pokko.gif";
 import styles from "./NavBar.module.css";
 
 // top bar shown on every page after login
