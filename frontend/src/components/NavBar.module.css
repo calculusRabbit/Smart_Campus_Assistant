@@ -28,9 +28,39 @@
   color: var(--yellow);
 }
 
-.userName {
-  margin-right: 10px;
+/* the dropdown sits under the button */
+.menuWrap {
+  position: relative;
+}
+
+.menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  min-width: 150px;
+  margin-top: 6px;
+  padding: 6px;
+  background-color: white;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.menuItem {
+  padding: 8px 12px;
+  text-align: left;
   font-weight: bold;
+  color: var(--black);
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.menuItem:hover {
+  background-color: var(--yellow);
 }
 
 .navButton {
