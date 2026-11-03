@@ -407,6 +407,74 @@ def get_missing_course_reply(message: str) -> dict[str, Any] | None:
     }
 
 
+def get_general_professor_response(message: str) -> dict[str, Any]:
+    """Return WSU faculty information for general chat requests."""
+    departments = (
+        "Electrical and Computer Engineering",
+        "Mechanical Engineering",
+        "Aerospace Engineering",
+        "Biomedical Engineering",
+        "School of Computing",
+    )
+
+    professors = [
+        professor
+        for professor in get_professors_from_database()
+        if professor.get("professor_department") in departments
+        and str(professor.get("professor_email") or "").lower().endswith("@wichita.edu")
+    ]
+
+    matched_departments = [
+        department for department in departments if contains_keyword(message, department.lower())
+    ]
+
+    if matched_departments:
+        professors = [
+            professor
+            for professor in professors
+            if professor["professor_department"] in matched_departments
+        ]
+
+    return {
+        "intent": "professors",
+        "reply": (
+            f"Here are the professors in {matched_departments[0]}."
+            if len(matched_departments) == 1
+            else "Here are some WSU professor details."
+        ),
+        "data": professors,
+    }
+
+
+def get_general_event_response() -> dict[str, Any]:
+    """Return upcoming ShockerSync events for general chat requests."""
+    from services import event_recommender
+
+    try:
+        upcoming_events = event_recommender.list_upcoming_events(
+            get_recommender().events,
+            today=event_recommender.today_in_wichita(),
+            limit=10,
+        )
+    except Exception as error:
+        print("ShockerSync event listing unavailable:", error)
+        return {
+            "intent": "events",
+            "reply": "Upcoming ShockerSync events are temporarily unavailable.",
+            "data": [],
+        }
+
+    return {
+        "intent": "events",
+        "reply": (
+            "Here are upcoming ShockerSync campus events."
+            if upcoming_events
+            else "I couldn't find upcoming ShockerSync campus events."
+        ),
+        "data": upcoming_events,
+    }
+
+
 def get_general_chat_response(message: str) -> dict[str, Any] | None:
     """Handle general campus information and interest recommendations."""
     event_keywords = ["event", "events", "activity", "activities", "career fair", "competition"]
@@ -453,31 +521,7 @@ def get_general_chat_response(message: str) -> dict[str, Any] | None:
     if any(
         contains_keyword(message, keyword) for keyword in event_keywords
     ) and is_event_listing_request(message):
-        from services import event_recommender
-
-        try:
-            upcoming_events = event_recommender.list_upcoming_events(
-                get_recommender().events,
-                today=event_recommender.today_in_wichita(),
-                limit=10,
-            )
-        except Exception as error:
-            print("ShockerSync event listing unavailable:", error)
-            return {
-                "intent": "events",
-                "reply": "Upcoming ShockerSync events are temporarily unavailable.",
-                "data": [],
-            }
-
-        return {
-            "intent": "events",
-            "reply": (
-                "Here are upcoming ShockerSync campus events."
-                if upcoming_events
-                else "I couldn't find upcoming ShockerSync campus events."
-            ),
-            "data": upcoming_events,
-        }
+        return get_general_event_response()
 
     if any(contains_keyword(message, keyword) for keyword in dining_keywords):
         return {
@@ -494,43 +538,7 @@ def get_general_chat_response(message: str) -> dict[str, Any] | None:
         }
 
     if any(contains_keyword(message, keyword) for keyword in professor_keywords):
-        departments = (
-            "Electrical and Computer Engineering",
-            "Mechanical Engineering",
-            "Aerospace Engineering",
-            "Biomedical Engineering",
-            "School of Computing",
-        )
-
-        professors = [
-            professor
-            for professor in get_professors_from_database()
-            if professor.get("professor_department") in departments
-            and str(professor.get("professor_email") or "").lower().endswith("@wichita.edu")
-        ]
-
-        matched_departments = [
-            department
-            for department in departments
-            if contains_keyword(message, department.lower())
-        ]
-
-        if matched_departments:
-            professors = [
-                professor
-                for professor in professors
-                if professor["professor_department"] in matched_departments
-            ]
-
-        return {
-            "intent": "professors",
-            "reply": (
-                f"Here are the professors in {matched_departments[0]}."
-                if len(matched_departments) == 1
-                else "Here are some WSU professor details."
-            ),
-            "data": professors,
-        }
+        return get_general_professor_response(message)
 
     if any(contains_keyword(message, keyword) for keyword in deadline_keywords):
         return {
