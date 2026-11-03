@@ -7,6 +7,50 @@ SCHOOL_NAME = "College of Engineering"
 DEPARTMENT_NAME = "School of Computing"
 DEPARTMENT_CODE = "SOC"
 
+DEPARTMENT_CODES = {
+    "School of Computing": "SOC",
+    "Electrical and Computer Engineering": "ECE",
+    "Mechanical Engineering": "ME",
+    "Aerospace Engineering": "AE",
+    "Biomedical Engineering": "BME",
+}
+
+
+
+def normalize_faculty_name(full_name: str) -> tuple[str, str]:
+    """Remove known academic titles and split a faculty display name."""
+    import re
+
+    name = " ".join(full_name.strip().split())
+
+    # Remove an academic title at the beginning.
+    name = re.sub(r"^Dr\.?\s+", "", name, flags=re.IGNORECASE)
+
+    # Remove recognized credentials at the end, including combinations.
+    credential_pattern = (
+        r"\s*,?\s*(?:Ph\.?D\.?|F\.\s*ASME|MS)\.?,?\s*$"
+    )
+
+    while True:
+        cleaned = re.sub(
+            credential_pattern,
+            "",
+            name,
+            flags=re.IGNORECASE,
+        ).strip()
+
+        if cleaned == name:
+            break
+
+        name = cleaned
+
+    parts = name.split(maxsplit=1)
+
+    if len(parts) != 2:
+        raise ValueError(f"Invalid faculty name: {full_name}")
+
+    return parts[0], parts[1]
+
 
 def preview_sync():
     faculty = fetch_faculty()
@@ -96,12 +140,7 @@ def validate_faculty(faculty):
     for person in faculty:
         name = person["name"].strip()
         email = person["email"].strip().lower()
-        name_parts = name.split(maxsplit=1)
-
-        if len(name_parts) != 2:
-            raise ValueError(f"Invalid faculty name: {name}")
-
-        first_name, last_name = name_parts
+        first_name, last_name = normalize_faculty_name(name)
 
         if len(first_name) >= 30 or len(last_name) >= 50:
             raise ValueError(f"Faculty name exceeds database limits: {name}")
@@ -113,6 +152,15 @@ def validate_faculty(faculty):
 def apply_sync(faculty, commit=False):
     """Synchronize verified faculty using a single database transaction."""
     validate_faculty(faculty)
+
+    departments = list(dict.fromkeys(
+        person.get("department", DEPARTMENT_NAME)
+        for person in faculty
+    ))
+
+    for department_name in departments:
+        if department_name not in DEPARTMENT_CODES:
+            raise ValueError(f"Unsupported WSU department: {department_name}")
 
     with get_connection() as connection:
         with connection.cursor() as cursor:
@@ -128,32 +176,36 @@ def apply_sync(faculty, commit=False):
             )
             school_id = cursor.fetchone()["school_id"]
 
-            cursor.execute(
-                """
-                INSERT INTO departments (
-                    school_id, department_name, department_code
+            department_ids = {}
+
+            for department_name in departments:
+                department_code = DEPARTMENT_CODES[department_name]
+
+                cursor.execute(
+                    """
+                    INSERT INTO departments (
+                        school_id, department_name, department_code
+                    )
+                    VALUES (%s, %s, %s)
+                    ON CONFLICT (school_id, department_name)
+                    DO UPDATE SET department_name = EXCLUDED.department_name
+                    RETURNING department_id
+                    """,
+                    (school_id, department_name, department_code),
                 )
-                VALUES (%s, %s, %s)
-                ON CONFLICT (school_id, department_name)
-                DO UPDATE SET department_name = EXCLUDED.department_name
-                RETURNING department_id
-                """,
-                (school_id, DEPARTMENT_NAME, DEPARTMENT_CODE),
-            )
-            department_id = cursor.fetchone()["department_id"]
+
+                department_ids[department_name] = cursor.fetchone()["department_id"]
 
             inserted = 0
             existing = 0
 
             for person in faculty:
-                name_parts = person["name"].strip().split(maxsplit=1)
-
-                if len(name_parts) != 2:
-                    raise ValueError(
-                        f"Cannot split faculty name: {person['name']}"
-                    )
-
-                first_name, last_name = name_parts
+                first_name, last_name = normalize_faculty_name(
+                    person["name"]
+                )
+                department_id = department_ids[
+                    person.get("department", DEPARTMENT_NAME)
+                ]
                 email = person["email"].strip().lower()
 
                 cursor.execute(

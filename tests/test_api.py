@@ -276,3 +276,144 @@ def test_find_course_and_professor_return_none_for_other_text():
 
     assert find_course_by_message("qwertyuiop") is None
     assert find_professor_by_message("qwertyuiop") is None
+
+
+def test_chat_filters_professors_by_department(monkeypatch):
+    """Department faculty questions should return only matching real records."""
+    no_matches(monkeypatch)
+    monkeypatch.setattr("main.RAG_ENABLED", False)
+
+    professors = [
+        {
+            "professor_id": 101,
+            "professor_name": "Rajeev Nair",
+            "professor_department": "Mechanical Engineering",
+            "professor_email": "rajeev.nair@wichita.edu",
+        },
+        {
+            "professor_id": 102,
+            "professor_name": "Rajiv Bagai",
+            "professor_department": "School of Computing",
+            "professor_email": "rajiv.bagai@wichita.edu",
+        },
+        {
+            "professor_id": 103,
+            "professor_name": "Test Instructor",
+            "professor_department": "Test Department",
+            "professor_email": "test@example.edu",
+        },
+    ]
+
+    monkeypatch.setattr(
+        "main.get_professors_from_database",
+        lambda: professors,
+    )
+
+    response = client.post(
+        "/chat",
+        json={"message": "Who are the professors in Mechanical Engineering?"},
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["intent"] == "professors"
+    assert isinstance(data["data"], list)
+    assert len(data["data"]) == 1
+    assert data["data"][0]["professor_name"] == "Rajeev Nair"
+    assert data["data"][0]["professor_department"] == "Mechanical Engineering"
+
+
+def test_chat_engineering_events_use_shockersync(monkeypatch):
+    """Engineering event questions should reach the live recommender."""
+    no_matches(monkeypatch)
+
+    class FakeRecommender:
+        def recommend(self, message, top_k=5):
+            assert "engineering" in message
+            assert top_k == 5
+            return [
+                {
+                    "event_id": "shockersync-test",
+                    "event_name": "Engineering Workshop",
+                }
+            ]
+
+    monkeypatch.setattr(
+        "main.get_recommender",
+        lambda: FakeRecommender(),
+    )
+
+    response = client.post(
+        "/chat",
+        json={"message": "Recommend engineering events"},
+    )
+
+    assert response.status_code == 200
+
+    result = response.json()
+
+    assert result["intent"] == "recommendations"
+    assert len(result["data"]) == 1
+    assert result["data"][0]["event_name"] == "Engineering Workshop"
+
+
+def test_chat_general_events_use_shockersync(monkeypatch):
+    """General event questions should list upcoming ShockerSync events."""
+    no_matches(monkeypatch)
+
+    class FakeRecommender:
+        events = [
+            {
+                "id": "12345",
+                "source": "shockersync",
+                "title": "Campus Welcome Event",
+                "dates": ["2026-11-10"],
+                "start_date": "2026-11-10",
+                "end_date": "2026-11-10",
+                "end_datetime": "2026-11-10T18:00:00-06:00",
+                "time": "4:00 PM",
+                "location": "RSC",
+                "description": "Welcome students",
+                "categories": ["Campus Wide"],
+                "url": "https://wichita.campuslabs.com/engage/event/12345",
+            }
+        ]
+
+    monkeypatch.setattr(
+        "main.get_recommender",
+        lambda: FakeRecommender(),
+    )
+
+    def reject_database_events():
+        raise AssertionError("General event chat must not use PostgreSQL test events")
+
+    monkeypatch.setattr(
+        "main.get_events_from_database",
+        reject_database_events,
+    )
+
+    from datetime import date
+
+    from services import event_recommender
+
+    monkeypatch.setattr(
+        event_recommender,
+        "today_in_wichita",
+        lambda: date(2026, 11, 3),
+    )
+
+    response = client.post(
+        "/chat",
+        json={"message": "What events are happening on campus?"},
+    )
+
+    assert response.status_code == 200
+
+    result = response.json()
+
+    assert result["intent"] == "events"
+    assert len(result["data"]) == 1
+    assert result["data"][0]["event_id"] == "shockersync-12345"
+    assert result["data"][0]["event_name"] == "Campus Welcome Event"

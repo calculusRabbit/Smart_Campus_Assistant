@@ -405,6 +405,90 @@ def _score_upcoming_event(
     return when, min(1.0, final_score)
 
 
+def _eligible_event_date(
+    event: dict[str, Any],
+    today: date,
+    now: datetime,
+) -> str | None:
+    """Return a display date only for eligible upcoming ShockerSync events."""
+    if event.get("source") != "shockersync":
+        return None
+
+    if "Student Organization Closed Event" in (event.get("categories") or []):
+        return None
+
+    end_text = event.get("end_datetime")
+    if end_text and datetime.fromisoformat(end_text) <= now:
+        return None
+
+    display = get_event_display_date(event, today)
+    if display is None:
+        return None
+
+    when, ongoing = display
+    if not ongoing:
+        days_ahead = (date.fromisoformat(when) - today).days
+        if days_ahead < 0 or days_ahead > LOOKAHEAD_DAYS:
+            return None
+
+    return when
+
+
+def list_upcoming_events(
+    events: list[dict[str, Any]],
+    today: date | None = None,
+    now: datetime | None = None,
+    limit: int = 10,
+) -> list[dict[str, Any]]:
+    """List upcoming public-facing ShockerSync events without interest ranking."""
+    if now is None:
+        now = datetime.now(ZoneInfo("America/Chicago"))
+    if today is None:
+        today = now.astimezone(ZoneInfo("America/Chicago")).date()
+    if limit <= 0:
+        return []
+
+    results = []
+
+    for event in events:
+        when = _eligible_event_date(event, today, now)
+        if when is None:
+            continue
+
+        categories = event.get("categories") or []
+
+        results.append(
+            {
+                "event_id": f"{event['source']}-{event['id']}",
+                "event_name": event["title"],
+                "event_date": when,
+                "event_time": event.get("time", ""),
+                "event_location": event.get("location", ""),
+                "event_description": event.get("description", ""),
+                "event_category": categories[0] if categories else "general",
+                "url": event.get("url", ""),
+            }
+        )
+
+    results.sort(key=lambda item: (item["event_date"], item["event_name"]))
+
+    unique_results = []
+    seen = set()
+
+    for result in results:
+        key = (result["event_id"], result["event_date"])
+        if key in seen:
+            continue
+
+        seen.add(key)
+        unique_results.append(result)
+
+        if len(unique_results) >= limit:
+            break
+
+    return unique_results
+
+
 def get_score(result: dict[str, Any]) -> float:
     return float(result["score"])
 
