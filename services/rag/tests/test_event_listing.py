@@ -49,3 +49,43 @@ def test_list_upcoming_events_excludes_past_and_closed():
     assert results[0]["event_id"] == "shockersync-2"
     assert results[0]["event_name"] == "Event 2"
     assert results[0]["event_date"] == "2026-11-04"
+
+
+def test_recommendations_exclude_closed_events(monkeypatch):
+    """Closed events must not enter personalized recommendation scoring."""
+    from datetime import date, datetime
+    from zoneinfo import ZoneInfo
+
+    from services import event_recommender
+
+    today = date(2026, 11, 3)
+    now = datetime(2026, 11, 3, 10, 0, tzinfo=ZoneInfo("America/Chicago"))
+
+    monkeypatch.setattr(
+        event_recommender,
+        "matches_event_topic",
+        lambda event, query: True,
+    )
+    monkeypatch.setattr(
+        event_recommender,
+        "matches_requested_activity",
+        lambda event, query: True,
+    )
+    monkeypatch.setattr(
+        event_recommender,
+        "_score_upcoming_event",
+        lambda *args: ("2026-11-13", 0.8),
+    )
+
+    closed_event = {
+        "categories": ["Student Organization Closed Event"],
+    }
+    public_event = {
+        "categories": ["Campus Events"],
+    }
+
+    def score_event(event):
+        return event_recommender._score_matching_event(event, 0.8, [], today, now, "career")
+
+    assert score_event(closed_event) is None
+    assert score_event(public_event) == ("2026-11-13", 0.8)

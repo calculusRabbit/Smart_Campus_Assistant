@@ -343,6 +343,9 @@ def _score_matching_event(
     now: datetime,
     likes_text: str,
 ) -> tuple[str, float] | None:
+    if "Student Organization Closed Event" in (event.get("categories") or []):
+        return None
+
     if not matches_event_topic(event, likes_text):
         return None
     if not matches_requested_activity(event, likes_text):

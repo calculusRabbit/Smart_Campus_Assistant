@@ -417,3 +417,26 @@ def test_chat_general_events_use_shockersync(monkeypatch):
     assert len(result["data"]) == 1
     assert result["data"][0]["event_id"] == "shockersync-12345"
     assert result["data"][0]["event_name"] == "Campus Welcome Event"
+
+
+def test_internships_do_not_match_internship_course(monkeypatch):
+    """Plural career interests must not match a singular course title."""
+    import main
+
+    monkeypatch.setattr(
+        main,
+        "get_courses_from_database",
+        lambda: [
+            {
+                "code": "ME 481N",
+                "course_number": "",
+                "name": "Internship",
+            }
+        ],
+    )
+
+    message = (
+        "I'm interested in internships and career opportunities. What events do you recommend?"
+    )
+
+    assert main.find_course_by_message(message) is None

@@ -109,7 +109,7 @@ def find_course_by_message(message: str) -> dict[str, Any] | None:
         full_code = f"{course_code} {course_number}".strip()
 
         if (full_code and full_code.lower() in message) or (
-            course_name and course_name.lower() in message
+            course_name and contains_keyword(message, course_name.lower())
         ):
             return course
 
