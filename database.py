@@ -237,10 +237,11 @@ def get_professors_from_database() -> list[dict[str, Any]]:
 def get_dining_from_database() -> list[dict[str, Any]]:
     rows = fetch_all("""
         SELECT dn.dining_id, dn.dining_name, dn.cuisine, dn.event_status,
-               l.open_hours, l.address_room, l.address_street, l.city
+               l.open_hours, l.location_notes
         FROM dining dn
-        LEFT JOIN locations l ON l.location_id = dn.location_id
-        ORDER BY dn.dining_id
+        JOIN locations l ON l.location_id = dn.location_id
+        WHERE l.location_notes LIKE 'Official WSU dining area: %'
+        ORDER BY l.location_notes, dn.dining_name
     """)
 
     dining = []
@@ -262,7 +263,7 @@ def get_dining_from_database() -> list[dict[str, Any]]:
         dining.append({
             "dining_id": row["dining_id"],
             "dining_name": row["dining_name"],
-            "dining_location": format_place(row),
+            "dining_location": row["location_notes"].removeprefix("Official WSU dining area: "),
             "opening_time": opening,
             "closing_time": closing,
             "dining_status": status,
