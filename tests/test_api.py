@@ -75,13 +75,29 @@ def test_chat_uses_rag_for_unmatched_question(monkeypatch):
     assert "[1] Japanese Culture Association" in data["sources"]
 
 
-def test_dining_endpoint():
+def test_dining_endpoint(monkeypatch):
+    sample_dining = [
+        {
+            "dining_id": 1,
+            "dining_name": "Shocker Dining Hall",
+            "dining_location": "Shocker Hall",
+            "opening_time": "N/A",
+            "closing_time": "N/A",
+            "dining_status": "Unknown",
+            "cuisine": [],
+        }
+    ]
+
+    monkeypatch.setattr(
+        "main.get_dining_from_database",
+        lambda: sample_dining,
+    )
+
     response = client.get("/dining")
     data = response.json()
 
     assert response.status_code == 200
-    assert isinstance(data["dining"], list)
-    assert len(data["dining"]) > 0
+    assert data["dining"] == sample_dining
 
 
 def test_professors_endpoint():
