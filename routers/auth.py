@@ -46,7 +46,7 @@ def logout(
 ):
     with get_connection() as conn:
         conn.execute(
-            """ UPDATE auth_sessions SET revoked_at = CURRENT_TIMESTAMP
+            """ UPDATE Auth_sessions SET revoked_at = CURRENT_TIMESTAMP
             WHERE session_id = %s AND username = %s""",
             (user["session_id"], user["username"]))
 
@@ -55,6 +55,7 @@ def logout(
         headers={"Cache-Control": "no-store"})
 
 
+#delete user - non-permanent (soft-delete)
 @router.delete("/me", status_code=204)
 def delete_me(
     request: ReauthenticateRequest,
@@ -63,18 +64,17 @@ def delete_me(
     with get_connection() as conn:
         account = conn.execute(
             """
-            SELECT hashed_password FROM users
+            SELECT hashed_password FROM Users
             WHERE username = %s AND deleted_timestamp IS NULL
-            FOR UPDATE""", (user["username"],),
+            FOR UPDATE""", (user["username"],)
         ).fetchone()
 
         if account is None or not verify_password(
-            request.password.get_secret_value(),
-            account["hashed_password"],
+            request.password.get_secret_value(),account["hashed_password"],
         ):
             raise HTTPException(
                 status_code=401,
-                detail="Reauthentication failed",
+                detail="reauthentication failed",
             )
 
         conn.execute(
@@ -88,10 +88,8 @@ def delete_me(
             WHERE student_id = %s""", (user["student_id"],),
         )
         conn.execute(
-            """UPDATE auth_sessions
-            SET revoked_at = CURRENT_TIMESTAMP
-            WHERE username = %s AND revoked_at IS NULL """,
-            (user["username"],),
+            """UPDATE auth_sessions SET revoked_at = CURRENT_TIMESTAMP
+            WHERE username = %s AND revoked_at IS NULL """, (user["username"],),
         )
 
     return Response(

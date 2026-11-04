@@ -94,7 +94,7 @@ CREATE TABLE IF NOT EXISTS Courses (
 	department_id INTEGER NOT NULL REFERENCES Departments(department_id) ON DELETE CASCADE,
 	course_number VARCHAR(10) NOT NULL,
 	course_name TEXT CHECK(LENGTH(course_name)<=75) NOT NULL,
-	course_description TEXT CHECK(LENGTH(course_description)<=500),
+	course_description TEXT CHECK(LENGTH(course_description)<=1000),
 	course_credits REAL CHECK(course_credits>=0.00 AND course_credits <= 50.00) NOT NULL,
 	-- no duplicate courses 
 	CONSTRAINT unique_coursenumbers UNIQUE (department_id, course_code, course_number)
