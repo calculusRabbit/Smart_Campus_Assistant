@@ -1,4 +1,5 @@
--- please see schema in the repository's Wiki for more details
+-- See schema in the repository's wiki for more details:
+	-- https://github.com/calculusRabbit/Smart_Campus_Assistant/wiki/Database-Schema
 
 BEGIN;
 

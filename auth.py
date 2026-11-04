@@ -1,45 +1,49 @@
+# based on https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/
+
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 from uuid import UUID, uuid4
 
 import jwt
-
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-
 from pwdlib import PasswordHash
-from pwdlib.hashers.argon2 import Argon2Hasher
-from pwdlib.hashers.bcrypt import BcryptHasher
 
 from database import get_connection
 
-
 JWT_KEY = os.environ.get("JWT_KEY", "")
-if len(JWT_KEY.encode("utf-8")) < 32:
+if len(JWT_KEY.encode("utf-8")) < 32: #less than 32 bytes - invalid
     raise RuntimeError("JWT_KEY isn't set to a generated secret")
 
 JWT_ISSUER = "smart-campus-assistant"
 JWT_AUDIENCE = "smart-campus-api"
-ACCESS_TOKEN_MINUTES = 15
 
-PASSWORDS = PasswordHash((Argon2Hasher(), BcryptHasher()))
-DUMMY_HASH = PASSWORDS.hash("not-a-real-account-password")
+# JWT access token lifetime: 15 mins
+    # IF UPDATED: update auth_service.py login() response: "expires_at"
+ACCESS_TOKEN_MINUTES = 15
+jwt_algorithm = "HS256" 
+
+password_hash = PasswordHash.recommended()
+
+#prevents timing attacks with nonexistent usernames
+# by running pasword verification every time
+DUMMY_HASH = password_hash.hash("fake-Password_123") 
 bearer = HTTPBearer(auto_error=False)
 
 
 def hash_password(password: str) -> str:
-    return PASSWORDS.hash(password)
+    return password_hash.hash(password)
 
 
 def verify_password(password: str, stored_hash: str) -> bool:
-    return PASSWORDS.verify(password, stored_hash)
+    return password_hash.verify(password, stored_hash)
 
 
 def create_session(conn, username: str) -> str:
     #create session within the caller's transaction and return JWT
     session_id = uuid4()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     expires_at = now + timedelta(minutes=ACCESS_TOKEN_MINUTES)
 
     conn.execute("INSERT INTO Auth_sessions (session_id, username, expires_at) "
@@ -53,18 +57,18 @@ def create_session(conn, username: str) -> str:
             "type": "access",
             "iss": JWT_ISSUER,
             "aud": JWT_AUDIENCE,
-            "iat": now,
+            "iat": now, #issued at
             "exp": expires_at,
         },
         JWT_KEY,
-        algorithm="HS256",
+        algorithm=jwt_algorithm,
     )
 
 
 def get_current_user(
     credentials: Annotated[
         HTTPAuthorizationCredentials | None,
-        Depends(bearer),
+        Depends(bearer), #get bearer token
     ],
 ) -> dict:
     #validate the JWT, active session, and current student account
@@ -77,7 +81,7 @@ def get_current_user(
     if credentials is None:
         raise unauthorized
 
-    try:
+    try: #check JWT token details
         claims = jwt.decode(
             credentials.credentials,
             JWT_KEY,
@@ -93,7 +97,7 @@ def get_current_user(
             raise jwt.InvalidTokenError("invalid token claims")
 
         session_id = UUID(claims["sid"])
-    except (
+    except ( #invalid token values
         jwt.InvalidTokenError,
         ValueError,
         TypeError,
@@ -108,7 +112,7 @@ def get_current_user(
                 u.username, u.account_type,
                 s.student_id, s.first_name, s.last_names, s.account_status,
                 a.session_id
-            FROM auth_sessions AS a
+            FROM Auth_sessions AS a
             JOIN users AS u ON u.username = a.username
             JOIN students AS s ON s.username = u.username
             WHERE a.session_id = %s
@@ -122,7 +126,7 @@ def get_current_user(
             (session_id, claims["sub"]),
         ).fetchone()
 
-    if user is None:
+    if user is None: #invalid JWT session or account
         raise unauthorized
 
     return user
@@ -145,7 +149,7 @@ def require_open_student(
     if user["account_status"] != "open":
         raise HTTPException(
             status_code=403,
-            detail="Verified student account required",
+            detail="verified student account required"
         )
     return user
 
@@ -156,5 +160,5 @@ def public_user(user: dict) -> dict:
         "id": user["student_id"],
         "username": user["username"],
         "name": f"{user['first_name']} {user['last_names']}",
-        "account_status": user["account_status"],
+        "account_status": user["account_status"]
     }

@@ -1,21 +1,16 @@
 import re
-
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, Query
-
-from auth import get_current_user, require_student_owner
-
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
-from fastapi.exceptions import RequestValidationError
 from fastapi.staticfiles import StaticFiles
 
-from routers.auth import router as auth_router
-
+from auth import get_current_user, require_student_owner
 from database import (
-    get_course_details,
     get_connection,
+    get_course_details,
     get_courses_by_professor,
     get_courses_from_database,
     get_deadlines_from_database,
@@ -26,6 +21,7 @@ from database import (
     save_student_interests,
 )
 from models import ChatRequest, RecommendationRequest, StudentInterestsRequest
+from routers.auth import router as auth_router
 from services.event_recommender import get_recommender, profile_to_text
 from services.interest_expansion import extract_event_interests
 from services.rag.config import RAG_ENABLED
