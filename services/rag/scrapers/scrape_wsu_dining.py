@@ -62,6 +62,21 @@ def normalize_dining_name(text: str) -> str:
     return " ".join(text.translate(replacements).casefold().split())
 
 
+def matches_dining_name(
+    name: str,
+    section: str,
+    description: str,
+    aliases: dict[str, str],
+) -> bool:
+    """Check whether an official dining section documents a restaurant."""
+    alias = aliases.get(name, name)
+
+    if normalize_dining_name(alias) in normalize_dining_name(description):
+        return True
+
+    return name == "Food Truck Plaza" and "Food Truck Plaza" in section
+
+
 def parse_dining(html: str) -> list[dict[str, Any]]:
     """Extract officially documented dining names and campus areas."""
     soup = BeautifulSoup(html, "html.parser")
@@ -84,13 +99,13 @@ def parse_dining(html: str) -> list[dict[str, Any]]:
         found_sections.add(section)
 
         for name in config["names"]:
-            alias = config.get("aliases", {}).get(name, name)
-
-            if normalize_dining_name(alias) not in normalize_dining_name(description):
-                if name == "Food Truck Plaza" and "Food Truck Plaza" in section:
-                    pass
-                else:
-                    continue
+            if not matches_dining_name(
+                name,
+                section,
+                description,
+                config.get("aliases", {}),
+            ):
+                continue
 
             results.append(
                 {
