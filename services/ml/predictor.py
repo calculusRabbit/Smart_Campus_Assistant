@@ -1,13 +1,14 @@
 from functools import lru_cache
 from pathlib import Path
+from typing import Any
 
-import joblib
+import joblib  # type: ignore[import-untyped]
 
 MODEL_PATH = Path(__file__).resolve().parent / "models" / "event_classifier.joblib"
 
 
 @lru_cache(maxsize=1)
-def load_model():
+def load_model() -> tuple[Any, Any]:
     """Load the locally trained, trusted ML classifier."""
     bundle = joblib.load(MODEL_PATH)
     return bundle["model"], bundle["encoder"]
