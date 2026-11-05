@@ -7,6 +7,7 @@ from zoneinfo import ZoneInfo
 import numpy as np
 
 from services.interest_expansion import expand_interests
+from services.ml.recommendation_enrichment import enrich_event_recommendations
 from services.rag.config import ALL_EVENTS_PATH, EVENTS_EMBEDDING_MODEL, EVENTS_INDEX_PATH
 from services.recommender_config import (
     LOOKAHEAD_DAYS,
@@ -287,7 +288,7 @@ class EventRecommender:
             seen_events.add(event_key)
             unique_results.append(result)
 
-        return unique_results[:top_k]
+        return enrich_event_recommendations(unique_results[:top_k])
 
 
 def matches_requested_activity(event: dict[str, Any], query: str) -> bool:

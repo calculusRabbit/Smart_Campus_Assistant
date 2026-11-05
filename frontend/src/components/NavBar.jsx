@@ -22,6 +22,12 @@ export default function NavBar({ goTo }) {
         <button className={styles.navButton} onClick={() => goTo("dashboard")}>
           Dashboard
         </button>
+        <button
+          className={styles.navButton}
+          onClick={() => goTo("ml-classifier")}
+        >
+          ML Classifier
+        </button>
         <button className={styles.navButton} onClick={() => goTo("reviews")}>
           Reviews
         </button>
