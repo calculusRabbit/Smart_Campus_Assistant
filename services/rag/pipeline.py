@@ -1,5 +1,6 @@
 import json
 from datetime import datetime
+from typing import Any
 
 import faiss
 import httpx
@@ -16,6 +17,7 @@ from services.rag.retriever import embed_query, search_similar
 document_index = faiss.read_index(str(INDEX_PATH))
 with open(CHUNKS_PATH, encoding="utf-8") as f:
     chunks = json.load(f)
+
 
 def generate_with_ollama(messages: list[dict]) -> str:
     response = httpx.post(
@@ -41,7 +43,8 @@ def generate_with_ollama(messages: list[dict]) -> str:
     if "</think>" in content:
         content = content.split("</think>", 1)[1]
 
-    return content.strip()
+    return str(content).strip()
+
 
 def is_bad_generation(answer: str) -> bool:
     if not answer or not answer.strip():
@@ -75,27 +78,36 @@ def is_bad_generation(answer: str) -> bool:
     return repetition_ratio > 0.5
 
 
-def prioritize_campus_documents(question, indices, scores):
-    """Prioritize exact campus entities while retaining semantic retrieval."""
+def get_priority_campus_urls(question: str) -> list[str]:
+    """Identify official campus pages to prioritize for a question."""
     import re
 
     normalized = question.casefold()
+    priority_urls: list[str] = []
 
-    priority_urls = []
-
-    if re.search(r"(?<!\\w)wulug(?!\\w)", normalized):
-        priority_urls.append(
-            "https://wichita.campuslabs.com/engage/organization/wulug"
-        )
+    if re.search(r"(?<!\w)wulug(?!\w)", normalized):
+        priority_urls.append("https://wichita.campuslabs.com/engage/organization/wulug")
 
     if "shockersync" in normalized and any(
-        term in normalized
-        for term in ("what is", "purpose", "used for", "platform", "portal")
+        term in normalized for term in ("what is", "purpose", "used for", "platform", "portal")
     ):
-        priority_urls.extend([
-            "https://wichita.campuslabs.com/engage/organization/seb",
-            "https://wichita.campuslabs.com/engage/organizations",
-        ])
+        priority_urls.extend(
+            [
+                "https://wichita.campuslabs.com/engage/organization/seb",
+                "https://wichita.campuslabs.com/engage/organizations",
+            ]
+        )
+
+    return priority_urls
+
+
+def prioritize_campus_documents(
+    question: str,
+    indices: Any,
+    scores: Any,
+) -> list[tuple[int, float]]:
+    """Prioritize exact campus entities while retaining semantic retrieval."""
+    priority_urls = get_priority_campus_urls(question)
 
     prioritized = []
     seen = set()
@@ -118,35 +130,47 @@ def prioritize_campus_documents(question, indices, scores):
 
     return prioritized[:TOP_K]
 
+
+def filter_wulug_documents(
+    user_input: str,
+    selected_documents: list[tuple[int, float]],
+) -> list[tuple[int, float]]:
+    """Prefer official WuLUG documents for WuLUG-related questions."""
+    import re
+
+    normalized = user_input.casefold()
+
+    is_wulug_question = (
+        re.search(r"(?<!\w)wulug(?!\w)", normalized) is not None
+        or "wichita state university linux users group" in normalized
+    )
+
+    if not is_wulug_question:
+        return selected_documents
+
+    official_documents = [
+        (i, score)
+        for i, score in selected_documents
+        if chunks[i].get("url", "").rstrip("/").endswith("/engage/organization/wulug")
+    ]
+
+    return official_documents or selected_documents
+
+
 def query_RAG(user_input: str, history: list) -> tuple[str, str]:
     # retrieve relevant chunks
     query_vector = embed_query(user_input)
     distances, indices = search_similar(document_index, query_vector, top_k=TOP_K)
 
     # Prioritize known campus entities, then include semantic matches.
-    selected_documents = prioritize_campus_documents(
-        user_input, indices, distances
-    )
+    selected_documents = prioritize_campus_documents(user_input, indices, distances)
 
     relevant_documents = ""
     sources_text = ""
 
     # An exact WuLUG question should use its official campus document,
     # rather than unrelated semantic matches that can confuse generation.
-    import re
-
-    if re.search(r"(?<!\w)wulug(?!\w)", user_input.casefold()) or (
-        "wichita state university linux users group" in user_input.casefold()
-    ):
-        official_documents = [
-            (i, score)
-            for i, score in selected_documents
-            if chunks[i].get("url", "").rstrip("/").endswith(
-                "/engage/organization/wulug"
-            )
-        ]
-        if official_documents:
-            selected_documents = official_documents
+    selected_documents = filter_wulug_documents(user_input, selected_documents)
 
     for rank, (i, score) in enumerate(selected_documents, 1):
         relevant_documents += chunks[i]["chunk_text"] + "\n\n"
@@ -156,7 +180,6 @@ def query_RAG(user_input: str, history: list) -> tuple[str, str]:
         else:
             sources_text += f" Score: {score:.4f}\n"
         sources_text += f" URL: {chunks[i]['url']}\n\n"
-
 
     today = datetime.now().strftime("%B %d, %Y")
     system_instruction = (
@@ -181,10 +204,10 @@ def query_RAG(user_input: str, history: list) -> tuple[str, str]:
 
     # add current question with relevant documents
     prompt = (
-    f"Question: {user_input}\n\n"
-    f"Relevant Documents:\n{relevant_documents}\n\n"
-    "Answer the question directly using the relevant documents above. "
-    "Keep the answer concise."
+        f"Question: {user_input}\n\n"
+        f"Relevant Documents:\n{relevant_documents}\n\n"
+        "Answer the question directly using the relevant documents above. "
+        "Keep the answer concise."
     )
     messages.append({"role": "user", "content": prompt})
 
@@ -195,8 +218,7 @@ def query_RAG(user_input: str, history: list) -> tuple[str, str]:
         # answers for this organization.
         is_wulug_question = (
             "wulug" in user_input.casefold()
-            or "wichita state university linux users group"
-            in user_input.casefold()
+            or "wichita state university linux users group" in user_input.casefold()
         )
 
         if is_wulug_question and len(selected_documents) == 1:
@@ -213,8 +235,7 @@ def query_RAG(user_input: str, history: list) -> tuple[str, str]:
                 {
                     "role": "user",
                     "content": (
-                        f"Campus document:\n{relevant_documents}\n\n"
-                        f"Question: {user_input}"
+                        f"Campus document:\n{relevant_documents}\n\nQuestion: {user_input}"
                     ),
                 },
             ]

@@ -13,9 +13,7 @@ def test_wulug_abbreviation_prioritizes_official_club():
     assert selected
     first_index, _ = selected[0]
 
-    assert pipeline.chunks[first_index]["url"].endswith(
-        "/organization/wulug"
-    )
+    assert pipeline.chunks[first_index]["url"].endswith("/organization/wulug")
 
 
 def test_shockersync_prioritizes_platform_sources():
@@ -25,10 +23,7 @@ def test_shockersync_prioritizes_platform_sources():
         [],
     )
 
-    urls = [
-        pipeline.chunks[index]["url"]
-        for index, _ in selected
-    ]
+    urls = [pipeline.chunks[index]["url"] for index, _ in selected]
 
     assert urls[0].endswith("/organization/seb")
     assert urls[1].endswith("/engage/organizations")
