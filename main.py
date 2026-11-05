@@ -20,6 +20,7 @@ from database import (
 from models import ChatRequest, RecommendationRequest, StudentInterestsRequest
 from services.event_recommender import get_recommender, profile_to_text
 from services.interest_expansion import extract_event_interests
+from services.ml.router import router as ml_router
 from services.rag.config import RAG_ENABLED
 from services.recommendation_service import RecommendationService
 
@@ -31,6 +32,7 @@ INTEREST_GROUPS = {
 }
 
 app = FastAPI()
+app.include_router(ml_router)
 
 # let the react app (vite runs on 5173) call this backend
 app.add_middleware(
