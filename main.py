@@ -305,6 +305,8 @@ def get_live_event_chat_response(message: str) -> dict[str, Any] | None:
         "programming",
         "engineering",
         "soccer",
+        "cultural",
+        "culture",
     )
 
     has_event_request = any(contains_keyword(message, term) for term in event_request_terms)
