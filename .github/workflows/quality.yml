@@ -115,7 +115,7 @@ jobs:
           bandit_status=0
           bandit -r main.py models.py database.py seed.py \
           services \
-            -x services/rag/tests,services/rag/data \
+            -x services/rag/tests,services/rag/data,services/ml/test_*.py \
             -f json \
             -o reports/bandit.json || bandit_status=$?
 

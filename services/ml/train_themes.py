@@ -4,7 +4,6 @@ from collections import Counter
 from pathlib import Path
 
 import joblib
-import numpy as np
 from bs4 import BeautifulSoup
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression

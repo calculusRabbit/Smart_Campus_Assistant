@@ -58,7 +58,8 @@ def main():
     y_test = y[test_idx]
 
     overlap = set(groups[i] for i in train_idx) & set(groups[i] for i in test_idx)
-    assert not overlap, "Duplicate events crossed the split."
+    if overlap:
+        raise ValueError("Duplicate events crossed the split.")
     print("Overlapping event groups:", len(overlap))
 
     print("Training events:", len(X_train))

@@ -50,8 +50,8 @@ export default function MLClassifier({ goTo }) {
           ShockerSync ML Event Classifier
         </h1>
         <p>
-          Test our trained machine learning model using an event title
-          and description.
+          Test our trained machine learning model using an event title and
+          description.
         </p>
 
         <form onSubmit={handlePredict}>
@@ -62,7 +62,12 @@ export default function MLClassifier({ goTo }) {
             onChange={(event) => setTitle(event.target.value)}
             maxLength={500}
             placeholder="Example: Student Cultural Festival"
-            style={{ display: "block", width: "100%", margin: "8px 0 20px", padding: 12 }}
+            style={{
+              display: "block",
+              width: "100%",
+              margin: "8px 0 20px",
+              padding: 12,
+            }}
           />
 
           <label htmlFor="ml-description">Event description</label>
@@ -73,10 +78,18 @@ export default function MLClassifier({ goTo }) {
             maxLength={5000}
             rows={5}
             placeholder="Describe the event..."
-            style={{ display: "block", width: "100%", margin: "8px 0 20px", padding: 12 }}
+            style={{
+              display: "block",
+              width: "100%",
+              margin: "8px 0 20px",
+              padding: 12,
+            }}
           />
 
-          <button type="submit" disabled={loading || (!title.trim() && !description.trim())}>
+          <button
+            type="submit"
+            disabled={loading || (!title.trim() && !description.trim())}
+          >
             {loading ? "Predicting..." : "Predict Categories"}
           </button>
         </form>
@@ -98,9 +111,7 @@ export default function MLClassifier({ goTo }) {
 
             <p>
               <strong>Predicted categories:</strong>{" "}
-              {result.categories.length
-                ? result.categories.join(", ")
-                : "None"}
+              {result.categories.length ? result.categories.join(", ") : "None"}
             </p>
 
             <h3>Category probabilities</h3>
@@ -121,8 +132,8 @@ export default function MLClassifier({ goTo }) {
               ))}
 
             <p style={{ fontSize: 13, opacity: 0.75 }}>
-              Experimental model. These scores are model estimates,
-              not guaranteed probabilities of an event's true category.
+              Experimental model. These scores are model estimates, not
+              guaranteed probabilities of an event's true category.
             </p>
           </section>
         )}
