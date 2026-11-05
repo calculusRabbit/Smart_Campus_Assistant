@@ -1,4 +1,4 @@
-﻿import json
+import json
 import re
 from collections import Counter
 from pathlib import Path
@@ -45,18 +45,26 @@ def load_training_data():
 
 
 def create_pipeline():
-    return Pipeline([
-        ("tfidf", TfidfVectorizer(
-            ngram_range=(1, 2),
-            max_features=10000,
-            sublinear_tf=True,
-        )),
-        ("classifier", LogisticRegression(
-            max_iter=2000,
-            class_weight="balanced",
-            random_state=42,
-        )),
-    ])
+    return Pipeline(
+        [
+            (
+                "tfidf",
+                TfidfVectorizer(
+                    ngram_range=(1, 2),
+                    max_features=10000,
+                    sublinear_tf=True,
+                ),
+            ),
+            (
+                "classifier",
+                LogisticRegression(
+                    max_iter=2000,
+                    class_weight="balanced",
+                    random_state=42,
+                ),
+            ),
+        ]
+    )
 
 
 def main():
@@ -84,12 +92,11 @@ def main():
         cv=cv,
     )
 
-    print("\nCross-validation accuracy:",
-          round(accuracy_score(labels, predictions), 4))
-    print("Cross-validation macro F1:",
-          round(f1_score(labels, predictions, average="macro"), 4))
-    print("Cross-validation weighted F1:",
-          round(f1_score(labels, predictions, average="weighted"), 4))
+    print("\nCross-validation accuracy:", round(accuracy_score(labels, predictions), 4))
+    print("Cross-validation macro F1:", round(f1_score(labels, predictions, average="macro"), 4))
+    print(
+        "Cross-validation weighted F1:", round(f1_score(labels, predictions, average="weighted"), 4)
+    )
 
     print("\nPer-theme results:")
     print(classification_report(labels, predictions, zero_division=0))
