@@ -1,51 +1,118 @@
-import { useState } from "react";
+import {
+  Navigate,
+  Route,
+  Routes,
+  useNavigate,
+  useParams,
+} from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
 import Profile from "./pages/Profile";
 import Reviews from "./pages/Reviews";
 import ProfessorPage from "./pages/ProfessorPage";
+import NotFound from "./pages/NotFound";
 import { getUser } from "./api";
 
+// the pages still say goTo("profile"), this is the url for each page name
+const urls = {
+  login: "/login",
+  signup: "/signup",
+  dashboard: "/dashboard",
+  profile: "/profile",
+  reviews: "/reviews",
+};
+
+// pages that need a logged in user
+function RequireLogin({ children }) {
+  if (getUser() === null) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+}
+
+// login and sign up make no sense when you are already logged in
+function LoggedOutOnly({ children }) {
+  if (getUser() !== null) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return children;
+}
+
+// the professor id comes from the url, like /professors/12
+function ProfessorRoute({ goTo }) {
+  const { professorId } = useParams();
+  return <ProfessorPage goTo={goTo} professorId={Number(professorId)} />;
+}
+
 function App() {
-  // no router library, just keep track of which page we are on
-  const [page, setPage] = useState(getUser() ? "dashboard" : "login");
-  // which professor was clicked in the reviews list
-  const [professorId, setProfessorId] = useState(null);
+  const navigate = useNavigate();
+
+  function goTo(page) {
+    navigate(urls[page]);
+  }
 
   function openProfessor(id) {
-    setProfessorId(id);
-    setPage("professor");
+    navigate("/professors/" + id);
   }
 
-  // pages that need a logged in user
-  const loggedIn = getUser() !== null;
-  if (
-    !loggedIn &&
-    (page === "dashboard" ||
-      page === "profile" ||
-      page === "reviews" ||
-      page === "professor")
-  ) {
-    return <Login goTo={setPage} />;
-  }
+  return (
+    <Routes>
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-  if (page === "signup") {
-    return <SignUp goTo={setPage} />;
-  }
-  if (page === "dashboard") {
-    return <Dashboard goTo={setPage} />;
-  }
-  if (page === "profile") {
-    return <Profile goTo={setPage} />;
-  }
-  if (page === "reviews") {
-    return <Reviews goTo={setPage} openProfessor={openProfessor} />;
-  }
-  if (page === "professor") {
-    return <ProfessorPage goTo={setPage} professorId={professorId} />;
-  }
-  return <Login goTo={setPage} />;
+      <Route
+        path="/login"
+        element={
+          <LoggedOutOnly>
+            <Login goTo={goTo} />
+          </LoggedOutOnly>
+        }
+      />
+      <Route
+        path="/signup"
+        element={
+          <LoggedOutOnly>
+            <SignUp goTo={goTo} />
+          </LoggedOutOnly>
+        }
+      />
+
+      <Route
+        path="/dashboard"
+        element={
+          <RequireLogin>
+            <Dashboard goTo={goTo} />
+          </RequireLogin>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <RequireLogin>
+            <Profile goTo={goTo} />
+          </RequireLogin>
+        }
+      />
+      <Route
+        path="/reviews"
+        element={
+          <RequireLogin>
+            <Reviews goTo={goTo} openProfessor={openProfessor} />
+          </RequireLogin>
+        }
+      />
+      <Route
+        path="/professors/:professorId"
+        element={
+          <RequireLogin>
+            <ProfessorRoute goTo={goTo} />
+          </RequireLogin>
+        }
+      />
+
+      <Route path="*" element={<NotFound goTo={goTo} />} />
+    </Routes>
+  );
 }
 
 export default App;
