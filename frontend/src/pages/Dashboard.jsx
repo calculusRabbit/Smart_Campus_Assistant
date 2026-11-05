@@ -183,9 +183,15 @@ function ChatPanel() {
     for (let j = 0; j < m.lines.length; j++) {
       lineList.push(
         <p key={j} className={styles.chatLine}>
-          - {m.lines[j].split(/(https?:\/\/[^\s|]+)/g).map((part, index) =>
+          -{" "}
+          {m.lines[j].split(/(https?:\/\/[^\s|]+)/g).map((part, index) =>
             /^https?:\/\//.test(part) ? (
-              <a key={index} href={part} target="_blank" rel="noopener noreferrer">
+              <a
+                key={index}
+                href={part}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 View on ShockerSync
               </a>
             ) : (
