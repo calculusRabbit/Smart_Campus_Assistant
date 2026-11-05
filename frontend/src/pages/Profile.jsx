@@ -224,7 +224,8 @@ export default function Profile({ goTo }) {
             <h3 className={styles.title}>Delete your account?</h3>
             <p className={styles.subtitle}>
               You can get your account back by logging in within 30 days. After
-              that it is deleted for good.
+              1 year of deletion, your account data may be permanently deleted
+              at any time.
             </p>
 
             <p className={styles.label}>Why are you leaving? (optional)</p>
