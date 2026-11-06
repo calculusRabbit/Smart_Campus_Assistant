@@ -56,6 +56,12 @@ export default function NavBar({ goTo }) {
             </button>
             <button
               className={styles.menuItem}
+              onClick={() => handleGo("appointments")}
+            >
+              Appointments
+            </button>
+            <button
+              className={styles.menuItem}
               onClick={() => handleGo("profile")}
             >
               Profile
