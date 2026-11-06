@@ -444,6 +444,201 @@ The AI-assisted work included:
 
 ---
 
+
+## Entry 11: Prototype 3 ? Real Campus Data and Student Course Integration
+
+* **Date:** October?November 2026
+* **Team Member:** Teng Fai Leong (`@tengfive`)
+* **Tool Used:** ChatGPT (GPT-6)
+* **Associated Git Issue:** `#77` ? Real Campus Data Integration
+* **Associated Feature Branch:** `feature/issue77-real-campus-data`
+* **Associated Pull Request:** `#78`
+
+### Prompt Submitted (Reconstructed from Development Conversation):
+
+> "Help me improve the backend of our Smart Campus Assistant senior design project. We are using FastAPI, PostgreSQL, and Docker. I want to integrate real Wichita State University campus information instead of relying on dummy data. Update the events endpoint to return upcoming ShockerSync events, including their dates, locations, and event links. I also want to improve the course retrieval functionality so students can see courses related to their selected major. Please guide me step by step, help me debug any errors, and verify the changes using our existing backend tests."
+
+### AI Output Summary & Code Generated:
+
+ChatGPT assisted with developing and debugging FastAPI endpoints and database functions for real campus information.
+
+The AI-assisted work included:
+
+- Updating `GET /events` to return upcoming ShockerSync events with event details and URLs.
+- Filtering out expired and closed student organization events.
+- Developing database functions to retrieve courses associated with a student's major.
+- Adding `GET /students/{student_id}/courses`.
+- Updating frontend course API calls to use student-specific endpoints.
+
+### Human Review, Refactoring & Modifications Made:
+
+- Reviewed event dates, categories, and ShockerSync links.
+- Checked student-major and department mapping logic against the database.
+- Tested course retrieval with different student IDs.
+- Ensured test courses were excluded from student-specific results.
+- Identified the dependency on real authentication and saved student-major data.
+- Kept course-dashboard and database changes separate from the hybrid recommender commit.
+
+### Verification & Testing Method:
+
+- Tested the `/events` endpoint and confirmed real upcoming ShockerSync events were returned.
+- Tested student-specific course queries for Computer Science and Mechanical Engineering.
+- Verified the backend using Docker, FastAPI, and PostgreSQL.
+- Ran automated backend regression tests.
+
+**Status:** Backend features locally tested. Related course-dashboard and database changes remained uncommitted at the time of this work.
+
+---
+
+## Entry 12: Prototype 3 ? Machine Learning and Hybrid Event Recommendation System
+
+* **Date:** November 5, 2026
+* **Team Member:** Teng Fai Leong (`@tengfive`)
+* **Tool Used:** ChatGPT (GPT-6)
+* **Associated Git Issue:** `#77`
+* **Associated Feature Branch:** `feature/issue77-real-campus-data`
+* **Associated Pull Request:** `#78`
+* **Associated Git Commit:** `995deeb`
+
+### Prompt Submitted (Reconstructed from Development Conversation):
+
+> "I want to improve the event recommendation system for our Smart Campus Assistant. Currently, we use FAISS to search for ShockerSync events based on student interests, but some recommendations are not relevant, and some interests return no results. I also trained a machine learning model using ShockerSync event data to classify events into nine categories. Can we integrate this ML model with our existing FAISS and keyword-matching functions to improve recommendation accuracy? Please help me support all ten student interests, preserve the event eligibility rules, and test the improvements step by step."
+
+### AI Output Summary & Code Generated:
+
+ChatGPT assisted with integrating the trained nine-theme ShockerSync event classifier into the existing recommendation system.
+
+The classifier was trained using 254 ShockerSync event records and predicts these categories from event titles and descriptions:
+
+- Arts
+- Athletics
+- CommunityService
+- Cultural
+- Fundraising
+- GroupBusiness
+- Social
+- Spirituality
+- ThoughtfulLearning
+
+The updated hybrid recommender combines:
+
+1. **FAISS semantic search** to retrieve similar events.
+2. **Keyword matching** to verify topic relevance.
+3. **Event eligibility filtering** to exclude closed, expired, and out-of-window events.
+4. **ML theme scoring** to provide an additional ranking signal.
+
+AI-assisted changes included:
+
+- Expanding interest descriptions for all ten frontend interests.
+- Extending keyword topic matching in `services/event_recommender.py`.
+- Creating `services/ml/theme_scoring.py`.
+- Integrating an optional five-percentage-point ML ranking bonus.
+- Adding unit and integration tests for ML scoring and eligibility filtering.
+
+The bonus currently supports Art, Sports, Volunteering, and Culture using the model's corresponding themes.
+
+### Human Review, Refactoring & Modifications Made:
+
+- Inspected FAISS search results to identify irrelevant recommendations.
+- Reviewed actual ShockerSync event titles, descriptions, and event categories.
+- Compared ML predictions with real events to identify reliable category matches.
+- Preserved the 30% FAISS similarity threshold.
+- Preserved restrictions on closed and expired events.
+- Chose a small ML bonus instead of using predictions as strict filters.
+- Fixed Ruff linting, formatting, and import issues.
+- Verified the recommendation rankings before committing.
+
+### Verification & Testing Method:
+
+Real ShockerSync recommendation tests showed:
+
+| Event | Before ML | After ML |
+|---|---:|---:|
+| Maker Market | 44% | 49% |
+| MoonBall 2026 | 42% | 47% |
+| Volunteer Fair | 44% | 49% |
+| Tanganyika Volunteer Opportunity | 46% | 51% |
+| Community Service Board Senior Saturdays | 51% | 56% |
+
+New automated tests:
+
+- `tests/test_theme_scoring.py` ? 12 tests.
+- `tests/test_hybrid_recommender.py` ? 6 tests.
+- `tests/test_ml_ranking_integration.py` ? 1 test.
+
+Final verification:
+
+- `python -m pytest -q` ? **210 tests passed**.
+- Ruff linting ? All checks passed.
+- Ruff formatting ? All checks passed.
+- Mypy ? No issues found in 3 configured source files.
+- ML integration test ? Passed.
+
+**Relevant Commit:** `995deeb` ? `feat: improve event recommendations with hybrid FAISS and ML ranking`
+
+---
+
+## Entry 13: Prototype 3 ? GitHub Actions Bandit Security Scan Fix
+
+* **Date:** November 5, 2026
+* **Team Member:** Teng Fai Leong (`@tengfive`)
+* **Tool Used:** ChatGPT (GPT-6)
+* **Associated Git Issue:** CI verification related to `#77`
+* **Associated Feature Branch:** `feature/issue77-real-campus-data`
+* **Associated Git Commit:** `f01a593`
+
+### Prompt Submitted (Reconstructed from Development Conversation):
+
+> "My GitHub Actions CI security scan is failing because Bandit detected 28 low-severity B101 warnings related to assert statements in our ML test files. Can you help me identify why this is happening and fix the issue without affecting our machine learning functionality or automated tests? Please check the Bandit configuration in our CI workflows and show me how to make the security scan pass while still scanning our production code."
+
+### AI Output Summary & Code Generated:
+
+ChatGPT helped diagnose a failing Bandit static security analysis check in GitHub Actions.
+
+The scan reported 28 low-severity B101 warnings caused by pytest assertions in:
+
+- `services/ml/test_predictor.py`
+- `services/ml/test_recommendation_enrichment.py`
+- `services/ml/test_router.py`
+
+The AI identified an inconsistency between the Bandit exclusions in `.github/workflows/ci.yml` and `.github/workflows/quality.yml`.
+
+The suggested fix was to exclude ML test files from the main CI security scan while preserving security analysis for production code.
+
+### Human Review, Refactoring & Modifications Made:
+
+- Reviewed the full Bandit report and identified the affected test files.
+- Compared the security analysis configuration in both GitHub Actions workflows.
+- Updated `.github/workflows/ci.yml` to exclude `services/ml/test_*.py`.
+- Preserved production-code scanning and did not disable Bandit globally.
+- Reviewed the Git diff to ensure only the intended CI configuration changed.
+
+### Verification & Testing Method:
+
+Executed the updated Bandit scan inside the Docker backend:
+
+`python -m bandit -r main.py models.py services -x 'services/rag/tests,services/rag/data,services/ml/test_*.py'`
+
+Results:
+
+- Total lines scanned: **3,598**
+- Low-severity findings: **0**
+- Medium-severity findings: **0**
+- High-severity findings: **0**
+- Final result: **No issues identified**
+
+Verified the CI workflow changes using `git diff --check`.
+
+**Relevant Commit:** `f01a593` ? `ci: exclude ML test files from Bandit security scan`
+
+**Status:** Local Bandit verification passed. Remote GitHub Actions results should be checked separately.
+
+---
+
+**Prototype 3 Audit Note:** Entries 11?13 were added after the original October 8, 2026 team lead certification. They require team lead review for the updated log.
+
+---
+
 ## Audit Certification
 I certify as Team Lead that all entries above accurately represent AI usage within this project phase, all prompts have been recorded, and all code has been validated by human review and automated testing.
 
