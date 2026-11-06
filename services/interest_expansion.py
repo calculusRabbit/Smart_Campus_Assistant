@@ -12,15 +12,14 @@ INTEREST_ACTIVITIES = {
     "music": "music concerts, live performances, and music club events",
     "cybersecurity": "cybersecurity workshops, information security events, and WiCyS activities",
     "computer science": (
-        "computer science clubs, technology workshops, "
-        "and software development events"
+        "computer science clubs, technology workshops, and software development events"
     ),
     "career": "career fairs, internship opportunities, and professional networking events",
     "internship": "internship opportunities, career fairs, and employer networking events",
 }
 
 
-def expand_interests(text):
+def expand_interests(text: str) -> str:
     """Preserve the original interests and add matching activity descriptions."""
     normalized = text.casefold()
     activities = []
@@ -58,7 +57,7 @@ INTEREST_ALIASES = {
 }
 
 
-def extract_event_interests(question):
+def extract_event_interests(question: str) -> str:
     """Extract interests from a student question for event searching."""
     normalized = question.casefold()
     interests = []
