@@ -23,6 +23,7 @@ from database import (
 from models import ChatRequest, RecommendationRequest, StudentInterestsRequest
 from routers.auth import router as auth_router
 from routers.verification import router as verification_router
+from services.appointments import router as appointments_router
 from services.event_recommender import get_recommender, profile_to_text
 from services.interest_expansion import extract_event_interests
 from services.ml.router import router as ml_router
@@ -38,6 +39,7 @@ INTEREST_GROUPS = {
 
 app = FastAPI()
 app.include_router(ml_router)
+app.include_router(appointments_router)
 
 app.include_router(auth_router)
 app.include_router(verification_router)

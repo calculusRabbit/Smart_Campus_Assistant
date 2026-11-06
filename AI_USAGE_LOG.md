@@ -444,7 +444,48 @@ The AI-assisted work included:
 
 ---
 
+
+## Entry 11: Prototype 3 - Various application updates, including authentication, verification, improvements, and bug fixes
+
+* **Date:** October 13
+* **Team Member:** Arpan Dey
+* **Tool Used:** Perplexity
+* **Associated Git Issue:** mainly #95
+* * **Associated Feature Branch:** feat/backend-updates
+
+### Exact Prompt Submitted:
+
+> Initial prompt: This is the current repository.
+Note, there are open pull requests to: fix version numbers in docker-compose.yml, add dependabot.yml and quality.yml, and update ci.yml (two open PRs for ci.yml).
+
+My main goals right now: build as much of the backend and DB as possible feature-wise, fulfil as many requirements from Prototypes 1 and 2 (particularly: ensure CVE dependency scanning and establish secure user authentication workflows, and PII protection and soft deletes) + whatever's possible for prototype 3, and documentation (user stores/workflows and also a diagram of these, developer onboard/setup guides, etc). My immediate goal is to complete the requirement "Secure user authentication workflows (JWT, OAuth2, session handling) with secret key encryption.".
+
+give me an overview of the backend files (i don't work on frontend, but will do the minimal work required for users to access backend features), and how to implement the entire auth process as outlined in the final report, along with the basics/beginnings of the code to do it (and specify exact filenames and everything).
+
+### AI Output Summary & Code Generated:
+
+- Perplexity generated updates to current files and new files for authentication and verification, mainly to the backend and minimal changes to the frontend to support features. I found services I wanted to use and gave them to Perplexity to analyse the suitability for the app.
+
+### Shared conversation:
+
+*[https://www.perplexity.ai/search/2db3a30c-415d-4f6f-9a50-fbf136df70de](https://www.perplexity.ai/search/2db3a30c-415d-4f6f-9a50-fbf136df70de)
+
+### Human Review, Refactoring & Modifications Made:
+
+- Reviewed the AI-generated suggestions before implementing changes in the existing application
+- Cross-referenced with documnentation and forum posts I could find online
+- Rejected many design choices and gave it preferred alternatives instead
+
+### Verification & Testing Method:
+
+- Reviewed linting, formatting, and type checking in VSCode to make sure no problems were detected
+- Tested using CI/CD workflows - not all checks passed, currently troubleshooting and fixing 
+
+
+---
+
+
 ## Audit Certification
 I certify as Team Lead that all entries above accurately represent AI usage within this project phase, all prompts have been recorded, and all code has been validated by human review and automated testing.
 
-**Team Lead Signature:** *Arpan Dey* — **Date:** October 08, 2026
+**Team Lead Signature:** *Arpan Dey* — **Date:** November 5, 2026
