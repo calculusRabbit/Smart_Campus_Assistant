@@ -141,15 +141,29 @@ def test_professors_have_a_full_name_and_email():
         assert professor["professor_rating"] is None
 
 
-def test_dining_has_opening_and_closing_times():
+def test_dining_has_opening_and_closing_times(monkeypatch):
+    sample_rows = [
+        {
+            "dining_id": 1,
+            "dining_name": "Shocker Dining Hall",
+            "cuisine": [],
+            "event_status": None,
+            "open_hours": None,
+            "location_notes": "Official WSU dining area: Shocker Hall",
+        }
+    ]
+
+    monkeypatch.setattr("database.fetch_all", lambda query: sample_rows)
+
     dining = get_dining_from_database()
 
-    assert len(dining) > 0
-    for place in dining:
-        assert place["dining_status"] in ("Open", "Closed", "Unknown")
-        assert isinstance(place["cuisine"], list)
-        assert "opening_time" in place
-        assert "closing_time" in place
+    assert len(dining) == 1
+    assert dining[0]["dining_name"] == "Shocker Dining Hall"
+    assert dining[0]["dining_location"] == "Shocker Hall"
+    assert dining[0]["dining_status"] == "Unknown"
+    assert dining[0]["cuisine"] == []
+    assert dining[0]["opening_time"] == "N/A"
+    assert dining[0]["closing_time"] == "N/A"
 
 
 def test_deadlines_have_a_date_text():

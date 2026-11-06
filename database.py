@@ -1,5 +1,6 @@
 import os
 from datetime import datetime
+from typing import Any
 from zoneinfo import ZoneInfo
 
 import psycopg
@@ -14,7 +15,7 @@ LOCAL_TIMEZONE = ZoneInfo("America/Chicago")
 DAY_LETTERS = ["M", "T", "W", "R", "F", "Sa", "Su"]
 
 
-def get_connection():
+def get_connection() -> psycopg.Connection[dict[str, Any]]:
     postgres_host = os.getenv("POSTGRES_HOST")
 
     # Docker / environment-based connection
@@ -42,7 +43,7 @@ def fetch_all(query, params=None):
             return cursor.fetchall()
 
 
-def format_clock(text):
+def format_clock(text: str) -> str:
     # "13:30" -> "1:30 PM"
     try:
         return datetime.strptime(text, "%H:%M").strftime("%-I:%M %p")
@@ -50,7 +51,7 @@ def format_clock(text):
         return text
 
 
-def get_first_times(schedule):
+def get_first_times(schedule: Any) -> tuple[list[int], Any | None]:
     # gives back the days and times of the first entry that has times
     for entry in schedule or []:
         if entry.get("times"):
@@ -58,7 +59,7 @@ def get_first_times(schedule):
     return [], None
 
 
-def format_class_time(schedule):
+def format_class_time(schedule: Any) -> str:
     days, times = get_first_times(schedule)
     if times is None:
         return "TBA"
@@ -69,7 +70,7 @@ def format_class_time(schedule):
     return f"{letters} {format_clock(times[0])} - {format_clock(times[1])}"
 
 
-def format_place(row):
+def format_place(row: dict[str, Any]) -> str:
     parts = []
     for key in ("address_room", "address_street", "city"):
         if row.get(key):
@@ -79,7 +80,7 @@ def format_place(row):
     return ", ".join(parts)
 
 
-def get_events_from_database():
+def get_events_from_database() -> list[dict[str, Any]]:
     rows = fetch_all("""
         SELECT e.event_id, e.event_name, e.event_time, e.event_description, e.event_tags,
                l.address_room, l.address_street, l.city
@@ -119,7 +120,7 @@ def get_events_from_database():
     return events
 
 
-def get_student_interests(student_id: int):
+def get_student_interests(student_id: int) -> list[str]:
     rows = fetch_all(
         "SELECT interests FROM students "
         "WHERE student_id = %s AND deleted_timestamp IS NULL AND account_status <> 'closed'",
@@ -127,7 +128,7 @@ def get_student_interests(student_id: int):
     )
     if len(rows) == 0 or rows[0]["interests"] is None:
         return []
-    return rows[0]["interests"]
+    return list(rows[0]["interests"])
 
 
 def save_student_interests(student_id: int, interests: list[str]):
@@ -168,7 +169,7 @@ def get_deadlines_from_database(student_id: int):
     return deadlines
 
 
-def get_courses_from_database():
+def get_courses_from_database() -> list[dict[str, Any]]:
     # time, room and teacher are on the offering (one class section), not on the course
     rows = fetch_all("""
         SELECT c.course_id, o.offering_id, c.course_code, c.course_number, c.course_name,
@@ -208,7 +209,7 @@ def get_courses_from_database():
     return courses
 
 
-def get_professors_from_database():
+def get_professors_from_database() -> list[dict[str, Any]]:
     rows = fetch_all("""
         SELECT i.instructor_id, i.instructor_fname, i.instructor_lnames, i.instructor_email,
                d.department_name, l.address_room, l.address_street, l.city
@@ -232,23 +233,37 @@ def get_professors_from_database():
     return professors
 
 
-def get_dining_from_database():
+def get_dining_hours_for_day(
+    schedule: Any,
+    weekday: int | None = None,
+) -> tuple[str, str]:
+    """Return verified dining hours for one Wichita-local weekday."""
+    from zoneinfo import ZoneInfo
+
+    if weekday is None:
+        weekday = datetime.now(ZoneInfo("America/Chicago")).weekday()
+
+    for entry in schedule or []:
+        if weekday in entry.get("days", []) and entry.get("times"):
+            opening, closing = entry["times"][0]
+            return format_clock(opening), format_clock(closing)
+
+    return "N/A", "N/A"
+
+
+def get_dining_from_database() -> list[dict[str, Any]]:
     rows = fetch_all("""
         SELECT dn.dining_id, dn.dining_name, dn.cuisine, dn.event_status,
-               l.open_hours, l.address_room, l.address_street, l.city
+               l.open_hours, l.location_notes
         FROM dining dn
-        LEFT JOIN locations l ON l.location_id = dn.location_id
-        ORDER BY dn.dining_id
+        JOIN locations l ON l.location_id = dn.location_id
+        WHERE l.location_notes LIKE 'Official WSU dining area: %'
+        ORDER BY l.location_notes, dn.dining_name
     """)
 
     dining = []
     for row in rows:
-        days, times = get_first_times(row["open_hours"])
-        opening = "N/A"
-        closing = "N/A"
-        if times is not None:
-            opening = format_clock(times[0])
-            closing = format_clock(times[1])
+        opening, closing = get_dining_hours_for_day(row["open_hours"])
 
         # not sure what event_status means exactly, treating true as open
         status = "Unknown"
@@ -260,7 +275,9 @@ def get_dining_from_database():
         dining.append({
             "dining_id": row["dining_id"],
             "dining_name": row["dining_name"],
-            "dining_location": format_place(row),
+            "dining_location": row["location_notes"].removeprefix(
+                "Official WSU dining area: "
+            ).split(" | Restaurant:", 1)[0],
             "opening_time": opening,
             "closing_time": closing,
             "dining_status": status,
@@ -270,7 +287,9 @@ def get_dining_from_database():
     return dining
 
 
-def get_course_details(course_code: str, course_number: str):
+def get_course_details(
+    course_code: str, course_number: str
+) -> list[dict[str, Any]]:
     """Retrieve course details and offerings from PostgreSQL."""
     with get_connection() as connection:
         with connection.cursor() as cursor:
@@ -306,7 +325,7 @@ def get_course_details(course_code: str, course_number: str):
             )
             return cursor.fetchall()
 
-def get_courses_by_professor(professor: str):
+def get_courses_by_professor(professor: str) -> list[dict[str, Any]]:
     """Find courses by primary or secondary instructor name."""
     with get_connection() as connection:
         with connection.cursor() as cursor:
