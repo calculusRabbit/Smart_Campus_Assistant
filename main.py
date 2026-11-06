@@ -1,5 +1,5 @@
 import re
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.exceptions import RequestValidationError
@@ -544,7 +544,10 @@ def get_general_event_response() -> dict[str, Any]:
     }
 
 
-def get_general_chat_response(message: str) -> dict[str, Any] | None:
+def get_general_chat_response(
+    message: str, 
+    user: Annotated[dict, Depends(get_current_user)]
+    ) -> dict[str, Any] | None:
     """Handle general campus information and interest recommendations."""
     event_keywords = ["event", "events", "activity", "activities", "career fair", "competition"]
     dining_keywords = ["dining", "food", "eat", "cafeteria", "restaurant", "hungry"]
@@ -620,7 +623,7 @@ def get_general_chat_response(message: str) -> dict[str, Any] | None:
 
 
 @app.post("/chat")
-def chat(  # noqa: C901
+def chat( 
     request: ChatRequest,
     user: Annotated[dict, Depends(get_current_user)],
 ) -> dict[str, Any]:

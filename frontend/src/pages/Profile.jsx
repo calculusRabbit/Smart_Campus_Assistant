@@ -3,7 +3,7 @@ import {
   getUser,
   getInterests,
   saveInterests,
-  deleteAccount,
+//deleteAccount,
   logout,
 } from "../api";
 import shockerImage from "../assets/images/babyboo-pokko.gif";
@@ -113,24 +113,24 @@ export default function Profile({ goTo }) {
     setDeleteError("");
   }
 
-  async function handleDelete(e) {
-    e.preventDefault();
-    setDeleting(true);
+  // async function handleDelete(e) {
+  //   e.preventDefault();
+  //   setDeleting(true);
 
-    try {
-      await deleteAccount(user.id, deletePassword, reason, comment);
-      localStorage.setItem(
-        "loginNotice",
-        "Your account is scheduled for deletion. Log in within 30 days to restore it.",
-      );
-      // log out last, the page needs the user until it changes
-      logout();
-      goTo("login");
-    } catch (err) {
-      setDeleteError(err.message);
-      setDeleting(false);
-    }
-  }
+  //   try {
+  //     await deleteAccount(password, captcha);
+  //     localStorage.setItem(
+  //       "loginNotice",
+  //       "Your account is scheduled for deletion. Log in within 30 days to restore it.",
+  //     );
+  //     // log out last, the page needs the user until it changes
+  //     logout();
+  //     goTo("login");
+  //   } catch (err) {
+  //     setDeleteError(err.message);
+  //     setDeleting(false);
+  //   }
+  // }
 
   let reasonOptions = [];
   for (let i = 0; i < deleteReasons.length; i++) {

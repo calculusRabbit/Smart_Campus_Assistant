@@ -93,6 +93,20 @@ export async function logout() {
   }
 }
 
+export async function deleteAccount(password, captcha) {
+  await apiFetch("/me", {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password, captcha })
+  });
+
+  accessToken = null;
+  currentUser = null;
+  window.dispatchEvent(new Event("auth-expired"));
+
+  return { message: "Account deactivated successfully." };
+}
+
 // export function getUser() {
 //   const saved = localStorage.getItem("user");
 //   if (saved === null) {

@@ -97,10 +97,7 @@ def manual_verification(user: User):
 
 
 @router.post("/verification/manual/document")
-async def upload_document(
-    user: User,
-    file: UploadFile = File(),
-):
+async def upload_document(user: User, file: Annotated[UploadFile, File()]):
     content = await file.read(5 * 1024 * 1024 + 1)
     await file.close()
 
