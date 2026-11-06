@@ -4,23 +4,26 @@
 
 The Smart Campus Assistant Platform is a web-based application designed to make university information easier for students to access. Campus information is often distributed across different systems, making it difficult to quickly find information about courses, professors, dining, academic deadlines, and campus events.
 
-The platform brings this information together through a centralized student dashboard, a ML recommendation engine, and a LLM chatbot. Students can explore campus resources, manage their interests, and receive personalized event recommendations.
+The platform brings this information together through a student dashboard, an ML recommendation engine, and an LLM chatbot. Prototype 3 adds event classification, more WSU campus data, and professor appointment requests. Students can explore campus resources, manage their interests, and receive personalized event recommendations.
 
-## Prototype 2 Features
+## Prototype 3 Features
 
 - Student dashboard with campus information and event recommendations
 - Login and signup interfaces
 - Student profiles and interest management
 - Campus events, dining, courses, professor information, and academic deadlines
 - Professor review interfaces with ratings and voting
-- Interest-based event recommendations using category matching and semantic similarity
+- Professor appointment requests and request history
+- ML Classifier page for predicting event categories from a title and description
+- Interest-based event recommendations using semantic similarity and ML theme scoring
+- WSU faculty and course data collection, with ShockerSync event links
 - Natural-language chatbot with structured database responses and retrieval-augmented generation (RAG)
 - Campus knowledge collection, document processing, and semantic search
 - PostgreSQL database integration with pgvector support
 - REST API with interactive documentation
 - Containerized development environment and automated testing
 
-The alpha interface uses demonstration authentication and browser-local reviews. Use synthetic accounts and data for development and demonstrations.
+The current interface still uses demonstration authentication and browser-local reviews. Account deletion and its 30-day recovery window are simulated in local storage. Use synthetic accounts for demonstrations. Appointment requests are saved to PostgreSQL as pending requests; they are not confirmed bookings with professors.
 
 ## Technology Stack
 
@@ -51,6 +54,7 @@ The alpha interface uses demonstration authentication and browser-local reviews.
 - Ollama for local language-model inference
 - `qwen3-direct`, based on `qwen3:4b`
 - Category-based and semantic event recommendation services
+- Scikit-learn event classifiers using TF-IDF and logistic regression
 
 ### Development and Quality Tools
 
@@ -70,6 +74,9 @@ flowchart TD
     API --> Database[PostgreSQL / pgvector]
     API --> Recommendations[Event Recommendation Services]
     Recommendations --> EventIndex[Semantic Event Data / FAISS]
+    Recommendations --> ML[ML Category Predictions / Theme Scoring]
+    API --> Appointments[Professor Appointment Requests]
+    Appointments --> Database
     API --> Chat[Chat Intent Routing]
     Chat --> Database
     Chat --> RAG[RAG Pipeline]
@@ -79,7 +86,7 @@ flowchart TD
     Processing --> Retrieval
 ```
 
-The frontend communicates with the backend through `frontend/src/api.js`. The backend retrieves campus information, stores student interests, and generates recommendations. Chat requests use structured campus data first and use the RAG pipeline for additional campus knowledge when enabled.
+The frontend communicates with the backend through `frontend/src/api.js`. The backend retrieves campus information, stores student interests and appointment requests, and generates recommendations. Chat requests use structured campus data first and use the RAG pipeline for additional campus knowledge when enabled.
 
 The RAG pipeline retrieves relevant document chunks and sends them to Ollama to generate source-grounded responses. Document search uses FAISS artifacts; PostgreSQL stores the platform's relational data and defines vector-enabled knowledge tables.
 
@@ -101,15 +108,17 @@ services/
   event_recommender.py           Semantic event recommendations
   recommendation_service.py     Interest and category matching
   recommender_config.py         Recommendation settings
+  appointments.py              Appointment requests and history
+  ml/                          Event classifiers, training scripts, and models
   rag/                          Retrieval, generation, and knowledge processing
     data/                       Document data and FAISS artifacts
     processing/                 Filtering, chunking, and ingestion
     scrapers/                   Campus information collection
     tests/                      RAG and scraper tests
 static/                         Backend-served web interface
-tests/                          API and database tests
+tests/                          API, database, recommendation, and chat tests
 docs/                           Developer documentation
-migrations/                     Prototype 1 migration and rollback scripts
+migrations/                     Initial schema and appointment migrations/rollbacks
 sca_database_v0.4.0.sql          Expanded database schema
 sca_database_v0.4.0_DOWN.sql     Expanded schema teardown
 seed.py                         Development/test seeding entry point
@@ -134,8 +143,9 @@ The database supports the following domains:
 | Reviews | `reviews_generic`, `review_replies`, `review_votes`, `reviews_educational`, `reviews_dining`, `reviews_resources` |
 | Communities | `groups`, `memberships`, `notifications` |
 | Campus knowledge | `scraped_information` |
+| Appointments | `appointments` (separate migration) |
 
-The schema defines relational constraints, validation checks, indexes, trigger functions, and 384-dimensional vector columns. Student interests are stored in `students.interests`; professor-facing API responses are assembled from instructor data.
+The schema defines relational constraints, validation checks, indexes, trigger functions, and 384-dimensional vector columns. Student interests are stored in `students.interests`; professor-facing API responses are assembled from instructor data. The appointment migration adds student/instructor references, a requested date and time, a reason, and a request status.
 
 ### Supabase Project
 
@@ -190,7 +200,7 @@ cp .env.example .env
 
 Edit `.env` and set `POSTGRES_PASSWORD`. For a database-backed demonstration without AI generation, set `RAG_ENABLED=false`.
 
-Generate the lockfile with `npm install` from `frontend/` when needed.
+The frontend lockfile is included. Use `npm ci` from `frontend/` for local frontend development.
 
 Build and start the development stack:
 
@@ -224,6 +234,15 @@ Named volumes preserve local data between runs. Use volume deletion only for an 
 
 The expanded schema is defined in `sca_database_v0.4.0.sql`. PostgreSQL runs the configured initialization SQL when creating a new database volume.
 
+The appointment table is added separately. After the database starts, copy its migration into the database container and run it from the repository root:
+
+```bash
+docker compose cp migrations/002_professor_appointments_up.sql db:/tmp/appointments_up.sql
+docker compose exec db sh -c 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f /tmp/appointments_up.sql'
+```
+
+Its rollback is `migrations/002_professor_appointments_down.sql`.
+
 To initialize an explicitly empty database manually:
 
 ```bash
@@ -245,7 +264,7 @@ For schema work:
 Populate a disposable local database with synthetic data:
 
 ```bash
-docker compose exec -e APP_ENV=development backend python seed.py --reset
+docker compose exec -e APP_ENV=development backend python seed.py
 ```
 
 This resets application data and invokes `dummy_data_populator_v0.5.0.py`. Use only a verified development/test database. Synthetic data supports repeatable testing and demonstrations without exposing real student records.
@@ -293,6 +312,12 @@ Run this command in a Python environment with the project dependencies installed
 
 Semantic event recommendations use a separate `all_events.json` and `events_index.faiss` pair. Recommendation thresholds and date windows are defined in `services/recommender_config.py`; category matching provides the alternate recommendation path.
 
+### Event Classification
+
+The ML Classifier page sends an event title and description to `/ml/predict-event`. The trained model returns category predictions and probabilities. Recommendation ranking also uses ML theme scores alongside semantic similarity and an upcoming-event boost.
+
+Model files are stored in `services/ml/models/`. The category training script is `python -m services.ml.train`; it reads labeled events from `services/rag/data/all_events.json`. Theme training is in `services/ml/train_themes.py`. Retraining replaces model artifacts, so review the evaluation output before using a new model.
+
 ## API Endpoints
 
 | Method | Endpoint | Purpose |
@@ -307,6 +332,9 @@ Semantic event recommendations use a separate `all_events.json` and `events_inde
 | POST | `/students/{student_id}/interests` | Save student interests |
 | GET | `/students/{student_id}/recommendations/events` | Recommendations from a saved student profile |
 | POST | `/chat` | Natural-language campus questions |
+| POST | `/ml/predict-event` | Predict categories for an event title and description |
+| POST | `/appointments` | Submit a professor appointment request |
+| GET | `/students/{student_id}/appointments` | List a student's appointment requests |
 
 Example requests:
 
@@ -354,11 +382,21 @@ npm run build
 
 ## Testing
 
-Tests cover campus API responses, database access, interest management, recommendation behavior, retrieval, and generation handling. Run against a seeded, disposable test database with the appropriate `POSTGRES_*` environment variables.
+Tests cover campus API responses, database access, interest management, recommendation ranking, ML predictions, chat routing, retrieval, and generation handling. Unit tests check individual functions; integration tests check API behavior and database reads/writes. Some AI and external-service calls are mocked to keep results repeatable. Run against a seeded, disposable test database with the appropriate `POSTGRES_*` environment variables.
+
+With the Docker backend running, install the test tools and run the main backend suite:
+
+```bash
+docker compose exec backend python -m pip install -r requirements-dev.txt
+docker compose exec backend python -m pytest tests -v
+```
+
+RAG/scraper and ML tests also live outside `tests/`. Run them separately, or omit the folder argument to discover all Python tests:
 
 ```bash
 python -m pytest tests -q
 python -m pytest services/rag/tests -q
+python -m pytest services/ml -q
 ```
 
 Run the combined suite with coverage and exported reports:
@@ -376,7 +414,9 @@ python -m pytest -q \
 
 ## Security and Data Privacy
 
-Prototype 2 security review covers secure authentication and session handling, password hashing, secret management, OWASP Top 10 risks, dependency vulnerabilities, PII protection, and soft-delete behavior. 
+Prototype 3 security checks should cover authentication and session handling, password hashing, secret management, OWASP Top 10 risks, dependency vulnerabilities, PII protection, and soft-delete behavior.
+
+The frontend on this branch uses `FAKE_AUTH` in `frontend/src/api.js`. It does not provide production authentication or server-enforced access control for student data. The appointment API also needs authorization before use with real accounts.
 
 The schema includes hashed-password storage and `deleted_timestamp` fields for applicable account/review records. Security review should verify their behavior through the application workflows. Use sanitized configuration, synthetic test data, and restricted project/database access.
 
@@ -403,6 +443,8 @@ GitHub Actions provide:
 7. Uploaded test and coverage reports
 8. Separate RAG tests for applicable changes
 9. Conventional PR-title validation
+10. Frontend linting, production build, and dependency auditing
+11. Python formatting, type, complexity, and security checks
 
 CI logs and reports should be linked from the associated issues and prototype submission. Run the frontend lint/build and applicable security checks as part of release validation, and enforce required checks through repository branch protection.
 
@@ -423,22 +465,28 @@ feat(recommendations): add semantic event matching
 fix(api): validate student interests
 test(database): cover profile updates
 ci(security): add dependency auditing
-docs(readme): update alpha setup instructions
+docs(readme): update prototype 3 setup instructions
 ```
 
 ## Prototype Milestones and Submission Package
 
-The cumulative submission package through Prototype 2 includes:
+Prototype 3 targets the `v0.9.0-beta` release. Keep the earlier setup, testing, and security evidence, and include the following in the submission:
 
-- Peer-reviewed MVP changes merged into `main`, a tagged release, and release history
+- Peer-reviewed feature changes merged into `main`, the beta release tag, and release history
 - Reproducible local setup, sanitized environment examples, synthetic seed data, and verified schema rollback evidence
 - Updated README, visual architecture documentation, schema reference, and developer onboarding guide
 - Integration test reports with at least 60% coverage and issue-linked results
 - Static-analysis metrics, dependency audit results, OWASP review, and remediation evidence
 - Verified authentication, privacy, and soft-delete workflows
 - Environment feature-toggle documentation, including `RAG_ENABLED`
-- A cumulative, Team Lead-reviewed [AI Usage Log](AI_USAGE_LOG.md) recording prompts, generated output, human changes, and validation, including Sprint 2–3 records
+- A cumulative, Team Lead-reviewed [AI Usage Log](AI_USAGE_LOG.md) recording prompts, generated output, human changes, and validation through the beta phase
 - Repository/release link and CI run URL for submission
+- Browser E2E test results for the main user journeys, with QA findings, severity, and resolution status tracked in GitHub Issues
+- Load/stress test results showing API latency and throughput
+- WCAG 2.1 AA audit results for contrast, keyboard navigation, and screen reader support
+- `/health` and `/ready` probes, structured JSON logs, and updated maintenance documentation
+
+This list describes the submission requirements, not a record of completed checks. The current main branch does not yet include browser E2E scripts, health/readiness endpoints, or load-test and accessibility reports. Verify these items against the final release and link the actual results before submission. After the beta submission, focus on fixes and regression testing during the feature freeze.
 
 ## Team
 ### The Three Musketeers
