@@ -271,7 +271,8 @@ def start_otp(user: dict[str, Any], email: str) -> dict[str, Any]:
     }
 
 
-def complete_otp(user: dict[str, Any], code: str) -> dict[str, Any]:
+def complete_otp(user: dict[str, Any], code: str) -> dict[str, Any]: # noqa: C901 
+    # many DB operations and error handling required for OTPs
     student_id = user["student_id"]
     error = None
     result = None
