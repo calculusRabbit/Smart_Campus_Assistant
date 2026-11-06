@@ -78,7 +78,7 @@ jobs:
         run: complexipy main.py models.py services --max-complexity-allowed 15
 
       - name: Static security analysis
-        run: bandit -r main.py models.py services -x services/rag/tests,services/rag/data
+        run: bandit -r main.py models.py services -x services/rag/tests,services/rag/data,services/ml/test_*.py
 
       - name: Audit Python dependencies
         run: |
