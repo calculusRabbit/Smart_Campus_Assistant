@@ -150,3 +150,57 @@
 .pillPicked {
   background-color: var(--yellow);
 }
+
+/* delete account on the profile page */
+.line {
+  margin: 25px 0 15px 0;
+  border: none;
+  border-top: 1px solid #ddd;
+}
+
+.dangerButton {
+  padding: 10px 20px;
+  font-weight: bold;
+  color: white;
+  background-color: #c62828;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.dangerButton:hover {
+  background-color: #a31f1f;
+}
+
+.dangerButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* dark background behind the popup */
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  background-color: rgba(0, 0, 0, 0.6);
+}
+
+.modal {
+  width: 400px;
+  max-width: 90%;
+  margin: auto;
+  padding: 30px;
+  background-color: white;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.modalButtons {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+
+.modalButtons .darkButton {
+  margin-top: 0;
+}
