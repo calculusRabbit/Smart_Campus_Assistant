@@ -8,8 +8,6 @@ let currentUser = null;
 localStorage.removeItem("token");
 localStorage.removeItem("user");
 
-// a deleted account can come back if you log in within this many days
-const DELETE_DAYS = 30;
 
 export function getUser() {
   return currentUser;

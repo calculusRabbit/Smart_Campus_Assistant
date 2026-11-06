@@ -55,7 +55,11 @@ class AuthService:
                     "SELECT student_id FROM Students WHERE username = %s",
                     (request.username,),
                 ).fetchone()
-
+                
+                conn.execute("UPDATE Schools SET scorecard_id=%s "
+                "WHERE school_name=%s AND scorecard_id IS NULL", 
+                (institution["id"], institution["name"]))
+                
                 school = conn.execute(
                     """
                     INSERT INTO Schools (school_name, scorecard_id) VALUES (%s, %s)

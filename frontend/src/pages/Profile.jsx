@@ -11,15 +11,15 @@ import { interestOptions, MAX_TAG_WORDS } from "../interests";
 import styles from "./Auth.module.css";
 import DeactivateAccount from "../components/DeactivateAccount";
 
-// reasons in the delete account popup
-const deleteReasons = [
-  "Not useful for me",
-  "The events or info were wrong",
-  "Privacy concerns",
-  "Too many notifications",
-  "Using something else",
-  "Other",
-];
+// // reasons in the delete account popup
+// const deleteReasons = [
+//   "Not useful for me",
+//   "The events or info were wrong",
+//   "Privacy concerns",
+//   "Too many notifications",
+//   "Using something else",
+//   "Other",
+// ];
 
 export default function Profile({ goTo }) {
   const user = getUser();
@@ -31,13 +31,13 @@ export default function Profile({ goTo }) {
   const [aboutText, setAboutText] = useState("");
   const [message, setMessage] = useState("");
 
-  // delete account popup
-  const [showDelete, setShowDelete] = useState(false);
-  const [reason, setReason] = useState("");
-  const [comment, setComment] = useState("");
-  const [deletePassword, setDeletePassword] = useState("");
-  const [deleteError, setDeleteError] = useState("");
-  const [deleting, setDeleting] = useState(false);
+  // // delete account popup
+  // const [showDelete, setShowDelete] = useState(false);
+  // const [reason, setReason] = useState("");
+  // const [comment, setComment] = useState("");
+  // const [deletePassword, setDeletePassword] = useState("");
+  // const [deleteError, setDeleteError] = useState("");
+  // const [deleting, setDeleting] = useState(false);
 
   // load saved stuff when the page opens
   // the text and the tags are saved in the same list so split them again here
@@ -104,14 +104,14 @@ export default function Profile({ goTo }) {
     }
   }
 
-  // close the popup and clear what was typed
-  function closeDelete() {
-    setShowDelete(false);
-    setReason("");
-    setComment("");
-    setDeletePassword("");
-    setDeleteError("");
-  }
+  // // close the popup and clear what was typed
+  // function closeDelete() {
+  //   setShowDelete(false);
+  //   setReason("");
+  //   setComment("");
+  //   setDeletePassword("");
+  //   setDeleteError("");
+  // }
 
   // async function handleDelete(e) {
   //   e.preventDefault();
@@ -132,14 +132,14 @@ export default function Profile({ goTo }) {
   //   }
   // }
 
-  let reasonOptions = [];
-  for (let i = 0; i < deleteReasons.length; i++) {
-    reasonOptions.push(
-      <option key={deleteReasons[i]} value={deleteReasons[i]}>
-        {deleteReasons[i]}
-      </option>,
-    );
-  }
+  // let reasonOptions = [];
+  // for (let i = 0; i < deleteReasons.length; i++) {
+  //   reasonOptions.push(
+  //     <option key={deleteReasons[i]} value={deleteReasons[i]}>
+  //       {deleteReasons[i]}
+  //     </option>,
+  //   );
+  // }
 
   // each interest is a button that turns yellow when picked
   let interestButtons = [];
@@ -216,16 +216,7 @@ export default function Profile({ goTo }) {
           Back to Dashboard
         </button>
 
-        <hr className={styles.line} />
-        <button
-          onClick={() => setShowDelete(true)}
-          className={styles.dangerButton}
-        >
-          Delete account
-        </button>
-      </div>
-
-      {showDelete && (
+      {/* {showDelete && (
         <div className={styles.overlay} onClick={closeDelete}>
           <form
             className={styles.modal}
@@ -283,7 +274,8 @@ export default function Profile({ goTo }) {
             </div>
           </form>
         </div>
-      )}
+      )} */}
+      </div>
     </div>
   );
 }

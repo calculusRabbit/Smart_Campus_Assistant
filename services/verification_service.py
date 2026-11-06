@@ -17,7 +17,7 @@ from database import get_connection
 
 #keywords to flag in emails 
 STAFF_LABELS = set(
-    "cs cse ee ece bme math physics bio chem psych"
+    "cs cse ee ece bme math physics bio chem psych "
     "hr legal payroll office president provost dean registrar "
     "admissions financialaid bursar faculty staff".split()
 )

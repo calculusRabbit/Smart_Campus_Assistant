@@ -545,9 +545,9 @@ def get_general_event_response() -> dict[str, Any]:
 
 
 def get_general_chat_response(
-    message: str, 
-    user: Annotated[dict, Depends(get_current_user)]
-    ) -> dict[str, Any] | None:
+    message: str,
+    user: dict,
+) -> dict[str, Any] | None:
     """Handle general campus information and interest recommendations."""
     event_keywords = ["event", "events", "activity", "activities", "career fair", "competition"]
     dining_keywords = ["dining", "food", "eat", "cafeteria", "restaurant", "hungry"]
@@ -648,7 +648,7 @@ def chat(
     if live_event_response is not None:
         return live_event_response
 
-    general_response = get_general_chat_response(message)
+    general_response = get_general_chat_response(message, user)
     if general_response is not None:
         return general_response
 

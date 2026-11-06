@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { apiFetch, logout } from "../api";
+import { deleteAccount } from "../api";
 import Captcha from "./Captcha";
 
 export default function DeactivateAccount({ goTo }) {
@@ -19,23 +19,11 @@ export default function DeactivateAccount({ goTo }) {
 
     const form = new FormData(event.currentTarget);
 
-    try {
-      await apiFetch("/me", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          password: form.get("password"),
-          captcha: form.get("captcha"),
-        }),
-      });
-
-      // The server session is already revoked. logout() still clears
-      // the existing in-memory frontend identity in its finally block.
-      try {
-        await logout();
-      } catch {
-        // A revoked session can legitimately reject /logout.
-      }
+        try {
+      await deleteAccount(
+        form.get("password"),
+        form.get("captcha"),
+      );
 
       goTo("login");
     } catch (err) {
