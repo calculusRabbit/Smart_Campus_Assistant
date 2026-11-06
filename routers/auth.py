@@ -1,14 +1,10 @@
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, Field, SecretStr
 
 from auth import DUMMY_HASH, create_session, get_current_user, public_user, verify_password
-from auth_models import (
-    DeactivateRequest,
-    LoginRequest,
-    SignupRequest,
-)
+from auth_models import DeactivateRequest, LoginRequest, SignupRequest
 from database import get_connection
 from services.auth_service import AuthService
 from services.captcha_service import check_captcha, create_captcha
@@ -18,14 +14,14 @@ service = AuthService()
 
 
 @router.post("/signup", status_code=201)
-def signup(request: SignupRequest, response: Response):
+def signup(request: SignupRequest, response: Response) -> dict[str, Any]:
     check_captcha(request.captcha, "signup")
     response.headers["Cache-Control"] = "no-store"
     return service.signup(request)
 
 
 @router.post("/login")
-def login(request: LoginRequest, response: Response):
+def login(request: LoginRequest, response: Response) -> dict[str, Any]:
     response.headers["Cache-Control"] = "no-store"
     return service.login(request)
 
@@ -34,13 +30,13 @@ def login(request: LoginRequest, response: Response):
 def me(
     response: Response,
     user: Annotated[dict, Depends(get_current_user)],
-):
+) -> dict[str, Any]:
     response.headers["Cache-Control"] = "no-store"
     return public_user(user)
 
 
 @router.post("/logout", status_code=204)
-def logout(user: Annotated[dict, Depends(get_current_user)]):
+def logout(user: Annotated[dict, Depends(get_current_user)]) -> Response:
     service.logout(user["session_id"], user["username"])
     return Response(status_code=204, headers={"Cache-Control": "no-store"})
 
@@ -50,7 +46,7 @@ def logout(user: Annotated[dict, Depends(get_current_user)]):
 def delete_me(
     request: DeactivateRequest,
     user: Annotated[dict, Depends(get_current_user)],
-):
+) -> Response:
     check_captcha(request.captcha, "deactivate")
     with get_connection() as conn:
         account = conn.execute(
@@ -96,7 +92,7 @@ def delete_me(
 
 
 @router.get("/captcha/{action}")
-def captcha(action: str, response: Response):
+def captcha(action: str, response: Response) -> dict[str, Any]:
     if action not in {"signup", "deactivate"}:
         raise HTTPException(400, "Unknown CAPTCHA action")
 
@@ -110,7 +106,7 @@ class AdminLoginRequest(BaseModel):
 
 
 @router.post("/admin/login")
-def admin_login(request: AdminLoginRequest, response: Response):
+def admin_login(request: AdminLoginRequest, response: Response) -> dict[str, str]:
     with get_connection() as conn:
         user = conn.execute(
             """

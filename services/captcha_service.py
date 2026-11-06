@@ -5,6 +5,7 @@ import hashlib
 import hmac
 import json
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from altcha import create_challenge, verify_solution
 from fastapi import HTTPException
@@ -20,15 +21,17 @@ CAPTCHA_KEY = hmac.new(
 ).hexdigest()
 
 
-def create_captcha(action: str):
+def create_captcha(action: str) -> dict[str, Any]:
     expires = datetime.now(UTC) + timedelta(minutes=5)
 
-    challenge = create_challenge(
-        algorithm="PBKDF2/SHA-256",
-        cost=5000,
-        hmac_secret=CAPTCHA_KEY,
-        expires_at=expires,
-    ).to_dict()
+    challenge: dict[str, Any] = dict(
+        create_challenge(
+            algorithm="PBKDF2/SHA-256",
+            cost=5000,
+            hmac_secret=CAPTCHA_KEY,
+            expires_at=expires,
+        ).to_dict()
+    )
 
     with get_connection() as conn:
         conn.execute("DELETE FROM Captcha_challenges WHERE expires_at < CURRENT_TIMESTAMP")
@@ -40,7 +43,7 @@ def create_captcha(action: str):
     return challenge
 
 
-def check_captcha(payload: str, action: str):
+def check_captcha(payload: str, action: str) -> None:
     try:
         if not payload or len(payload) > 8192:
             raise ValueError("Missing CAPTCHA")

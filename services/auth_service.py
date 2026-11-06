@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from fastapi import HTTPException
 from psycopg.errors import UniqueViolation
 
@@ -75,6 +77,12 @@ class AuthService:
                     RETURNING school_id""",
                     (institution["name"], institution["id"]),
                 ).fetchone()
+
+                if student is None or school is None:
+                    raise HTTPException(
+                        500,
+                        "Account records could not be created",
+                    )
 
                 conn.execute(
                     "INSERT INTO Enrolments (student_id, school_id, majors) VALUES (%s, %s, %s)",
@@ -157,7 +165,7 @@ class AuthService:
             "user": public_user(user),
         }
 
-    def logout(self, session_id, username: str) -> None:
+    def logout(self, session_id: UUID, username: str) -> None:
         # revoke login without affecting user's other sessions, if any
         with get_connection() as conn:
             conn.execute(

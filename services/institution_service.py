@@ -2,6 +2,7 @@
 
 import os
 from functools import lru_cache
+from typing import Any
 
 import httpx
 from fastapi import HTTPException
@@ -15,7 +16,7 @@ US_STATES = (
 )
 
 
-def _get(**params):
+def _get(**params: Any) -> list[dict[str, Any]]:
     key = os.environ.get("SCORECARD_API_KEY")
     if not key:
         raise HTTPException(503, "Institution search is not configured")
@@ -25,14 +26,15 @@ def _get(**params):
             BASE_URL, params={"api_key": key, "keys_nested": "true", **params}, timeout=15
         )
         response.raise_for_status()
-        return response.json()["results"]
+        results: list[dict[str, Any]] = response.json()["results"]
+        return results
     except (httpx.HTTPError, KeyError, ValueError) as exc:
         raise HTTPException(
             503, "Institution search is unavailable, please try again later."
         ) from exc
 
 
-def search_institutions(query: str):
+def search_institutions(query: str) -> list[dict[str, Any]]:
     rows = _get(
         **{
             "school.name": query,
@@ -46,7 +48,7 @@ def search_institutions(query: str):
 
 
 @lru_cache(maxsize=256)
-def get_institution(scorecard_id: int):
+def get_institution(scorecard_id: int) -> dict[str, Any]:
     rows = _get(
         **{
             "id": scorecard_id,

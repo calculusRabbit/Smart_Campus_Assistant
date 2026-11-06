@@ -7,9 +7,11 @@ import os
 import re
 import secrets
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import httpx
 from fastapi import HTTPException
+from psycopg import Connection
 from psycopg.errors import UniqueViolation
 
 from auth import JWT_KEY
@@ -29,12 +31,12 @@ OTP_KEY = hmac.new(
 ).digest()
 
 
-def code_hash(student_id: int, email: str, code: str):
+def code_hash(student_id: int, email: str, code: str) -> str:
     value = f"{student_id}|{email}|{code}".encode()
     return hmac.new(OTP_KEY, value, hashlib.sha256).hexdigest()
 
 
-def staff_reasons(email: str):
+def staff_reasons(email: str) -> list[str]:
     local, domain = email.lower().rsplit("@", 1)
     tokens = set(re.split(r"[^a-z0-9]+", local))
     tokens.update(domain.split(".")[:-2])
@@ -47,7 +49,10 @@ def staff_reasons(email: str):
     return reasons
 
 
-def school_for(conn, student_id: int):
+def school_for(
+    conn: Connection[dict[str, Any]],
+    student_id: int,
+) -> dict[str, Any]:
     row = conn.execute(
         """
         SELECT sc.*
@@ -65,8 +70,12 @@ def school_for(conn, student_id: int):
     return row
 
 
-def require_manual(conn, student_id: int, reason: str):
-    # Serialize creation of pending reviews for this account.
+def require_manual(
+    conn: Connection[dict[str, Any]],
+    student_id: int,
+    reason: str,
+) -> dict[str, Any]:
+    # serialise creation of pending reviews for this account
     conn.execute(
         """
         SELECT u.username
@@ -120,12 +129,12 @@ def require_manual(conn, student_id: int, reason: str):
     }
 
 
-def send_email(email: str, code: str):
+def send_email(email: str, code: str) -> None:
     key = os.environ.get("MAILJET_API_KEY")
     secret = os.environ.get("MAILJET_API_SECRET")
     sender = os.environ.get("MAILJET_FROM")
 
-    if not all((key, secret, sender)):
+    if not key or not secret or not sender:
         raise HTTPException(503, "Email delivery is not configured")
 
     try:
@@ -157,7 +166,7 @@ def send_email(email: str, code: str):
         raise HTTPException(503, "Email delivery unavailable") from exc
 
 
-def start_otp(user: dict, email: str):
+def start_otp(user: dict[str, Any], email: str) -> dict[str, Any]:
     student_id = user["student_id"]
     email = email.lower()
     now = datetime.now(UTC)
@@ -262,7 +271,7 @@ def start_otp(user: dict, email: str):
     }
 
 
-def complete_otp(user: dict, code: str):
+def complete_otp(user: dict[str, Any], code: str) -> dict[str, Any]:
     student_id = user["student_id"]
     error = None
     result = None
@@ -377,8 +386,11 @@ def complete_otp(user: dict, code: str):
             "This institutional email is already linked to an account",
         ) from exc
 
-    # Raise outside the transaction so failed guesses remain counted.
-    if error:
-        raise HTTPException(400, error)
+    # raise outside the transaction, so failed guesses remain counted
+    if error or result is None:
+        raise HTTPException(
+            400 if error else 500,
+            error or "verification produced no result",
+        )
 
     return result

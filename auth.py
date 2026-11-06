@@ -2,12 +2,13 @@
 
 import os
 from datetime import UTC, datetime, timedelta
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID, uuid4
 
 import jwt
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from psycopg import Connection
 from pwdlib import PasswordHash
 
 from database import get_connection
@@ -39,7 +40,10 @@ def verify_password(password: str, stored_hash: str) -> bool:
     return password_hash.verify(password, stored_hash)
 
 
-def create_session(conn, username: str) -> str:
+def create_session(
+    conn: Connection[dict[str, Any]],
+    username: str,
+) -> str:
     # insert a session using the caller's transaction, return access JWT
     session_id = uuid4()
     now = datetime.now(UTC)

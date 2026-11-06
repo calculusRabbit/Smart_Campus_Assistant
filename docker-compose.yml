@@ -28,6 +28,12 @@ services:
         read_only: true
         bind:
           create_host_path: false
+      - type: bind
+        source: ./migrations/002_professor_appointments_up.sql
+        target: /docker-entrypoint-initdb.d/004-professor-appointments.sql
+        read_only: true
+        bind:
+          create_host_path: false
     healthcheck:
       test: ["CMD-SHELL", 'pg_isready -h 127.0.0.1 -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
       interval: 5s

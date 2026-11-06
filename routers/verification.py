@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import (
     APIRouter,
@@ -32,23 +32,27 @@ Admin = Annotated[dict, Depends(get_admin_user)]
 
 
 @router.get("/institutions")
-def institutions(q: str = Query(min_length=2, max_length=100)):
+def institutions(q: str = Query(min_length=2, max_length=100)) -> list[dict[str, Any]]:
     return search_institutions(q.strip())
 
 
 @router.get("/institutions/{scorecard_id}")
-def institution(scorecard_id: int):
+def institution(scorecard_id: int) -> dict[str, Any]:
     return get_institution(scorecard_id)
 
 
 @router.get("/verification")
-def verification_status(user: User, response: Response):
+def verification_status(user: User, response: Response) -> dict[str, Any]:
     with get_connection() as conn:
         school = school_for(conn, user["student_id"])
         student = conn.execute(
             "SELECT account_status FROM Students WHERE student_id = %s",
             (user["student_id"],),
         ).fetchone()
+
+        if student is None:
+            raise HTTPException(404, "Student not found")
+
         latest = conn.execute(
             """
             SELECT status, method, reason, admin_message
@@ -78,17 +82,17 @@ class CheckOtpRequest(BaseModel):
 
 
 @router.post("/verification/otp/send")
-def send_otp(request: SendOtpRequest, user: User):
+def send_otp(request: SendOtpRequest, user: User) -> dict[str, Any]:
     return start_otp(user, str(request.email))
 
 
 @router.post("/verification/otp/check")
-def check_otp(request: CheckOtpRequest, user: User):
+def check_otp(request: CheckOtpRequest, user: User) -> dict[str, Any]:
     return complete_otp(user, request.code)
 
 
 @router.post("/verification/manual")
-def manual_verification(user: User):
+def manual_verification(user: User) -> dict[str, Any]:
     with get_connection() as conn:
         return require_manual(
             conn,
@@ -98,7 +102,10 @@ def manual_verification(user: User):
 
 
 @router.post("/verification/manual/document")
-async def upload_document(user: User, file: Annotated[UploadFile, File()]):
+async def upload_document(
+    user: User,
+    file: Annotated[UploadFile, File()],
+) -> dict[str, str]:
     content = await file.read(5 * 1024 * 1024 + 1)
     await file.close()
 
@@ -125,11 +132,15 @@ async def upload_document(user: User, file: Annotated[UploadFile, File()]):
             (user["student_id"],),
         ).fetchone()
 
+        if review is None:
+            raise HTTPException(
+                409,
+                "No pending verification available",
+            )
+
         conn.execute(
             """
-            INSERT INTO Authentication_documents (
-                authentication_id, content
-            )
+            INSERT INTO Authentication_documents (authentication_id, content)
             VALUES (%s, %s)
             ON CONFLICT (authentication_id) DO UPDATE
             SET content = EXCLUDED.content
@@ -141,7 +152,7 @@ async def upload_document(user: User, file: Annotated[UploadFile, File()]):
 
 
 @router.get("/admin/verifications")
-def pending_verifications(admin: Admin, response: Response):
+def pending_verifications(admin: Admin, response: Response) -> list[dict[str, Any]]:
     response.headers["Cache-Control"] = "no-store"
 
     with get_connection() as conn:
@@ -172,7 +183,7 @@ def pending_verifications(admin: Admin, response: Response):
 
 
 @router.get("/admin/verifications/{authentication_id}/document")
-def get_document(authentication_id: int, admin: Admin):
+def get_document(authentication_id: int, admin: Admin) -> Response:
     with get_connection() as conn:
         row = conn.execute(
             """
@@ -207,7 +218,7 @@ def review_verification(
     authentication_id: int,
     request: ReviewRequest,
     admin: Admin,
-):
+) -> dict[str, str]:
     with get_connection() as conn:
         review = conn.execute(
             """

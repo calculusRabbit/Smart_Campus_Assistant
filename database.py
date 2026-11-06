@@ -4,6 +4,7 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 import psycopg
+from psycopg.abc import Params
 from psycopg.rows import dict_row
 
 DATABASE_NAME = os.getenv("POSTGRES_DB", "smart_campus")
@@ -36,7 +37,10 @@ def get_connection() -> psycopg.Connection[dict[str, Any]]:
     )
 
 
-def fetch_all(query, params=None):
+def fetch_all(
+    query: str,
+    params: Params | None = None,
+) -> list[dict[str, Any]]:
     with get_connection() as connection:
         with connection.cursor() as cursor:
             cursor.execute(query, params)
@@ -46,7 +50,7 @@ def fetch_all(query, params=None):
 def format_clock(text: str) -> str:
     # "13:30" -> "1:30 PM"
     try:
-        return datetime.strptime(text, "%H:%M").strftime("%-I:%M %p")
+        return datetime.strptime(text, "%H:%M").strftime("%I:%M %p").lstrip("0")
     except ValueError:
         return text
 
@@ -99,8 +103,7 @@ def get_events_from_database() -> list[dict[str, Any]]:
             ranges = list(row["event_time"])
             start = ranges[0].lower.astimezone(LOCAL_TIMEZONE)
             event_date = start.strftime("%Y-%m-%d")
-            time_text = start.strftime("%-I:%M %p")
-
+            time_text = start.strftime("%I:%M %p").lstrip("0")
         tags = row["event_tags"] or []
         category = "general"
         if len(tags) > 0:
@@ -131,7 +134,7 @@ def get_student_interests(student_id: int) -> list[str]:
     return list(rows[0]["interests"])
 
 
-def save_student_interests(student_id: int, interests: list[str]):
+def save_student_interests(student_id: int, interests: list[str]) -> bool:
     cleaned = [interest.lower().strip() for interest in interests]
 
     with get_connection() as connection:
@@ -148,7 +151,7 @@ def save_student_interests(student_id: int, interests: list[str]):
         return cursor.rowcount > 0 #were any rows changed?
 
 
-def get_deadlines_from_database(student_id: int):
+def get_deadlines_from_database(student_id: int) -> list[dict[str, Any]]:
     rows = fetch_all("""SELECT deadline_id, deadline_action, deadline_datetime, deadline_description
         FROM deadlines
         WHERE student_id = %s

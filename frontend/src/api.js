@@ -394,40 +394,25 @@ export async function voteReview(reviewId, username, value) {
   return reviews;
 }
 
-// Submit a professor appointment request.
-// The professor must approve the request separately.
+// submit a professor appointment request
+// the professor must approve the request separately
 export async function createAppointment(appointment) {
-  const res = await fetch(BASE_URL + "/appointments", {
+  const response = await apiFetch("/appointments", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(appointment),
   });
 
-  const data = await res.json();
-
-  if (!res.ok) {
-    const message =
-      typeof data.detail === "string"
-        ? data.detail
-        : "Could not submit appointment request.";
-
-    throw new Error(message);
-  }
-
-  return data;
+  return response.json();
 }
 
-// Retrieve appointment requests for a student.
-// Prototype only: requires proper authentication before deployment.
+
+// retrieve the student's appointment requests
 export async function getStudentAppointments(studentId) {
-  const res = await fetch(
-    BASE_URL + "/students/" + encodeURIComponent(studentId) + "/appointments",
+  const response = await apiFetch(
+    "/students/" + encodeURIComponent(studentId) + "/appointments",
   );
 
-  if (!res.ok) {
-    throw new Error("Could not load appointment history.");
-  }
-
-  const data = await res.json();
+  const data = await response.json();
   return data.appointments;
 }
