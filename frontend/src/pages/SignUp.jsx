@@ -20,7 +20,11 @@ export default function SignUp({ goTo }) {
   const [degreeLevel, setDegreeLevel] = useState("");
   const [majors, setMajors] = useState("");
   const [minors, setMinors] = useState("");
-  const splitSubjects = (value) => value.split(";").map((item) => item.trim()).filter(Boolean);
+  const splitSubjects = (value) =>
+    value
+      .split(";")
+      .map((item) => item.trim())
+      .filter(Boolean);
 
   function useLocation() {
     if (!navigator.geolocation) {
@@ -215,21 +219,38 @@ export default function SignUp({ goTo }) {
           />
 
           <InstitutionPicker onChange={setInstitution} />
-        <label><input type="checkbox" checked={!isPrimary}
-          onChange={(event) => setIsPrimary(!event.target.checked)} />
-          This is not my primary institution</label>
-        <label>Degree level
-          <input required maxLength={100} value={degreeLevel}
-            placeholder="Associate, bachelor, master, doctorate, certificate, non-degree"
-            onChange={(event) => setDegreeLevel(event.target.value)} />
-        </label>
-        <label>Current majors (optional; separate multiple with semicolons)
-          <input value={majors} onChange={(event) => setMajors(event.target.value)} />
-        </label>
-        <label>Current minors (optional; separate multiple with semicolons)
-          <input value={minors} onChange={(event) => setMinors(event.target.value)} />
-        </label>
-
+          <label>
+            <input
+              type="checkbox"
+              checked={!isPrimary}
+              onChange={(event) => setIsPrimary(!event.target.checked)}
+            />
+            This is not my primary institution
+          </label>
+          <label>
+            Degree level
+            <input
+              required
+              maxLength={100}
+              value={degreeLevel}
+              placeholder="Associate, bachelor, master, doctorate, certificate, non-degree"
+              onChange={(event) => setDegreeLevel(event.target.value)}
+            />
+          </label>
+          <label>
+            Current majors (optional; separate multiple with semicolons)
+            <input
+              value={majors}
+              onChange={(event) => setMajors(event.target.value)}
+            />
+          </label>
+          <label>
+            Current minors (optional; separate multiple with semicolons)
+            <input
+              value={minors}
+              onChange={(event) => setMinors(event.target.value)}
+            />
+          </label>
 
           <p className={styles.label}>Date of birth</p>
           <input
@@ -251,10 +272,14 @@ export default function SignUp({ goTo }) {
             required={!location}
           />
 
-          <button type="button" onClick={useLocation}>Use approximate browser location instead</button>
-        {location && <p>Approximate location captured. Zipcode is optional.</p>}
+          <button type="button" onClick={useLocation}>
+            Use approximate browser location instead
+          </button>
+          {location && (
+            <p>Approximate location captured. Zipcode is optional.</p>
+          )}
 
-        <input
+          <input
             className={styles.input}
             type="password"
             name="password"
