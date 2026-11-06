@@ -8,6 +8,7 @@ import numpy as np
 
 from services.interest_expansion import expand_interests
 from services.ml.recommendation_enrichment import enrich_event_recommendations
+from services.ml.theme_scoring import get_theme_bonus
 from services.rag.config import ALL_EVENTS_PATH, EVENTS_EMBEDDING_MODEL, EVENTS_INDEX_PATH
 from services.recommender_config import (
     LOOKAHEAD_DAYS,
@@ -120,6 +121,68 @@ TOPIC_KEYWORDS = {
         "wicys",
         "cyber defense",
     ),
+    "art": (
+        "art",
+        "arts",
+        "painting",
+        "drawing",
+        "gallery",
+        "exhibition",
+        "craft",
+        "creative",
+    ),
+    "sports": (
+        "sports",
+        "athletics",
+        "volleyball",
+        "basketball",
+        "soccer",
+        "football",
+        "tournament",
+        "intramural",
+    ),
+    "volunteering": (
+        "volunteer",
+        "volunteering",
+        "community service",
+        "service project",
+        "community outreach",
+    ),
+    "business": (
+        "business",
+        "entrepreneurship",
+        "entrepreneur",
+        "startup",
+        "marketing",
+        "commerce",
+    ),
+    "science": (
+        "science",
+        "scientific",
+        "research",
+        "stem",
+        "laboratory",
+        "biology",
+        "chemistry",
+        "physics",
+    ),
+    "health": (
+        "health",
+        "wellness",
+        "healthcare",
+        "mental health",
+        "wellbeing",
+        "medical",
+        "fitness",
+    ),
+    "culture": (
+        "culture",
+        "cultural",
+        "multicultural",
+        "international",
+        "heritage",
+        "diversity",
+    ),
 }
 
 TOPIC_QUERY_ALIASES = {
@@ -159,6 +222,13 @@ TOPIC_QUERY_ALIASES = {
         "information security",
         "infosec",
     ),
+    "art": ("art",),
+    "sports": ("sports",),
+    "volunteering": ("volunteering",),
+    "business": ("business",),
+    "science": ("science",),
+    "health": ("health",),
+    "culture": ("culture",),
 }
 
 
@@ -259,6 +329,17 @@ class EventRecommender:
                 continue
 
             when, final_score = scored
+
+            # ML provides a small ranking bonus only after eligibility checks.
+            final_score = min(
+                1.0,
+                final_score
+                + get_theme_bonus(
+                    likes_text,
+                    str(event.get("title", "")),
+                    str(event.get("description", "")),
+                ),
+            )
 
             categories = event["categories"]
             results.append(
