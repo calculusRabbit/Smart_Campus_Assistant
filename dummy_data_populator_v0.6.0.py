@@ -1,5 +1,6 @@
 # requires: psycopg, pwdlib[argon2]
-# populates existing postgres DB according to sca_database_v0.4.0.sql with dummy data
+# populates existing postgres DB according to sca_database_v0.4.1.sql with dummy data
+    # does NOT populate tables for: authentication data, scraped data
 
 # run command: python <this_script_name> <DSN> --reset
     #DSN format: postgresql://[user[:password]@][netloc][:port][/dbname][?param1=value1&...]
@@ -7,7 +8,7 @@
 
 import argparse
 
-#import os
+import os
 import random
 import sys
 from datetime import UTC, datetime, timedelta
@@ -39,7 +40,7 @@ anon_username_fields = ["student","campus","uni","college","whistleblower","revi
 #==================================================================
 
 
-#wipes any existing dummy data from all tables for a fresh re-population
+#wipes any existing data from all tables for a fresh re-population
 def erase_data(cur: psycopg.Cursor) -> None:
     cur.execute("""
         TRUNCATE Schools, Users, Departments, Locations, Events, Dining, 
@@ -565,12 +566,12 @@ def main():
     if not args.reset:
         parser.error("the script needs --reset to run, to prevent duplicates of unique records.")
 
-    # if args.reset:
-    #     environment = os.environ.get("APP_ENV")
-    #     if environment not in {"development", "test"}:
-    #         raise RuntimeError(
-    #             "Database won't be truncated unless APP_ENV is development or test"
-    #         )
+    if args.reset:
+        environment = os.environ.get("APP_ENV")
+        if environment not in {"development", "test"}:
+            raise RuntimeError(
+                "Database won't be truncated unless APP_ENV is development or test"
+            )
     global user_count
     if args.num_users < 2:
         parser.error("--num-users must be >=2 for valid review vote data to be populated")

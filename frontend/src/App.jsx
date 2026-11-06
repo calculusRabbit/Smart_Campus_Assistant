@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
@@ -6,6 +6,7 @@ import Profile from "./pages/Profile";
 import Reviews from "./pages/Reviews";
 import ProfessorPage from "./pages/ProfessorPage";
 import { getUser } from "./api";
+import Verification from "./pages/Verification";
 
 function App() {
   // no router library, just keep track of which page we are on
@@ -13,14 +14,25 @@ function App() {
   // which professor was clicked in the reviews list
   const [professorId, setProfessorId] = useState(null);
 
+  useEffect(() => {
+  function handleAuthExpired() {
+    setPage("login"); //re-render frontend
+  }
+  //install listener, then unmount and uninstall
+  window.addEventListener("auth-expired", handleAuthExpired);
+  return () => {
+    window.removeEventListener("auth-expired", handleAuthExpired);
+  };
+}, []);
+  
   function openProfessor(id) {
     setProfessorId(id);
     setPage("professor");
   }
 
   // pages that need a logged in user
-  const loggedIn = getUser() !== null;
-  const user = getUser();
+const user = getUser();
+const loggedIn = user !== null;
 
   if (
     user !== null &&
@@ -41,7 +53,8 @@ function App() {
     (page === "dashboard" ||
       page === "profile" ||
       page === "reviews" ||
-      page === "professor")
+      page === "professor" ||
+      page === "verification")
   ) {
     return <Login goTo={setPage} />;
   }
@@ -55,6 +68,9 @@ function App() {
   if (page === "profile") {
     return <Profile goTo={setPage} />;
   }
+  if (page === "verification") {
+  return <Verification goTo={setPage} />;
+}
   if (page === "reviews") {
     return <Reviews goTo={setPage} openProfessor={openProfessor} />;
   }

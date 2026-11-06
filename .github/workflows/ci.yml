@@ -34,6 +34,7 @@ jobs:
       POSTGRES_HOST: localhost
       POSTGRES_PORT: 5432
       APP_ENV: test
+      JWT_KEY: ci-test-environment-only-key-0123456789abcdef
 
     steps:
       - name: Checkout repository
@@ -59,11 +60,25 @@ jobs:
 
       - name: Create the tables
         run: |
-          PGPASSWORD=smartcampus_dev psql \
-            -h localhost \
-            -U smartcampus \
-            -d smart_campus \
-            -f sca_database_v0.4.0.sql
+          psql -v ON_ERROR_STOP=1 \
+            -h "$POSTGRES_HOST" \
+            -U "$POSTGRES_USER" \
+            -d "$POSTGRES_DB" \
+            -f sca_database_v0.4.1.sql
+
+          psql -v ON_ERROR_STOP=1 \
+            -h "$POSTGRES_HOST" \
+            -U "$POSTGRES_USER" \
+            -d "$POSTGRES_DB" \
+            -f migrations/002_auth_sessions_UP.sql
+            
+          psql -v ON_ERROR_STOP=1 \
+            -h "$POSTGRES_HOST" \
+            -U "$POSTGRES_USER" \
+            -d "$POSTGRES_DB" \
+            -f migrations/003_verification_UP.sql
+        env:
+          PGPASSWORD: ${{ env.POSTGRES_PASSWORD }}
 
       - name: Seed database
         run: python seed.py
@@ -73,6 +88,10 @@ jobs:
           python -m pytest -q \
             --cov=main \
             --cov=database \
+            --cov=models \
+            --cov=auth \
+            --cov=auth_models \
+            --cov=routers \
             --cov=services \
             --cov-report=term-missing \
             --cov-report=xml:coverage.xml \

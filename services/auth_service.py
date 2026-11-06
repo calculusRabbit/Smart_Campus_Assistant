@@ -1,15 +1,35 @@
 from fastapi import HTTPException
 from psycopg.errors import UniqueViolation
 
-from auth import DUMMY_HASH, create_session, hash_password, public_user, verify_password
+from auth import (
+    ACCESS_TOKEN_MINUTES,
+    DUMMY_HASH,
+    create_session,
+    hash_password,
+    public_user,
+    verify_password,
+)
 from auth_models import LoginRequest, SignupRequest
 from database import get_connection
+from services.institution_service import get_institution
 
 
 class AuthService:
     #student signup and login
 
     def signup(self, request: SignupRequest) -> dict:
+        institution = get_institution(request.scorecard_id)
+        programs = {
+            program["value"]: program["label"]
+            for program in institution["programs"]
+        }
+
+        if request.program and request.program not in programs:
+            raise HTTPException(
+                status_code=400,
+                detail="Choose a program from this institution's list",
+            )
+
         password_hash = hash_password(request.password.get_secret_value())
         interests = [interest.lower().strip() for interest in request.interests]
 
@@ -30,6 +50,28 @@ class AuthService:
                         str(request.email).lower(), request.dob, request.zipcode,
                         interests),
                 )
+
+                student = conn.execute(
+                    "SELECT student_id FROM Students WHERE username = %s",
+                    (request.username,),
+                ).fetchone()
+
+                school = conn.execute(
+                    """
+                    INSERT INTO Schools (school_name, scorecard_id) VALUES (%s, %s)
+                    ON CONFLICT (scorecard_id) DO UPDATE
+                    SET school_name = EXCLUDED.school_name
+                    RETURNING school_id""",
+                    (institution["name"], institution["id"]),
+                ).fetchone()
+
+                conn.execute(
+                    "INSERT INTO Enrolments (student_id, school_id, majors) VALUES (%s, %s, %s)",
+                    (   student["student_id"], school["school_id"],
+                        [programs[request.program]] if request.program else []
+                    )
+                )
+                
         except UniqueViolation as exc:
             raise HTTPException(
                 status_code=409,
@@ -37,21 +79,20 @@ class AuthService:
             ) from exc
 
         return {
-            "message": "account created; student verification is required"
+            "message": "account created, student verification is required"
         }
 
     def login(self, request: LoginRequest) -> dict:
         with get_connection() as conn:
             user = conn.execute(
                 """
-                SELECT u.username, u.hashed_password,
-                s.student_id, s.first_name, s.last_names, s.account_status
+                SELECT
+                    u.username, u.hashed_password, u.deleted_timestamp,
+                    u.self_deactivated, s.student_id, s.first_name, s.last_names, s.account_status
                 FROM Users AS u
                 JOIN Students AS s ON s.username = u.username
-                WHERE lower(s.email) = lower(%s)
-                  AND u.account_type = 'student'
-                  AND u.deleted_timestamp IS NULL
-                  AND s.deleted_timestamp IS NULL
+                WHERE lower(s.email) = lower(%s) AND u.account_type = 'student'
+                FOR UPDATE OF u, s
                 """, (str(request.email),)).fetchone()
 
             stored_hash = (user["hashed_password"] if user else DUMMY_HASH)
@@ -64,11 +105,51 @@ class AuthService:
                     headers={"WWW-Authenticate": "Bearer"},
                 )
 
+
+            if user["deleted_timestamp"] is not None:
+                if not user["self_deactivated"]:
+                    raise HTTPException(
+                        status_code=403,
+                        detail="This account cannot be restored through login",
+                    )
+
+                conn.execute(
+                    """
+                    UPDATE Users
+                    SET deleted_timestamp = NULL, self_deactivated = FALSE
+                    WHERE username = %s
+                    """,
+                    (user["username"],)
+                )
+                conn.execute(
+                    """
+                    UPDATE Students SET deleted_timestamp = NULL
+                    WHERE student_id = %s
+                    """,
+                    (user["student_id"],)
+                )
+
+            if user["account_status"] == "closed":
+                raise HTTPException(
+                    status_code=403,
+                    detail="This account is closed",
+                )
+            
             token = create_session(conn, user["username"])
 
         return {
             "access_token": token,
             "token_type": "bearer",
-            "expires_in": 15 * 60,
+            "expires_in": ACCESS_TOKEN_MINUTES * 60,
             "user": public_user(user)
         }
+
+    def logout(self, session_id, username: str) -> None:
+        #revoke login without affecting user's other sessions, if any
+        with get_connection() as conn:
+            conn.execute(
+                """
+                UPDATE Auth_sessions SET revoked_at = CURRENT_TIMESTAMP
+                WHERE session_id = %s AND username = %s
+                """, (session_id, username)
+            )

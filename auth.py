@@ -20,14 +20,13 @@ JWT_ISSUER = "smart-campus-assistant"
 JWT_AUDIENCE = "smart-campus-api"
 
 # JWT access token lifetime: 15 mins
-    # IF UPDATED: update auth_service.py login() response: "expires_at"
 ACCESS_TOKEN_MINUTES = 15
-jwt_algorithm = "HS256" 
+JWT_ALGORITHM = "HS256" 
 
 password_hash = PasswordHash.recommended()
 
-#prevents timing attacks with nonexistent usernames
-# by running pasword verification every time
+#helps prevent timing attacks with nonexistent usernames
+# by running pasword verification every time => reduces login timing differences
 DUMMY_HASH = password_hash.hash("fake-Password_123") 
 bearer = HTTPBearer(auto_error=False)
 
@@ -41,7 +40,7 @@ def verify_password(password: str, stored_hash: str) -> bool:
 
 
 def create_session(conn, username: str) -> str:
-    #create session within the caller's transaction and return JWT
+    #insert a session using the caller's transaction, return access JWT
     session_id = uuid4()
     now = datetime.now(UTC)
     expires_at = now + timedelta(minutes=ACCESS_TOKEN_MINUTES)
@@ -61,7 +60,7 @@ def create_session(conn, username: str) -> str:
             "exp": expires_at,
         },
         JWT_KEY,
-        algorithm=jwt_algorithm,
+        algorithm=JWT_ALGORITHM,
     )
 
 
@@ -85,7 +84,7 @@ def get_current_user(
         claims = jwt.decode(
             credentials.credentials,
             JWT_KEY,
-            algorithms=["HS256"],
+            algorithms=[JWT_ALGORITHM],
             issuer=JWT_ISSUER,
             audience=JWT_AUDIENCE,
             options={
@@ -155,10 +154,70 @@ def require_open_student(
 
 
 def public_user(user: dict) -> dict:
-    #return exactly the fields needed by the frontend
+    #build frontend user object w/o password or session fields
     return {
         "id": user["student_id"],
         "username": user["username"],
         "name": f"{user['first_name']} {user['last_names']}",
         "account_status": user["account_status"]
     }
+
+def get_admin_user(
+    credentials: Annotated[
+        HTTPAuthorizationCredentials | None,
+        Depends(bearer),
+    ],
+) -> dict:
+    unauthorized = HTTPException(
+        status_code=401,
+        detail="Administrator authentication required",
+        headers={"WWW-Authenticate": "Bearer"}
+    )
+
+    if credentials is None:
+        raise unauthorized
+
+    try:
+        claims = jwt.decode(
+            credentials.credentials,
+            JWT_KEY,
+            algorithms=[JWT_ALGORITHM],
+            issuer=JWT_ISSUER,
+            audience=JWT_AUDIENCE,
+            options={
+                "require": [
+                    "sub", "sid", "type", "iss",
+                    "aud", "iat", "exp"
+                ]
+            }
+        )
+
+        if claims["type"] != "access":
+            raise jwt.InvalidTokenError("Invalid token type")
+
+        session_id = UUID(claims["sid"])
+    except (
+        jwt.InvalidTokenError,
+        ValueError,
+        TypeError,
+        AttributeError
+    ) as exc:
+        raise unauthorized from exc
+
+    with get_connection() as conn:
+        user = conn.execute(
+            """
+            SELECT u.username
+            FROM Users u
+            JOIN Auth_sessions a ON a.username = u.username
+            WHERE a.session_id = %s
+              AND u.username = %s AND u.account_type = 'admin' AND u.deleted_timestamp IS NULL
+              AND a.revoked_at IS NULL AND a.expires_at > CURRENT_TIMESTAMP
+            """,
+            (session_id, claims["sub"])
+        ).fetchone()
+
+    if user is None:
+        raise unauthorized
+
+    return user

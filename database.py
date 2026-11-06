@@ -142,9 +142,9 @@ def save_student_interests(student_id: int, interests: list[str]):
               AND deleted_timestamp IS NULL
               AND account_status <> 'closed'
             """,
-            (cleaned, student_id),
+            (cleaned, student_id)
         )
-        return cursor.rowcount > 0
+        return cursor.rowcount > 0 #were any rows changed?
 
 
 def get_deadlines_from_database(student_id: int):
@@ -152,7 +152,7 @@ def get_deadlines_from_database(student_id: int):
         FROM deadlines
         WHERE student_id = %s
         ORDER BY deadline_datetime
-        """,(student_id,),
+        """,(student_id,)
     )
 
     deadlines = []

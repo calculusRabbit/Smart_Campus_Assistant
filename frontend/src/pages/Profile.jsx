@@ -3,6 +3,7 @@ import { getUser, getInterests, saveInterests } from "../api";
 import shockerImage from "../assets/images/wsu-shocker.png";
 import { interestOptions, MAX_TAG_WORDS } from "../interests";
 import styles from "./Auth.module.css";
+import DeactivateAccount from "../components/DeactivateAccount";
 
 export default function Profile({ goTo }) {
   const user = getUser();
@@ -29,6 +30,8 @@ export default function Profile({ goTo }) {
       }
       setInterests(tags);
       setAboutText(texts.join(" "));
+    }).catch((error) => {
+      setMessage(error.message);
     });
   }, [user.id]);
 
@@ -97,7 +100,7 @@ export default function Profile({ goTo }) {
       <div className={styles.card}>
         <img className={styles.logo} src={shockerImage} alt="WSU Shocker" />
         <h2 className={styles.title}>Profile</h2>
-        <p className={styles.subtitle}>Logged in as {user.email}</p>
+        <p className={styles.subtitle}>Logged in as {user.username}</p>
         {message && <p className={styles.message}>{message}</p>}
 
         <form onSubmit={handleSubmit}>
@@ -139,11 +142,18 @@ export default function Profile({ goTo }) {
             Save
           </button>
         </form>
+          
+        <button type="button" onClick={() => goTo("verification")}>
+          Student verification
+        </button>
 
+        <DeactivateAccount goTo={goTo} />
+        
         <button onClick={() => goTo("dashboard")} className={styles.darkButton}>
           Back to Dashboard
         </button>
       </div>
     </div>
+    
   );
 }

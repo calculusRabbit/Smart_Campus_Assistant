@@ -5,7 +5,7 @@ const BASE_URL =
 let accessToken = null;
 let currentUser = null;
 
-// Remove obsolete credentials left by the demonstration implementation.
+// remove stale credentials from fake implementation
 localStorage.removeItem("token");
 localStorage.removeItem("user");
 
@@ -15,9 +15,10 @@ export function getUser() {
 
 export async function apiFetch(path, options = {}) {
   const headers = new Headers(options.headers);
+  const requestToken = accessToken;
 
-  if (accessToken !== null) {
-    headers.set("Authorization", `Bearer ${accessToken}`);
+  if (requestToken !== null) {
+    headers.set("Authorization", `Bearer ${requestToken}`);
   }
 
   const response = await fetch(BASE_URL + path, {
@@ -26,16 +27,29 @@ export async function apiFetch(path, options = {}) {
   });
 
   if (!response.ok) {
-    if (response.status === 401) {
+    if (
+      response.status === 401 &&
+      requestToken !== null &&
+      accessToken === requestToken
+    ) {
       accessToken = null;
       currentUser = null;
+      window.dispatchEvent(new Event("auth-expired"));
     }
 
     const body = await response.json().catch(() => null);
-    const message =
-      typeof body?.detail === "string"
-        ? body.detail
-        : `Request failed (${response.status})`;
+    let message = `Request failed (${response.status})`;
+
+    if (typeof body?.detail === "string") {
+      message = body.detail;
+    } else if (Array.isArray(body?.detail)) {
+      message = body.detail
+        .map((error) => {
+          const field = error.loc.slice(1).join(".");
+          return field ? `${field}: ${error.msg}` : error.msg;
+        })
+        .join("; ");
+    }
 
     throw new Error(message);
   }
@@ -77,56 +91,56 @@ export async function logout() {
   }
 }
 
-export function getUser() {
-  const saved = localStorage.getItem("user");
-  if (saved === null) {
-    return null;
-  }
-  return JSON.parse(saved);
-}
+// export function getUser() {
+//   const saved = localStorage.getItem("user");
+//   if (saved === null) {
+//     return null;
+//   }
+//   return JSON.parse(saved);
+// }
 
-export function logout() {
-  localStorage.removeItem("user");
-  localStorage.removeItem("token");
-}
+// export function logout() {
+//   localStorage.removeItem("user");
+//   localStorage.removeItem("token");
+// }
 
-export async function login(email, password) {
-  if (FAKE_AUTH) {
-    const user = { id: 1, name: email.split("@")[0], email: email };
-    localStorage.setItem("user", JSON.stringify(user));
-    localStorage.setItem("token", "fake-token");
-    return user;
-  }
+// export async function login(email, password) {
+//   if (FAKE_AUTH) {
+//     const user = { id: 1, name: email.split("@")[0], email: email };
+//     localStorage.setItem("user", JSON.stringify(user));
+//     localStorage.setItem("token", "fake-token");
+//     return user;
+//   }
 
-  const res = await fetch(BASE_URL + "/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
-  });
-  if (!res.ok) {
-    throw new Error("Wrong email or password.");
-  }
-  const data = await res.json();
-  localStorage.setItem("token", data.access_token);
-  localStorage.setItem("user", JSON.stringify(data.user));
-  return data.user;
-}
+//   const res = await fetch(BASE_URL + "/login", {
+//     method: "POST",
+//     headers: { "Content-Type": "application/json" },
+//     body: JSON.stringify({ email, password }),
+//   });
+//   if (!res.ok) {
+//     throw new Error("Wrong email or password.");
+//   }
+//   const data = await res.json();
+//   localStorage.setItem("token", data.access_token);
+//   localStorage.setItem("user", JSON.stringify(data.user));
+//   return data.user;
+// }
 
-export async function signup(form) {
-  if (FAKE_AUTH) {
-    return { message: "fake signup ok" };
-  }
+// export async function signup(form) {
+//   if (FAKE_AUTH) {
+//     return { message: "fake signup ok" };
+//   }
 
-  const res = await fetch(BASE_URL + "/signup", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(form),
-  });
-  if (!res.ok) {
-    throw new Error("Could not create account.");
-  }
-  return res.json();
-}
+//   const res = await fetch(BASE_URL + "/signup", {
+//     method: "POST",
+//     headers: { "Content-Type": "application/json" },
+//     body: JSON.stringify(form),
+//   });
+//   if (!res.ok) {
+//     throw new Error("Could not create account.");
+//   }
+//   return res.json();
+// }
 
 export async function getEvents() {
   const res = await fetch(BASE_URL + "/events");

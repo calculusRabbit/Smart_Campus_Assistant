@@ -22,6 +22,7 @@ from database import (
 )
 from models import ChatRequest, RecommendationRequest, StudentInterestsRequest
 from routers.auth import router as auth_router
+from routers.verification import router as verification_router
 from services.event_recommender import get_recommender, profile_to_text
 from services.interest_expansion import extract_event_interests
 from services.rag.config import RAG_ENABLED
@@ -37,6 +38,7 @@ INTEREST_GROUPS = {
 app = FastAPI()
 
 app.include_router(auth_router)
+app.include_router(verification_router)
 
 # let the react app (vite runs on 5173) call this backend
 app.add_middleware(
@@ -48,11 +50,13 @@ app.add_middleware(
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-
+#handling all RequestValidationError's
 @app.exception_handler(RequestValidationError)
 async def validation_error_handler(_request, exc: RequestValidationError):
     return JSONResponse(
         status_code=422,
+        #input not included in response for potential PII data protection 
+            # if segmented into different validation errors, input can be returned for certain ones
         content={
             "detail": [
                 {
@@ -84,7 +88,7 @@ def ready():
     except Exception as exc:
         raise HTTPException(
             status_code=503,
-            detail="Database unavailable",
+            detail="database unreachable",
         ) from exc
 
     return {"status": "ready"}
