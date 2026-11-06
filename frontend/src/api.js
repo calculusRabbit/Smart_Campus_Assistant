@@ -331,3 +331,41 @@ export async function voteReview(reviewId, username, value) {
   saveReviews(reviews);
   return reviews;
 }
+
+// Submit a professor appointment request.
+// The professor must approve the request separately.
+export async function createAppointment(appointment) {
+  const res = await fetch(BASE_URL + "/appointments", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(appointment),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    const message =
+      typeof data.detail === "string"
+        ? data.detail
+        : "Could not submit appointment request.";
+
+    throw new Error(message);
+  }
+
+  return data;
+}
+
+// Retrieve appointment requests for a student.
+// Prototype only: requires proper authentication before deployment.
+export async function getStudentAppointments(studentId) {
+  const res = await fetch(
+    BASE_URL + "/students/" + encodeURIComponent(studentId) + "/appointments",
+  );
+
+  if (!res.ok) {
+    throw new Error("Could not load appointment history.");
+  }
+
+  const data = await res.json();
+  return data.appointments;
+}
