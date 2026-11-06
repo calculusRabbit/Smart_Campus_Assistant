@@ -23,7 +23,7 @@ The platform brings this information together through a student dashboard, an ML
 - REST API with interactive documentation
 - Containerized development environment and automated testing
 
-The current interface still uses demonstration authentication and browser-local reviews. Account deletion and its 30-day recovery window are simulated in local storage. Use synthetic accounts for demonstrations. Appointment requests are saved to PostgreSQL as pending requests; they are not confirmed bookings with professors.
+Appointment requests are saved to PostgreSQL with a pending status and appear in the student's request history.
 
 ## Technology Stack
 
@@ -416,8 +416,6 @@ python -m pytest -q \
 
 Prototype 3 security checks should cover authentication and session handling, password hashing, secret management, OWASP Top 10 risks, dependency vulnerabilities, PII protection, and soft-delete behavior.
 
-The frontend on this branch uses `FAKE_AUTH` in `frontend/src/api.js`. It does not provide production authentication or server-enforced access control for student data. The appointment API also needs authorization before use with real accounts.
-
 The schema includes hashed-password storage and `deleted_timestamp` fields for applicable account/review records. Security review should verify their behavior through the application workflows. Use sanitized configuration, synthetic test data, and restricted project/database access.
 
 Useful audit commands include:
@@ -486,7 +484,7 @@ Prototype 3 targets the `v0.9.0-beta` release. Keep the earlier setup, testing, 
 - WCAG 2.1 AA audit results for contrast, keyboard navigation, and screen reader support
 - `/health` and `/ready` probes, structured JSON logs, and updated maintenance documentation
 
-This list describes the submission requirements, not a record of completed checks. The current main branch does not yet include browser E2E scripts, health/readiness endpoints, or load-test and accessibility reports. Verify these items against the final release and link the actual results before submission. After the beta submission, focus on fixes and regression testing during the feature freeze.
+Link test results and release evidence in the relevant GitHub Issues. After the beta submission, focus on fixes and regression testing during the feature freeze.
 
 ## Team
 ### The Three Musketeers
