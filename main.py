@@ -18,10 +18,10 @@ from database import (
     save_student_interests,
 )
 from models import ChatRequest, RecommendationRequest, StudentInterestsRequest
+from services.appointments import router as appointments_router
 from services.event_recommender import get_recommender, profile_to_text
 from services.interest_expansion import extract_event_interests
 from services.ml.router import router as ml_router
-from services.appointments import router as appointments_router
 from services.rag.config import RAG_ENABLED
 from services.recommendation_service import RecommendationService
 
