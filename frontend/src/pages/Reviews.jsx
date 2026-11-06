@@ -25,7 +25,27 @@ export default function Reviews({ goTo, openProfessor }) {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    getProfessors().then((data) => setProfessors(data));
+    getProfessors().then((data) => {
+      const realProfessors = data.filter((professor) => {
+        const email = String(professor.professor_email || "").toLowerCase();
+        const name = String(professor.professor_name || "").toLowerCase();
+        const department = String(
+          professor.professor_department || "",
+        ).toLowerCase();
+
+        return (
+          email.endsWith("@wichita.edu") &&
+          !name.includes("test") &&
+          !department.includes("test")
+        );
+      });
+
+      realProfessors.sort((a, b) =>
+        a.professor_name.localeCompare(b.professor_name),
+      );
+
+      setProfessors(realProfessors);
+    });
     getReviews().then((data) => setReviews(data));
   }, []);
 
