@@ -6,7 +6,7 @@ import {
   deleteAccount,
   logout,
 } from "../api";
-import shockerImage from "../assets/images/babyboo-pokko.gif";
+import shockerImage from "../assets/images/wsu-shocker.png";
 import { interestOptions, MAX_TAG_WORDS } from "../interests";
 import styles from "./Auth.module.css";
 
