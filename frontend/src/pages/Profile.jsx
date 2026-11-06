@@ -3,8 +3,8 @@ import {
   getUser,
   getInterests,
   saveInterests,
-//deleteAccount,
-  logout,
+  //deleteAccount,
+  //logout,
 } from "../api";
 import shockerImage from "../assets/images/babyboo-pokko.gif";
 import { interestOptions, MAX_TAG_WORDS } from "../interests";

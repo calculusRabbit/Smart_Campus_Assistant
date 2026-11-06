@@ -19,13 +19,11 @@ export default function DeactivateAccount({ goTo }) {
 
     const form = new FormData(event.currentTarget);
 
-        try {
-      await deleteAccount(
-        form.get("password"),
-        form.get("captcha"),
-      );
+    try {
+      await deleteAccount(form.get("password"), form.get("captcha"));
 
       goTo("login");
+      
     } catch (err) {
       setMessage(err.message);
       setCaptchaKey((value) => value + 1);
