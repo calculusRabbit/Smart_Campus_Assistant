@@ -42,21 +42,23 @@ export default function Profile({ goTo }) {
   // load saved stuff when the page opens
   // the text and the tags are saved in the same list so split them again here
   useEffect(() => {
-    getInterests(user.id).then((saved) => {
-      let tags = [];
-      let texts = [];
-      for (let i = 0; i < saved.length; i++) {
-        if (saved[i].split(" ").length > MAX_TAG_WORDS) {
-          texts.push(saved[i]);
-        } else {
-          tags.push(saved[i]);
+    getInterests(user.id)
+      .then((saved) => {
+        let tags = [];
+        let texts = [];
+        for (let i = 0; i < saved.length; i++) {
+          if (saved[i].split(" ").length > MAX_TAG_WORDS) {
+            texts.push(saved[i]);
+          } else {
+            tags.push(saved[i]);
+          }
         }
-      }
-      setInterests(tags);
-      setAboutText(texts.join(" "));
-    }).catch((error) => {
-      setMessage(error.message);
-    });
+        setInterests(tags);
+        setAboutText(texts.join(" "));
+      })
+      .catch((error) => {
+        setMessage(error.message);
+      });
   }, [user.id]);
 
   function toggleInterest(name) {
@@ -203,13 +205,13 @@ export default function Profile({ goTo }) {
             Save
           </button>
         </form>
-          
+
         <button type="button" onClick={() => goTo("verification")}>
           Student verification
         </button>
 
         <DeactivateAccount goTo={goTo} />
-        
+
         <button onClick={() => goTo("dashboard")} className={styles.darkButton}>
           Back to Dashboard
         </button>
@@ -283,6 +285,5 @@ export default function Profile({ goTo }) {
         </div>
       )}
     </div>
-    
   );
 }

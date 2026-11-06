@@ -15,7 +15,7 @@ export default function Login({ goTo }) {
   }, []);
 
   async function handleSubmit(e) {
-    e.preventDefault();  //prevent browser default form submission
+    e.preventDefault(); //prevent browser default form submission
 
     try {
       await login(email, password);

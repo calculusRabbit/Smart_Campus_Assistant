@@ -16,24 +16,24 @@ function App() {
   const [professorId, setProfessorId] = useState(null);
 
   useEffect(() => {
-  function handleAuthExpired() {
-    setPage("login"); //re-render frontend
-  }
-  //install listener, then unmount and uninstall
-  window.addEventListener("auth-expired", handleAuthExpired);
-  return () => {
-    window.removeEventListener("auth-expired", handleAuthExpired);
-  };
-}, []);
-  
+    function handleAuthExpired() {
+      setPage("login"); //re-render frontend
+    }
+    //install listener, then unmount and uninstall
+    window.addEventListener("auth-expired", handleAuthExpired);
+    return () => {
+      window.removeEventListener("auth-expired", handleAuthExpired);
+    };
+  }, []);
+
   function openProfessor(id) {
     setProfessorId(id);
     setPage("professor");
   }
 
   // pages that need a logged in user
-const user = getUser();
-const loggedIn = user !== null;
+  const user = getUser();
+  const loggedIn = user !== null;
 
   if (
     user !== null &&
@@ -43,9 +43,7 @@ const loggedIn = user !== null;
     return (
       <main>
         <p>Student verification is required to access reviews.</p>
-        <button onClick={() => setPage("dashboard")}>
-          Back to dashboard
-        </button>
+        <button onClick={() => setPage("dashboard")}>Back to dashboard</button>
       </main>
     );
   }
@@ -74,8 +72,8 @@ const loggedIn = user !== null;
     return <Profile goTo={setPage} />;
   }
   if (page === "verification") {
-  return <Verification goTo={setPage} />;
-}
+    return <Verification goTo={setPage} />;
+  }
   if (page === "reviews") {
     return <Reviews goTo={setPage} openProfessor={openProfessor} />;
   }

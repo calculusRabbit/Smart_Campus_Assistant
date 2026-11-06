@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { signup, login } from "../api";
 import Captcha from "../components/Captcha";
-import InstitutionPicker from "../components/InstitutionPicker";import shockerImage from "../assets/images/wsu-shocker.png";
+import InstitutionPicker from "../components/InstitutionPicker";
+import shockerImage from "../assets/images/wsu-shocker.png";
 import { interestOptions, MAX_TAG_WORDS } from "../interests";
 import styles from "./Auth.module.css";
 
@@ -49,7 +50,9 @@ export default function SignUp({ goTo }) {
     }
 
     if (!/^\d{5}(-\d{4})?$/.test(zipcode)) {
-      setError("Zipcode must be 5 digits (e.g. 67260), or 9 digits with extension (e.g. 67260-1234).");
+      setError(
+        "Zipcode must be 5 digits (e.g. 67260), or 9 digits with extension (e.g. 67260-1234).",
+      );
       return;
     }
 
@@ -60,8 +63,7 @@ export default function SignUp({ goTo }) {
 
     const birthdayNotReached =
       today.getMonth() + 1 < birthMonth ||
-      (today.getMonth() + 1 === birthMonth &&
-        today.getDate() < birthDay);
+      (today.getMonth() + 1 === birthMonth && today.getDate() < birthDay);
 
     if (birthdayNotReached) {
       age -= 1;
@@ -101,13 +103,14 @@ export default function SignUp({ goTo }) {
         password: password,
         interests: interestList,
         ...institution,
-        captcha
+        captcha,
       });
       await login(email, password);
       goTo("verification");
     } catch (err) {
-    setError(err.message);
-    setCaptchaKey((value) => value + 1);    }
+      setError(err.message);
+      setCaptchaKey((value) => value + 1);
+    }
   }
 
   // each tag is a button that turns yellow when picked
@@ -181,9 +184,9 @@ export default function SignUp({ goTo }) {
             onChange={(e) => setEmail(e.target.value)}
             required
           />
-          
+
           <InstitutionPicker onChange={setInstitution} />
-          
+
           <p className={styles.label}>Date of birth</p>
           <input
             className={styles.input}
@@ -242,9 +245,9 @@ export default function SignUp({ goTo }) {
 
           <p className={styles.label}>Pick some tags too</p>
           <div className={styles.pills}>{interestButtons}</div>
-          
+
           <Captcha key={captchaKey} action="signup" />
-          
+
           <button type="submit" className={styles.button}>
             Create Account
           </button>

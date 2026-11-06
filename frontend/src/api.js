@@ -1,6 +1,5 @@
 // all the backend calls are in this file
-const BASE_URL =
-  import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
 let accessToken = null;
 let currentUser = null;
@@ -206,22 +205,17 @@ export async function getRecommendedEvents(studentId) {
 }
 
 export async function getInterests(studentId) {
-  const response = await apiFetch(
-    `/students/${studentId}/interests`,
-  );
+  const response = await apiFetch(`/students/${studentId}/interests`);
   const data = await response.json();
   return data.interests;
 }
 
 export async function saveInterests(studentId, interests) {
-  const response = await apiFetch(
-    `/students/${studentId}/interests`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ interests }),
-    },
-  );
+  const response = await apiFetch(`/students/${studentId}/interests`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ interests }),
+  });
   return response.json();
 }
 

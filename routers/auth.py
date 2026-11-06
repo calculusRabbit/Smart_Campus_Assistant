@@ -7,7 +7,6 @@ from auth import DUMMY_HASH, create_session, get_current_user, public_user, veri
 from auth_models import (
     DeactivateRequest,
     LoginRequest,
-    ReauthenticateRequest,
     SignupRequest,
 )
 from database import get_connection

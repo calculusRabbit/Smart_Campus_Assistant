@@ -271,27 +271,27 @@ export default function Dashboard({ goTo }) {
 
   // the backend compares the students interests with the events, the first time is slow
   async function loadRecommendations() {
-  setRecLoading(true);
-  setRecMessage("");
+    setRecLoading(true);
+    setRecMessage("");
 
-  try {
-    const recs = await getRecommendedEvents(user.id);
+    try {
+      const recs = await getRecommendedEvents(user.id);
 
-    setRecEvents(recs);
-    setRecLoaded(true);
-    setTab("recommended");
+      setRecEvents(recs);
+      setRecLoaded(true);
+      setTab("recommended");
 
-    if (recs.length === 0) {
-      setRecMessage(
-        "No matches yet. Write what you like in Profile and try again.",
-      );
+      if (recs.length === 0) {
+        setRecMessage(
+          "No matches yet. Write what you like in Profile and try again.",
+        );
+      }
+    } catch (error) {
+      setRecMessage(error.message);
+    } finally {
+      setRecLoading(false);
     }
-  } catch (error) {
-    setRecMessage(error.message);
-  } finally {
-    setRecLoading(false);
   }
-}
 
   // get data from backend and update arr
   useEffect(() => {

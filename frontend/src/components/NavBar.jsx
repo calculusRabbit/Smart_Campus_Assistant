@@ -9,17 +9,17 @@ export default function NavBar({ goTo }) {
   // is the dropdown menu open
   const [open, setOpen] = useState(false);
 
-async function handleLogout() {
-  try {
-    await logout();
-  } catch (error) {
-    window.alert(
-      `Local login cleared, but server logout was not confirmed: ${error.message}`,
-    );
-  } finally {
-    goTo("login");
+  async function handleLogout() {
+    try {
+      await logout();
+    } catch (error) {
+      window.alert(
+        `Local login cleared, but server logout was not confirmed: ${error.message}`,
+      );
+    } finally {
+      goTo("login");
+    }
   }
-}
 
   // go to a page and close the menu
   function handleGo(page) {

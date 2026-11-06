@@ -512,12 +512,7 @@ def get_general_professor_response(message: str) -> dict[str, Any]:
     }
 
   
-  @app.post("/chat")
-def chat(  # noqa: C901
-    request: ChatRequest,
-    user: Annotated[dict, Depends(get_current_user)],
-) -> dict[str, Any]:
-    message = request.message.lower().strip()
+
   
 
 def get_general_event_response() -> dict[str, Any]:
@@ -625,7 +620,10 @@ def get_general_chat_response(message: str) -> dict[str, Any] | None:
 
 
 @app.post("/chat")
-def chat(request: ChatRequest) -> dict[str, Any]:
+def chat(  # noqa: C901
+    request: ChatRequest,
+    user: Annotated[dict, Depends(get_current_user)],
+) -> dict[str, Any]:
     message = request.message.lower().strip()
 
     if not message:
