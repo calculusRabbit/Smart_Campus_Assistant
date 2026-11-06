@@ -332,7 +332,6 @@ export async function voteReview(reviewId, username, value) {
   return reviews;
 }
 
-
 // Submit a professor appointment request.
 // The professor must approve the request separately.
 export async function createAppointment(appointment) {
@@ -356,12 +355,11 @@ export async function createAppointment(appointment) {
   return data;
 }
 
-
 // Retrieve appointment requests for a student.
 // Prototype only: requires proper authentication before deployment.
 export async function getStudentAppointments(studentId) {
   const res = await fetch(
-    BASE_URL + "/students/" + encodeURIComponent(studentId) + "/appointments"
+    BASE_URL + "/students/" + encodeURIComponent(studentId) + "/appointments",
   );
 
   if (!res.ok) {

@@ -126,7 +126,9 @@ export default function Appointments({ goTo }) {
         const updated = await getStudentAppointments(user.id);
         setAppointments(updated);
       } catch {
-        setHistoryError("Request saved, but appointment history could not refresh.");
+        setHistoryError(
+          "Request saved, but appointment history could not refresh.",
+        );
       }
 
       setProfessorId("");
@@ -157,16 +159,16 @@ export default function Appointments({ goTo }) {
           <span className={styles.eyebrow}>Smart Campus Assistant</span>
           <h1>Professor Appointments</h1>
           <p>
-            Request a meeting with a professor to discuss coursework,
-            academic questions, or other university matters.
+            Request a meeting with a professor to discuss coursework, academic
+            questions, or other university matters.
           </p>
         </header>
 
         <section className={styles.card}>
           <h2>Request an Appointment</h2>
           <p className={styles.subtitle}>
-            Select your preferred meeting date and time.
-            All requests are subject to professor approval.
+            Select your preferred meeting date and time. All requests are
+            subject to professor approval.
           </p>
 
           {error && (
@@ -196,9 +198,7 @@ export default function Appointments({ goTo }) {
           )}
 
           <form onSubmit={handleSubmit} className={styles.form}>
-            <label htmlFor="appointment-professor">
-              Select Professor
-            </label>
+            <label htmlFor="appointment-professor">Select Professor</label>
             <select
               id="appointment-professor"
               value={professorId}
@@ -252,9 +252,7 @@ export default function Appointments({ goTo }) {
               </div>
             </div>
 
-            <label htmlFor="appointment-reason">
-              Reason for Appointment
-            </label>
+            <label htmlFor="appointment-reason">Reason for Appointment</label>
             <textarea
               id="appointment-reason"
               rows="5"
@@ -294,7 +292,9 @@ export default function Appointments({ goTo }) {
           {historyLoading && <p>Loading your appointments...</p>}
 
           {historyError && (
-            <p className={styles.error} role="alert">{historyError}</p>
+            <p className={styles.error} role="alert">
+              {historyError}
+            </p>
           )}
 
           {!historyLoading && appointments.length === 0 && (
@@ -303,35 +303,36 @@ export default function Appointments({ goTo }) {
             </p>
           )}
 
-          {!historyLoading && appointments.map((appointment) => (
-            <article
-              key={appointment.appointment_id}
-              className={styles.historyCard}
-            >
-              <div className={styles.historyHeading}>
-                <h3>{appointment.professor_name}</h3>
-                <span className={styles.pending}>
-                  {appointment.status === "pending"
-                    ? "Pending Approval"
-                    : appointment.status}
-                </span>
-              </div>
+          {!historyLoading &&
+            appointments.map((appointment) => (
+              <article
+                key={appointment.appointment_id}
+                className={styles.historyCard}
+              >
+                <div className={styles.historyHeading}>
+                  <h3>{appointment.professor_name}</h3>
+                  <span className={styles.pending}>
+                    {appointment.status === "pending"
+                      ? "Pending Approval"
+                      : appointment.status}
+                  </span>
+                </div>
 
-              <p>
-                <strong>Date:</strong> {appointment.appointment_date}
-              </p>
-              <p>
-                <strong>Time:</strong>{" "}
-                {appointment.appointment_time.slice(0, 5)}
-              </p>
-              <p>
-                <strong>Reason:</strong> {appointment.reason}
-              </p>
-              <p className={styles.historyId}>
-                Request #{appointment.appointment_id}
-              </p>
-            </article>
-          ))}
+                <p>
+                  <strong>Date:</strong> {appointment.appointment_date}
+                </p>
+                <p>
+                  <strong>Time:</strong>{" "}
+                  {appointment.appointment_time.slice(0, 5)}
+                </p>
+                <p>
+                  <strong>Reason:</strong> {appointment.reason}
+                </p>
+                <p className={styles.historyId}>
+                  Request #{appointment.appointment_id}
+                </p>
+              </article>
+            ))}
         </section>
       </main>
     </div>
