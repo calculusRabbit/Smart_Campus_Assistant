@@ -406,7 +406,6 @@ export async function createAppointment(appointment) {
   return response.json();
 }
 
-
 // retrieve the student's appointment requests
 export async function getStudentAppointments(studentId) {
   const response = await apiFetch(
