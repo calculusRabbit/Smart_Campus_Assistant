@@ -59,7 +59,8 @@ def school_for(
         FROM Enrolments e
         JOIN Schools sc USING (school_id)
         WHERE e.student_id = %s
-          AND e.is_primary
+        ORDER BY e.is_primary DESC, e.enrolment_id
+        LIMIT 1
         """,
         (student_id,),
     ).fetchone()

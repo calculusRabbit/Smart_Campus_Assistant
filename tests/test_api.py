@@ -1,6 +1,10 @@
+import pytest
 from fastapi.testclient import TestClient
 
 from main import app
+
+pytestmark = pytest.mark.usefixtures("authenticated_student")
+
 
 client = TestClient(app)
 

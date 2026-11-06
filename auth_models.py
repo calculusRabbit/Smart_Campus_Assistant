@@ -1,6 +1,6 @@
 import re
 from datetime import date
-from typing import Annotated
+from typing import Annotated, Self
 
 from pydantic import (
     AfterValidator,
@@ -11,6 +11,7 @@ from pydantic import (
     SecretStr,  # restricts password display
     StringConstraints,
     field_validator,
+    model_validator,
 )
 
 from models import Interest
@@ -36,7 +37,7 @@ class SignupRequest(BaseModel):
     username: str = Field(
         min_length=5,
         max_length=30,
-        pattern=r"^[A-Za-z0-9_!]+$",
+        pattern=r"^[A-Za-z0-9_,@!\-]+$",
     )
     first_name: Annotated[
         str, StringConstraints(strip_whitespace=True, min_length=1, max_length=30)
@@ -44,12 +45,64 @@ class SignupRequest(BaseModel):
     last_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=50)]
     email: AccountEmail
     dob: date
-    zipcode: str = Field(pattern=r"^[0-9]{5}(-[0-9]{4})?$")
+    zipcode: str | None = Field(default=None, pattern=r"^[0-9]{5}(-[0-9]{4})?$")
+    latitude_approx: float | None = Field(default=None, ge=-90, le=90, allow_inf_nan=False)
+    longitude_approx: float | None = Field(default=None, ge=-180, le=180, allow_inf_nan=False)
+    is_primary: bool
+    degree_level: Annotated[
+        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)
+    ]
+    majors: list[
+        Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
+    ] = Field(default_factory=list, max_length=20)
+    minors: list[
+        Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
+    ] = Field(default_factory=list, max_length=20)
     password: SecretStr = Field(min_length=8, max_length=128)
     interests: list[Interest] = Field(default_factory=list, max_length=50)
     scorecard_id: int = Field(gt=0)
     program: str = Field(default="", max_length=100)
     captcha: str = Field(max_length=8192)
+
+    @field_validator("username")
+    @classmethod
+    def validate_username(cls, value: str) -> str:
+        if any(word in value.casefold() for word in ("admin", "system", "alert")):
+            raise ValueError("Username contains a reserved phrase")
+        return value
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, value: SecretStr) -> SecretStr:
+        password = value.get_secret_value()
+        special = " !\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
+        if not all(
+            (
+                any("A" <= c <= "Z" for c in password),
+                any("a" <= c <= "z" for c in password),
+                any("0" <= c <= "9" for c in password),
+                any(c in special for c in password),
+            )
+        ):
+            raise ValueError("Password requires uppercase, lowercase, digit and special character")
+        return value
+
+    @model_validator(mode="after")
+    def validate_location(self) -> Self:
+        lat = self.latitude_approx
+        lon = self.longitude_approx
+
+        if (lat is None) != (lon is None):
+            raise ValueError("Provide both coordinates")
+
+        if self.zipcode is None and lat is None:
+            raise ValueError("Provide a zipcode or browser location")
+
+        if lat is not None and lon is not None:
+            self.latitude_approx = round(lat, 2)
+            self.longitude_approx = round(lon, 2)
+
+        return self
 
     @field_validator("dob")
     @classmethod

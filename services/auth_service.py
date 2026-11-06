@@ -44,8 +44,9 @@ class AuthService:
                 conn.execute(
                     """
                     INSERT INTO Students (username, first_name, last_names,
-                    email, dob, zipcode, account_status, created_at, interests)
-                    VALUES (%s, %s, %s, %s, %s, %s, 'pending', CURRENT_TIMESTAMP,
+                    email, dob, zipcode, latitude_approx, longitude_approx, 
+                    account_status, created_at, interests)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'pending', CURRENT_TIMESTAMP,
                     %s)""",
                     (
                         request.username,
@@ -54,6 +55,8 @@ class AuthService:
                         str(request.email).lower(),
                         request.dob,
                         request.zipcode,
+                        request.latitude_approx,
+                        request.longitude_approx,
                         interests,
                     ),
                 )
@@ -85,11 +88,16 @@ class AuthService:
                     )
 
                 conn.execute(
-                    "INSERT INTO Enrolments (student_id, school_id, majors) VALUES (%s, %s, %s)",
+                    "INSERT INTO Enrolments (student_id, school_id, majors, "
+                    "minors, is_primary, degree_level) "
+                    "VALUES (%s, %s, %s, %s, %s, %s)",
                     (
                         student["student_id"],
                         school["school_id"],
-                        [programs[request.program]] if request.program else [],
+                        request.majors or ([programs[request.program]] if request.program else []),
+                        request.minors,
+                        request.is_primary,
+                        request.degree_level,
                     ),
                 )
 
