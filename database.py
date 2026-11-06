@@ -234,23 +234,37 @@ def get_professors_from_database() -> list[dict[str, Any]]:
     return professors
 
 
+def get_dining_hours_for_day(
+    schedule: Any,
+    weekday: int | None = None,
+) -> tuple[str, str]:
+    """Return verified dining hours for one Wichita-local weekday."""
+    from zoneinfo import ZoneInfo
+
+    if weekday is None:
+        weekday = datetime.now(ZoneInfo("America/Chicago")).weekday()
+
+    for entry in schedule or []:
+        if weekday in entry.get("days", []) and entry.get("times"):
+            opening, closing = entry["times"][0]
+            return format_clock(opening), format_clock(closing)
+
+    return "N/A", "N/A"
+
+
 def get_dining_from_database() -> list[dict[str, Any]]:
     rows = fetch_all("""
         SELECT dn.dining_id, dn.dining_name, dn.cuisine, dn.event_status,
-               l.open_hours, l.address_room, l.address_street, l.city
+               l.open_hours, l.location_notes
         FROM dining dn
-        LEFT JOIN locations l ON l.location_id = dn.location_id
-        ORDER BY dn.dining_id
+        JOIN locations l ON l.location_id = dn.location_id
+        WHERE l.location_notes LIKE 'Official WSU dining area: %'
+        ORDER BY l.location_notes, dn.dining_name
     """)
 
     dining = []
     for row in rows:
-        days, times = get_first_times(row["open_hours"])
-        opening = "N/A"
-        closing = "N/A"
-        if times is not None:
-            opening = format_clock(times[0])
-            closing = format_clock(times[1])
+        opening, closing = get_dining_hours_for_day(row["open_hours"])
 
         # not sure what event_status means exactly, treating true as open
         status = "Unknown"
@@ -262,7 +276,9 @@ def get_dining_from_database() -> list[dict[str, Any]]:
         dining.append({
             "dining_id": row["dining_id"],
             "dining_name": row["dining_name"],
-            "dining_location": format_place(row),
+            "dining_location": row["location_notes"].removeprefix(
+                "Official WSU dining area: "
+            ).split(" | Restaurant:", 1)[0],
             "opening_time": opening,
             "closing_time": closing,
             "dining_status": status,

@@ -7,6 +7,8 @@ from zoneinfo import ZoneInfo
 import numpy as np
 
 from services.interest_expansion import expand_interests
+from services.ml.recommendation_enrichment import enrich_event_recommendations
+from services.ml.theme_scoring import get_theme_bonus
 from services.rag.config import ALL_EVENTS_PATH, EVENTS_EMBEDDING_MODEL, EVENTS_INDEX_PATH
 from services.recommender_config import (
     LOOKAHEAD_DAYS,
@@ -119,6 +121,68 @@ TOPIC_KEYWORDS = {
         "wicys",
         "cyber defense",
     ),
+    "art": (
+        "art",
+        "arts",
+        "painting",
+        "drawing",
+        "gallery",
+        "exhibition",
+        "craft",
+        "creative",
+    ),
+    "sports": (
+        "sports",
+        "athletics",
+        "volleyball",
+        "basketball",
+        "soccer",
+        "football",
+        "tournament",
+        "intramural",
+    ),
+    "volunteering": (
+        "volunteer",
+        "volunteering",
+        "community service",
+        "service project",
+        "community outreach",
+    ),
+    "business": (
+        "business",
+        "entrepreneurship",
+        "entrepreneur",
+        "startup",
+        "marketing",
+        "commerce",
+    ),
+    "science": (
+        "science",
+        "scientific",
+        "research",
+        "stem",
+        "laboratory",
+        "biology",
+        "chemistry",
+        "physics",
+    ),
+    "health": (
+        "health",
+        "wellness",
+        "healthcare",
+        "mental health",
+        "wellbeing",
+        "medical",
+        "fitness",
+    ),
+    "culture": (
+        "culture",
+        "cultural",
+        "multicultural",
+        "international",
+        "heritage",
+        "diversity",
+    ),
 }
 
 TOPIC_QUERY_ALIASES = {
@@ -158,6 +222,13 @@ TOPIC_QUERY_ALIASES = {
         "information security",
         "infosec",
     ),
+    "art": ("art",),
+    "sports": ("sports",),
+    "volunteering": ("volunteering",),
+    "business": ("business",),
+    "science": ("science",),
+    "health": ("health",),
+    "culture": ("culture",),
 }
 
 
@@ -259,6 +330,17 @@ class EventRecommender:
 
             when, final_score = scored
 
+            # ML provides a small ranking bonus only after eligibility checks.
+            final_score = min(
+                1.0,
+                final_score
+                + get_theme_bonus(
+                    likes_text,
+                    str(event.get("title", "")),
+                    str(event.get("description", "")),
+                ),
+            )
+
             categories = event["categories"]
             results.append(
                 {
@@ -287,7 +369,7 @@ class EventRecommender:
             seen_events.add(event_key)
             unique_results.append(result)
 
-        return unique_results[:top_k]
+        return enrich_event_recommendations(unique_results[:top_k])
 
 
 def matches_requested_activity(event: dict[str, Any], query: str) -> bool:
@@ -343,6 +425,9 @@ def _score_matching_event(
     now: datetime,
     likes_text: str,
 ) -> tuple[str, float] | None:
+    if "Student Organization Closed Event" in (event.get("categories") or []):
+        return None
+
     if not matches_event_topic(event, likes_text):
         return None
     if not matches_requested_activity(event, likes_text):
@@ -403,6 +488,90 @@ def _score_upcoming_event(
         final_score += SOON_BOOST
 
     return when, min(1.0, final_score)
+
+
+def _eligible_event_date(
+    event: dict[str, Any],
+    today: date,
+    now: datetime,
+) -> str | None:
+    """Return a display date only for eligible upcoming ShockerSync events."""
+    if event.get("source") != "shockersync":
+        return None
+
+    if "Student Organization Closed Event" in (event.get("categories") or []):
+        return None
+
+    end_text = event.get("end_datetime")
+    if end_text and datetime.fromisoformat(end_text) <= now:
+        return None
+
+    display = get_event_display_date(event, today)
+    if display is None:
+        return None
+
+    when, ongoing = display
+    if not ongoing:
+        days_ahead = (date.fromisoformat(when) - today).days
+        if days_ahead < 0 or days_ahead > LOOKAHEAD_DAYS:
+            return None
+
+    return when
+
+
+def list_upcoming_events(
+    events: list[dict[str, Any]],
+    today: date | None = None,
+    now: datetime | None = None,
+    limit: int = 10,
+) -> list[dict[str, Any]]:
+    """List upcoming public-facing ShockerSync events without interest ranking."""
+    if now is None:
+        now = datetime.now(ZoneInfo("America/Chicago"))
+    if today is None:
+        today = now.astimezone(ZoneInfo("America/Chicago")).date()
+    if limit <= 0:
+        return []
+
+    results = []
+
+    for event in events:
+        when = _eligible_event_date(event, today, now)
+        if when is None:
+            continue
+
+        categories = event.get("categories") or []
+
+        results.append(
+            {
+                "event_id": f"{event['source']}-{event['id']}",
+                "event_name": event["title"],
+                "event_date": when,
+                "event_time": event.get("time", ""),
+                "event_location": event.get("location", ""),
+                "event_description": event.get("description", ""),
+                "event_category": categories[0] if categories else "general",
+                "url": event.get("url", ""),
+            }
+        )
+
+    results.sort(key=lambda item: (item["event_date"], item["event_name"]))
+
+    unique_results = []
+    seen = set()
+
+    for result in results:
+        key = (result["event_id"], result["event_date"])
+        if key in seen:
+            continue
+
+        seen.add(key)
+        unique_results.append(result)
+
+        if len(unique_results) >= limit:
+            break
+
+    return unique_results
 
 
 def get_score(result: dict[str, Any]) -> float:

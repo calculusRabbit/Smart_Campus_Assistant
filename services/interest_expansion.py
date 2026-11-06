@@ -10,6 +10,26 @@ INTEREST_ACTIVITIES = {
     "machine learning": "machine learning workshops and AI club meetings",
     "ai": "AI club meetings and artificial intelligence workshops",
     "music": "music concerts, live performances, and music club events",
+    "art": "art exhibitions, painting workshops, drawing, creative arts, and student galleries",
+    "sports": "sports competitions, athletics, recreational games, and intramural tournaments",
+    "volunteering": (
+        "community service projects, volunteer opportunities, charity events, and campus outreach"
+    ),
+    "business": (
+        "entrepreneurship workshops, business clubs, startup events, and business networking"
+    ),
+    "science": (
+        "science research presentations, STEM workshops, "
+        "laboratory demonstrations, and science clubs"
+    ),
+    "health": (
+        "health and wellness workshops, fitness activities, "
+        "mental health awareness, and student wellbeing"
+    ),
+    "culture": (
+        "cultural celebrations, international student events, "
+        "diversity programs, and multicultural activities"
+    ),
     "cybersecurity": "cybersecurity workshops, information security events, and WiCyS activities",
     "computer science": (
         "computer science clubs, technology workshops, and software development events"

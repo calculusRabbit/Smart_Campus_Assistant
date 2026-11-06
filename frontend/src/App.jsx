@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Dashboard from "./pages/Dashboard";
+import MLClassifier from "./pages/MLClassifier";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
 import Profile from "./pages/Profile";
@@ -23,6 +24,7 @@ function App() {
   if (
     !loggedIn &&
     (page === "dashboard" ||
+      page === "ml-classifier" ||
       page === "profile" ||
       page === "reviews" ||
       page === "professor")
@@ -32,6 +34,9 @@ function App() {
 
   if (page === "signup") {
     return <SignUp goTo={setPage} />;
+  }
+  if (page === "ml-classifier") {
+    return <MLClassifier goTo={setPage} />;
   }
   if (page === "dashboard") {
     return <Dashboard goTo={setPage} />;

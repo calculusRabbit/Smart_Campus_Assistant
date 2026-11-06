@@ -20,6 +20,7 @@ from database import (
 from models import ChatRequest, RecommendationRequest, StudentInterestsRequest
 from services.event_recommender import get_recommender, profile_to_text
 from services.interest_expansion import extract_event_interests
+from services.ml.router import router as ml_router
 from services.rag.config import RAG_ENABLED
 from services.recommendation_service import RecommendationService
 
@@ -31,6 +32,7 @@ INTEREST_GROUPS = {
 }
 
 app = FastAPI()
+app.include_router(ml_router)
 
 # let the react app (vite runs on 5173) call this backend
 app.add_middleware(
@@ -66,10 +68,18 @@ def get_courses(
     courses = get_courses_from_database()
 
     if code:
+        search_code = " ".join(code.upper().split())
         courses = [
             course
             for course in courses
-            if code.lower() in str(course.get("course_code") or course.get("code") or "").lower()
+            if (
+                str(course.get("course_code") or course.get("code") or "").upper().split()[0:1]
+                == [search_code]
+                if search_code.isalpha()
+                else " ".join(
+                    str(course.get("course_code") or course.get("code") or "").upper().split()
+                ).startswith(search_code)
+            )
         ]
 
     if professor:
@@ -101,7 +111,7 @@ def find_course_by_message(message: str) -> dict[str, Any] | None:
         full_code = f"{course_code} {course_number}".strip()
 
         if (full_code and full_code.lower() in message) or (
-            course_name and course_name.lower() in message
+            course_name and contains_keyword(message, course_name.lower())
         ):
             return course
 
@@ -293,7 +303,10 @@ def get_live_event_chat_response(message: str) -> dict[str, Any] | None:
         "internship",
         "python",
         "programming",
+        "engineering",
         "soccer",
+        "cultural",
+        "culture",
     )
 
     has_event_request = any(contains_keyword(message, term) for term in event_request_terms)
@@ -398,6 +411,74 @@ def get_missing_course_reply(message: str) -> dict[str, Any] | None:
     }
 
 
+def get_general_professor_response(message: str) -> dict[str, Any]:
+    """Return WSU faculty information for general chat requests."""
+    departments = (
+        "Electrical and Computer Engineering",
+        "Mechanical Engineering",
+        "Aerospace Engineering",
+        "Biomedical Engineering",
+        "School of Computing",
+    )
+
+    professors = [
+        professor
+        for professor in get_professors_from_database()
+        if professor.get("professor_department") in departments
+        and str(professor.get("professor_email") or "").lower().endswith("@wichita.edu")
+    ]
+
+    matched_departments = [
+        department for department in departments if contains_keyword(message, department.lower())
+    ]
+
+    if matched_departments:
+        professors = [
+            professor
+            for professor in professors
+            if professor["professor_department"] in matched_departments
+        ]
+
+    return {
+        "intent": "professors",
+        "reply": (
+            f"Here are the professors in {matched_departments[0]}."
+            if len(matched_departments) == 1
+            else "Here are some WSU professor details."
+        ),
+        "data": professors,
+    }
+
+
+def get_general_event_response() -> dict[str, Any]:
+    """Return upcoming ShockerSync events for general chat requests."""
+    from services import event_recommender
+
+    try:
+        upcoming_events = event_recommender.list_upcoming_events(
+            get_recommender().events,
+            today=event_recommender.today_in_wichita(),
+            limit=10,
+        )
+    except Exception as error:
+        print("ShockerSync event listing unavailable:", error)
+        return {
+            "intent": "events",
+            "reply": "Upcoming ShockerSync events are temporarily unavailable.",
+            "data": [],
+        }
+
+    return {
+        "intent": "events",
+        "reply": (
+            "Here are upcoming ShockerSync campus events."
+            if upcoming_events
+            else "I couldn't find upcoming ShockerSync campus events."
+        ),
+        "data": upcoming_events,
+    }
+
+
 def get_general_chat_response(message: str) -> dict[str, Any] | None:
     """Handle general campus information and interest recommendations."""
     event_keywords = ["event", "events", "activity", "activities", "career fair", "competition"]
@@ -405,8 +486,12 @@ def get_general_chat_response(message: str) -> dict[str, Any] | None:
     course_keywords = ["course", "courses", "class", "classes", "cs 560", "cs 598"]
     professor_keywords = [
         "professor",
+        "professors",
+        "faculty",
         "instructor",
+        "instructors",
         "teacher",
+        "teachers",
         "who teaches",
         "dr.",
         "yang",
@@ -440,11 +525,7 @@ def get_general_chat_response(message: str) -> dict[str, Any] | None:
     if any(
         contains_keyword(message, keyword) for keyword in event_keywords
     ) and is_event_listing_request(message):
-        return {
-            "intent": "events",
-            "reply": "Here are some upcoming campus events.",
-            "data": get_events_from_database(),
-        }
+        return get_general_event_response()
 
     if any(contains_keyword(message, keyword) for keyword in dining_keywords):
         return {
@@ -461,11 +542,7 @@ def get_general_chat_response(message: str) -> dict[str, Any] | None:
         }
 
     if any(contains_keyword(message, keyword) for keyword in professor_keywords):
-        return {
-            "intent": "professors",
-            "reply": "Here are some professor details.",
-            "data": get_professors_from_database(),
-        }
+        return get_general_professor_response(message)
 
     if any(contains_keyword(message, keyword) for keyword in deadline_keywords):
         return {
