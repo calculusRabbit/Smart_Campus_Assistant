@@ -154,7 +154,7 @@ class AuthService:
             # auth label, not a password/secret
             "token_type": "bearer",  # nosec B105
             "expires_in": ACCESS_TOKEN_MINUTES * 60,
-            "user": public_user(user)
+            "user": public_user(user),
         }
 
     def logout(self, session_id, username: str) -> None:

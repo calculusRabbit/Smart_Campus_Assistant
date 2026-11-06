@@ -216,7 +216,7 @@ export default function Profile({ goTo }) {
           Back to Dashboard
         </button>
 
-      {/* {showDelete && (
+        {/* {showDelete && (
         <div className={styles.overlay} onClick={closeDelete}>
           <form
             className={styles.modal}

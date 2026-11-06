@@ -23,7 +23,6 @@ export default function DeactivateAccount({ goTo }) {
       await deleteAccount(form.get("password"), form.get("captcha"));
 
       goTo("login");
-      
     } catch (err) {
       setMessage(err.message);
       setCaptchaKey((value) => value + 1);

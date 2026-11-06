@@ -8,7 +8,6 @@ let currentUser = null;
 localStorage.removeItem("token");
 localStorage.removeItem("user");
 
-
 export function getUser() {
   return currentUser;
 }
@@ -95,7 +94,7 @@ export async function deleteAccount(password, captcha) {
   await apiFetch("/me", {
     method: "DELETE",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ password, captcha })
+    body: JSON.stringify({ password, captcha }),
   });
 
   accessToken = null;
