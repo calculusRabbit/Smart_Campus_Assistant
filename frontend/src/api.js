@@ -331,3 +331,28 @@ export async function voteReview(reviewId, username, value) {
   saveReviews(reviews);
   return reviews;
 }
+
+// Load the general course catalog for professor reviews.
+// The catalog does not verify which professor taught each course.
+export async function getReviewCourses() {
+  const res = await fetch(BASE_URL + "/courses");
+
+  if (!res.ok) {
+    throw new Error("Could not load the course catalog.");
+  }
+
+  const data = await res.json();
+
+  return (data.courses || [])
+    .filter((course) => {
+      const code = String(course.code || "")
+        .trim()
+        .toUpperCase();
+      return code !== "" && !code.startsWith("TEST");
+    })
+    .sort((a, b) =>
+      String(a.code).localeCompare(String(b.code), undefined, {
+        numeric: true,
+      }),
+    );
+}

@@ -5,7 +5,7 @@ import {
   addReview,
   voteReview,
   getProfessors,
-  getCourses,
+  getReviewCourses,
 } from "../api";
 import NavBar from "../components/NavBar";
 import styles from "./ProfessorPage.module.css";
@@ -113,27 +113,13 @@ export default function ProfessorPage({ goTo, professorId }) {
       }
     });
 
-    getCourses().then((data) => setCourses(data));
+    getReviewCourses()
+      .then((data) => setCourses(data))
+      .catch(() => {
+        setCourses([]);
+        setError("Could not load the WSU course catalog.");
+      });
   }, [professorId]);
-
-  // classes this professor teaches, show all classes if none match
-  function getClassOptions() {
-    let mine = [];
-    for (let i = 0; i < courses.length; i++) {
-      if (
-        professor &&
-        courses[i].professor
-          .toLowerCase()
-          .includes(professor.professor_name.toLowerCase())
-      ) {
-        mine.push(courses[i]);
-      }
-    }
-    if (mine.length === 0) {
-      return courses;
-    }
-    return mine;
-  }
 
   async function handleVote(reviewId, value) {
     setReviews(await voteReview(reviewId, user.name, value));
@@ -148,15 +134,18 @@ export default function ProfessorPage({ goTo, professorId }) {
   }
 
   function openForm() {
-    const options = getClassOptions();
-    if (options.length > 0) {
-      setCourse(options[0].code);
-    }
+    setCourse("");
+    setError("");
     setShowForm(true);
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
+
+    if (!course || !courses.some((item) => item.code === course)) {
+      setError("Please select a valid course.");
+      return;
+    }
 
     if (title.trim() === "") {
       setError("Please add a title.");
@@ -239,15 +228,11 @@ export default function ProfessorPage({ goTo, professorId }) {
     );
   }
 
-  let classOptions = [];
-  let options = getClassOptions();
-  for (let i = 0; i < options.length; i++) {
-    classOptions.push(
-      <option key={options[i].id} value={options[i].code}>
-        {options[i].code} - {options[i].name}
-      </option>,
-    );
-  }
+  const classOptions = courses.map((item) => (
+    <option key={item.id ?? item.code} value={item.code}>
+      {item.code} - {item.name}
+    </option>
+  ));
 
   let tagPills = [];
   for (let i = 0; i < allTags.length; i++) {
@@ -317,14 +302,24 @@ export default function ProfessorPage({ goTo, professorId }) {
             </h3>
             {error && <p className={styles.error}>{error}</p>}
 
-            <p className={styles.label}>Choose class</p>
+            <label className={styles.label} htmlFor="review-course">
+              Course you took with this professor
+            </label>
             <select
+              id="review-course"
               className={styles.input}
               value={course}
               onChange={(e) => setCourse(e.target.value)}
+              required
+              disabled={courses.length === 0}
             >
+              <option value="">Select a WSU course</option>
               {classOptions}
             </select>
+            <p className={styles.label}>
+              Select the course you personally took with this professor.
+              Teaching assignments have not been independently verified.
+            </p>
 
             <p className={styles.label}>Rating</p>
             <select
