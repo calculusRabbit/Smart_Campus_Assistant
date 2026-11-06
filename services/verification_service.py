@@ -271,6 +271,62 @@ def start_otp(user: dict[str, Any], email: str) -> dict[str, Any]:
     }
 
 
+def _complete_verified_otp(
+    conn: Connection[dict[str, Any]],
+    student_id: int,
+    email: str,
+) -> dict[str, Any]:
+    """Consume a correct code and apply the existing verification policy."""
+    conn.execute(
+        "UPDATE Enrollment_otps SET consumed = TRUE WHERE student_id = %s",
+        (student_id,),
+    )
+
+    reasons = staff_reasons(email)
+    if reasons:
+        return require_manual(conn, student_id, ", ".join(reasons))
+
+    # A previous staff/manual flag cannot be bypassed with email OTP.
+    pending = conn.execute(
+        """
+        SELECT 1 FROM Authentications
+        WHERE student_id = %s
+          AND status = 'pending'
+          AND method = 'manual'
+        """,
+        (student_id,),
+    ).fetchone()
+
+    if pending:
+        return {
+            "manual_required": True,
+            "message": "Complete your pending manual review",
+        }
+
+    conn.execute(
+        """
+        UPDATE Students
+        SET edu_email = %s, account_status = 'open'
+        WHERE student_id = %s
+        """,
+        (email, student_id),
+    )
+    conn.execute(
+        """
+        INSERT INTO Authentications (
+            student_id, status, method, reviewed_time
+        )
+        VALUES (%s, 'approved', 'email_otp', CURRENT_TIMESTAMP)
+        """,
+        (student_id,),
+    )
+
+    return {
+        "approved": True,
+        "message": "Email verification complete",
+    }
+
+
 def complete_otp(user: dict[str, Any], code: str) -> dict[str, Any]:
     student_id = user["student_id"]
     error = None
@@ -282,7 +338,6 @@ def complete_otp(user: dict[str, Any], code: str) -> dict[str, Any]:
                 "SELECT username FROM Users WHERE username = %s FOR UPDATE",
                 (user["username"],),
             )
-
             row = conn.execute(
                 """
                 SELECT * FROM Enrollment_otps
@@ -324,73 +379,22 @@ def complete_otp(user: dict[str, Any], code: str) -> dict[str, Any]:
                 else:
                     error = "Incorrect code"
             else:
-                conn.execute(
-                    "UPDATE Enrollment_otps SET consumed = TRUE WHERE student_id = %s",
-                    (student_id,),
+                result = _complete_verified_otp(
+                    conn,
+                    student_id,
+                    row["email"],
                 )
-
-                reasons = staff_reasons(row["email"])
-
-                if reasons:
-                    result = require_manual(
-                        conn,
-                        student_id,
-                        ", ".join(reasons),
-                    )
-                else:
-                    # A previous staff/manual flag cannot be bypassed
-                    # simply by switching verification methods.
-                    pending = conn.execute(
-                        """
-                        SELECT 1 FROM Authentications
-                        WHERE student_id = %s
-                          AND status = 'pending'
-                          AND method = 'manual'
-                        """,
-                        (student_id,),
-                    ).fetchone()
-
-                    if pending:
-                        result = {
-                            "manual_required": True,
-                            "message": "Complete your pending manual review",
-                        }
-                    else:
-                        conn.execute(
-                            """
-                            UPDATE Students
-                            SET edu_email = %s, account_status = 'open'
-                            WHERE student_id = %s
-                            """,
-                            (row["email"], student_id),
-                        )
-                        conn.execute(
-                            """
-                            INSERT INTO Authentications (
-                                student_id, status, method, reviewed_time
-                            )
-                            VALUES (
-                                %s, 'approved', 'email_otp',
-                                CURRENT_TIMESTAMP
-                            )
-                            """,
-                            (student_id,),
-                        )
-                        result = {
-                            "approved": True,
-                            "message": "Email verification complete",
-                        }
     except UniqueViolation as exc:
         raise HTTPException(
             409,
             "This institutional email is already linked to an account",
         ) from exc
 
-    # raise outside the transaction, so failed guesses remain counted
-    if error or result is None:
-        raise HTTPException(
-            400 if error else 500,
-            error or "verification produced no result",
-        )
+    # raise after leaving the transaction so failed guesses are still counted
+    if error:
+        raise HTTPException(400, error)
+
+    if result is None:
+        raise HTTPException(500, "verification produced no result")
 
     return result
