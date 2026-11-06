@@ -22,8 +22,7 @@ def _get(**params):
 
     try:
         response = httpx.get(
-            BASE_URL,
-            params={"api_key": key, "keys_nested": "true", **params}, timeout=15
+            BASE_URL, params={"api_key": key, "keys_nested": "true", **params}, timeout=15
         )
         response.raise_for_status()
         return response.json()["results"]
@@ -51,8 +50,8 @@ def get_institution(scorecard_id: int):
     rows = _get(
         **{
             "id": scorecard_id,
-            "fields": ("id,school.name,school.city,school.state," "latest.programs.cip_4_digit"),
-            "all_programs_nested": "true"
+            "fields": ("id,school.name,school.city,school.state,latest.programs.cip_4_digit"),
+            "all_programs_nested": "true",
         }
     )
 
@@ -65,7 +64,7 @@ def get_institution(scorecard_id: int):
     if school.get("state") not in US_STATES.split():
         raise HTTPException(400, "Choose a US institution")
 
-    programs = (row.get("latest", {}).get("programs", {}).get("cip_4_digit") or [])
+    programs = row.get("latest", {}).get("programs", {}).get("cip_4_digit") or []
 
     options = {}
     for program in programs:

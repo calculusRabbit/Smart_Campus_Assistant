@@ -9,9 +9,10 @@ from fastapi import (
     Response,
     UploadFile,
 )
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 
 from auth import get_admin_user, get_current_user
+from auth_models import AccountEmail
 from database import get_connection
 from services.institution_service import (
     get_institution,
@@ -69,7 +70,7 @@ def verification_status(user: User, response: Response):
 
 
 class SendOtpRequest(BaseModel):
-    email: EmailStr
+    email: AccountEmail
 
 
 class CheckOtpRequest(BaseModel):

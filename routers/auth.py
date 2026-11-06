@@ -45,7 +45,7 @@ def logout(user: Annotated[dict, Depends(get_current_user)]):
     return Response(status_code=204, headers={"Cache-Control": "no-store"})
 
 
-#delete user - non-permanent (soft-delete)
+# delete user - non-permanent (soft-delete)
 @router.delete("/me", status_code=204)
 def delete_me(
     request: DeactivateRequest,
@@ -57,11 +57,13 @@ def delete_me(
             """
             SELECT hashed_password FROM Users
             WHERE username = %s AND deleted_timestamp IS NULL
-            FOR UPDATE""", (user["username"],)
+            FOR UPDATE""",
+            (user["username"],),
         ).fetchone()
 
         if account is None or not verify_password(
-            request.password.get_secret_value(),account["hashed_password"],
+            request.password.get_secret_value(),
+            account["hashed_password"],
         ):
             raise HTTPException(
                 status_code=403,
@@ -78,17 +80,20 @@ def delete_me(
         )
         conn.execute(
             """UPDATE Students SET deleted_timestamp = CURRENT_TIMESTAMP
-            WHERE student_id = %s""", (user["student_id"],)
+            WHERE student_id = %s""",
+            (user["student_id"],),
         )
         conn.execute(
             """UPDATE auth_sessions SET revoked_at = CURRENT_TIMESTAMP
-            WHERE username = %s AND revoked_at IS NULL """, (user["username"],),
+            WHERE username = %s AND revoked_at IS NULL """,
+            (user["username"],),
         )
 
     return Response(
         status_code=204,
         headers={"Cache-Control": "no-store"},
     )
+
 
 @router.get("/captcha/{action}")
 def captcha(action: str, response: Response):
@@ -98,10 +103,10 @@ def captcha(action: str, response: Response):
     response.headers["Cache-Control"] = "no-store"
     return create_captcha(action)
 
+
 class AdminLoginRequest(BaseModel):
     username: str = Field(min_length=1, max_length=30)
     password: SecretStr = Field(max_length=128)
-
 
 
 @router.post("/admin/login")
@@ -119,10 +124,7 @@ def admin_login(request: AdminLoginRequest, response: Response):
         ).fetchone()
 
         stored_hash = user["hashed_password"] if user else DUMMY_HASH
-        valid = verify_password(
-            request.password.get_secret_value(),
-            stored_hash
-        )
+        valid = verify_password(request.password.get_secret_value(), stored_hash)
 
         if not valid or user is None:
             raise HTTPException(401, "Incorrect administrator credentials")

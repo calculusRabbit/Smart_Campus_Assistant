@@ -20,10 +20,9 @@ CREATE TABLE Authentication_documents (
 
 CREATE TABLE Enrollment_otps (
     student_id INTEGER PRIMARY KEY REFERENCES Students(student_id) ON DELETE CASCADE,
-    email TEXT NOT NULL, -- .edu email
+    email TEXT NOT NULL CHECK (email ~ '^[a-z0-9._%+-]+@[a-z0-9.-]+\.edu$'),
     code_hash TEXT NOT NULL,
-    failures INTEGER NOT NULL DEFAULT 0
-    CHECK (failures BETWEEN 0 AND 3),
+    failures INTEGER NOT NULL DEFAULT 0 CHECK (failures BETWEEN 0 AND 3),
     expires_at TIMESTAMPTZ NOT NULL,
     last_sent TIMESTAMPTZ NOT NULL,
     consumed BOOLEAN NOT NULL DEFAULT FALSE

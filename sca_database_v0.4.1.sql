@@ -119,7 +119,7 @@ CREATE TABLE IF NOT EXISTS Instructors (
 	instructor_fname TEXT NOT NULL CHECK(LENGTH(instructor_fname)<30),
 	instructor_lnames TEXT NOT NULL CHECK(LENGTH(instructor_lnames)<50),
 	instructor_department INTEGER NOT NULL REFERENCES Departments(department_id) ON DELETE CASCADE,
-	instructor_email TEXT NOT NULL UNIQUE CHECK(instructor_email ~ '^[A-Za-z0-9._%-]+@[A-Za-z0-9.-]+\.edu$'),
+	instructor_email TEXT NOT NULL UNIQUE CHECK(instructor_email ~ '^[a-z0-9._%+-]+@[a-z0-9.-]+\.edu$'),
 	instructor_office INTEGER REFERENCES Locations(location_id) ON DELETE SET NULL,
 	instructor_hours JSONB
 );
@@ -149,8 +149,8 @@ CREATE TABLE IF NOT EXISTS Students (
 	-- postgres doesn't allow dynamic functions like CURRENT_DATE in CHECK constraints
 		--so dob below will need to be validated in the backend (at least 14yo)
 	dob DATE NOT NULL CHECK(dob >= '1940-01-01'), 
-	email TEXT NOT NULL UNIQUE CHECK(email ~ '^[A-Za-z0-9._%-]+@[A-Za-z0-9.-]+\.[A-Za-z0-9\-]{2,}$'),
-	edu_email TEXT UNIQUE CHECK(edu_email ~ '^[A-Za-z0-9._%-]+@[A-Za-z0-9.-]+\.edu$'),
+	email TEXT NOT NULL UNIQUE CHECK(email ~ '^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z0-9\-]{2,}$'),
+	edu_email TEXT UNIQUE CHECK(edu_email ~ '^[a-z0-9._%+-]+@[a-z0-9.-]+\.edu$'),
 	zipcode VARCHAR(10) CHECK(zipcode ~ '^[0-9]{5}(-[0-9]{4})?$'),
 	latitude_approx REAL,
 	longitude_approx REAL,

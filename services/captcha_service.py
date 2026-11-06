@@ -1,4 +1,4 @@
-#ALTCHA verification w/ single-use CAPTCHAs
+# ALTCHA verification w/ single-use CAPTCHAs
 
 import base64
 import hashlib
@@ -13,7 +13,11 @@ from auth import JWT_KEY
 from database import get_connection
 
 # generate purpose-specific key
-CAPTCHA_KEY = hmac.new(JWT_KEY.encode(), b"captcha", hashlib.sha256,).hexdigest()
+CAPTCHA_KEY = hmac.new(
+    JWT_KEY.encode(),
+    b"captcha",
+    hashlib.sha256,
+).hexdigest()
 
 
 def create_captcha(action: str):
@@ -28,8 +32,10 @@ def create_captcha(action: str):
 
     with get_connection() as conn:
         conn.execute("DELETE FROM Captcha_challenges WHERE expires_at < CURRENT_TIMESTAMP")
-        conn.execute("INSERT INTO Captcha_challenges VALUES (%s, %s, %s)", 
-                     (challenge["signature"], action, expires))
+        conn.execute(
+            "INSERT INTO Captcha_challenges VALUES (%s, %s, %s)",
+            (challenge["signature"], action, expires),
+        )
 
     return challenge
 
@@ -62,7 +68,9 @@ def check_captcha(payload: str, action: str):
             DELETE FROM Captcha_challenges
             WHERE signature = %s AND action = %s AND expires_at > CURRENT_TIMESTAMP
             RETURNING signature
-            """, (signature, action)).fetchone()
+            """,
+            (signature, action),
+        ).fetchone()
 
     if used is None:
         raise HTTPException(400, "CAPTCHA expired or already used")

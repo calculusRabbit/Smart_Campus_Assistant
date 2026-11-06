@@ -15,14 +15,11 @@ from services.institution_service import get_institution
 
 
 class AuthService:
-    #student signup and login
+    # student signup and login
 
     def signup(self, request: SignupRequest) -> dict:
         institution = get_institution(request.scorecard_id)
-        programs = {
-            program["value"]: program["label"]
-            for program in institution["programs"]
-        }
+        programs = {program["value"]: program["label"] for program in institution["programs"]}
 
         if request.program and request.program not in programs:
             raise HTTPException(
@@ -38,7 +35,9 @@ class AuthService:
                 conn.execute(
                     """
                     INSERT INTO Users (username, account_type, hashed_password)
-                    VALUES (%s, 'student', %s)""", (request.username, password_hash))
+                    VALUES (%s, 'student', %s)""",
+                    (request.username, password_hash),
+                )
 
                 conn.execute(
                     """
@@ -46,20 +45,28 @@ class AuthService:
                     email, dob, zipcode, account_status, created_at, interests)
                     VALUES (%s, %s, %s, %s, %s, %s, 'pending', CURRENT_TIMESTAMP,
                     %s)""",
-                    (request.username, request.first_name, request.last_name,
-                        str(request.email).lower(), request.dob, request.zipcode,
-                        interests),
+                    (
+                        request.username,
+                        request.first_name,
+                        request.last_name,
+                        str(request.email).lower(),
+                        request.dob,
+                        request.zipcode,
+                        interests,
+                    ),
                 )
 
                 student = conn.execute(
                     "SELECT student_id FROM Students WHERE username = %s",
                     (request.username,),
                 ).fetchone()
-                
-                conn.execute("UPDATE Schools SET scorecard_id=%s "
-                "WHERE school_name=%s AND scorecard_id IS NULL", 
-                (institution["id"], institution["name"]))
-                
+
+                conn.execute(
+                    "UPDATE Schools SET scorecard_id=%s "
+                    "WHERE school_name=%s AND scorecard_id IS NULL",
+                    (institution["id"], institution["name"]),
+                )
+
                 school = conn.execute(
                     """
                     INSERT INTO Schools (school_name, scorecard_id) VALUES (%s, %s)
@@ -71,20 +78,20 @@ class AuthService:
 
                 conn.execute(
                     "INSERT INTO Enrolments (student_id, school_id, majors) VALUES (%s, %s, %s)",
-                    (   student["student_id"], school["school_id"],
-                        [programs[request.program]] if request.program else []
-                    )
+                    (
+                        student["student_id"],
+                        school["school_id"],
+                        [programs[request.program]] if request.program else [],
+                    ),
                 )
-                
+
         except UniqueViolation as exc:
             raise HTTPException(
                 status_code=409,
                 detail="account details are unavailable",
             ) from exc
 
-        return {
-            "message": "account created, student verification is required"
-        }
+        return {"message": "account created, student verification is required"}
 
     def login(self, request: LoginRequest) -> dict:
         with get_connection() as conn:
@@ -97,9 +104,11 @@ class AuthService:
                 JOIN Students AS s ON s.username = u.username
                 WHERE lower(s.email) = lower(%s) AND u.account_type = 'student'
                 FOR UPDATE OF u, s
-                """, (str(request.email),)).fetchone()
+                """,
+                (str(request.email),),
+            ).fetchone()
 
-            stored_hash = (user["hashed_password"] if user else DUMMY_HASH)
+            stored_hash = user["hashed_password"] if user else DUMMY_HASH
             valid = verify_password(request.password.get_secret_value(), stored_hash)
 
             if not valid or user is None:
@@ -108,7 +117,6 @@ class AuthService:
                     detail="incorrect email or password",
                     headers={"WWW-Authenticate": "Bearer"},
                 )
-
 
             if user["deleted_timestamp"] is not None:
                 if not user["self_deactivated"]:
@@ -123,14 +131,14 @@ class AuthService:
                     SET deleted_timestamp = NULL, self_deactivated = FALSE
                     WHERE username = %s
                     """,
-                    (user["username"],)
+                    (user["username"],),
                 )
                 conn.execute(
                     """
                     UPDATE Students SET deleted_timestamp = NULL
                     WHERE student_id = %s
                     """,
-                    (user["student_id"],)
+                    (user["student_id"],),
                 )
 
             if user["account_status"] == "closed":
@@ -138,22 +146,24 @@ class AuthService:
                     status_code=403,
                     detail="This account is closed",
                 )
-            
+
             token = create_session(conn, user["username"])
 
         return {
             "access_token": token,
-            "token_type": "bearer",
+            # auth label, not a password/secret
+            "token_type": "bearer",  # nosec B105
             "expires_in": ACCESS_TOKEN_MINUTES * 60,
             "user": public_user(user)
         }
 
     def logout(self, session_id, username: str) -> None:
-        #revoke login without affecting user's other sessions, if any
+        # revoke login without affecting user's other sessions, if any
         with get_connection() as conn:
             conn.execute(
                 """
                 UPDATE Auth_sessions SET revoked_at = CURRENT_TIMESTAMP
                 WHERE session_id = %s AND username = %s
-                """, (session_id, username)
+                """,
+                (session_id, username),
             )

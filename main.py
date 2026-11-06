@@ -1,7 +1,7 @@
 import re
 from typing import Annotated, Any
 
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
@@ -54,13 +54,14 @@ app.add_middleware(
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-#handling all RequestValidationError's
+
+# handling all RequestValidationError's
 @app.exception_handler(RequestValidationError)
-async def validation_error_handler(_request, exc: RequestValidationError):
+async def validation_error_handler(_request: Request, exc: RequestValidationError) -> JSONResponse:
     return JSONResponse(
         status_code=422,
-        #input not included in response for potential PII data protection 
-            # if segmented into different validation errors, input can be returned for certain ones
+        # input not included in response for potential PII data protection
+        # if segmented into different validation errors, input can be returned for certain ones
         content={
             "detail": [
                 {
@@ -74,18 +75,18 @@ async def validation_error_handler(_request, exc: RequestValidationError):
     )
 
 
-
 @app.get("/")
 def home() -> FileResponse:
     return FileResponse("static/index.html")
 
+
 @app.get("/health")
-def health():
+def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
 @app.get("/ready")
-def ready():
+def ready() -> dict[str, str]:
     try:
         with get_connection() as connection:
             connection.execute("SELECT 1").fetchone()
@@ -145,7 +146,7 @@ def get_professors() -> dict[str, Any]:
 @app.get("/deadlines")
 def get_deadlines(
     user: Annotated[dict, Depends(get_current_user)],
-):
+) -> dict[str, Any]:
     return {"deadlines": get_deadlines_from_database(user["student_id"])}
 
 
@@ -473,8 +474,6 @@ def get_missing_course_reply(message: str) -> dict[str, Any] | None:
     }
 
 
-
-
 def get_general_professor_response(message: str) -> dict[str, Any]:
     """Return WSU faculty information for general chat requests."""
     departments = (
@@ -513,9 +512,6 @@ def get_general_professor_response(message: str) -> dict[str, Any]:
         "data": professors,
     }
 
-  
-
-  
 
 def get_general_event_response() -> dict[str, Any]:
     """Return upcoming ShockerSync events for general chat requests."""
@@ -618,14 +614,14 @@ def get_general_chat_response(
         return {
             "intent": "deadlines",
             "reply": "Here are some important academic deadlines.",
-            "data": get_deadlines_from_database(user["student_id"])
+            "data": get_deadlines_from_database(user["student_id"]),
         }
 
     return None
 
 
 @app.post("/chat")
-def chat( 
+def chat(
     request: ChatRequest,
     user: Annotated[dict, Depends(get_current_user)],
 ) -> dict[str, Any]:

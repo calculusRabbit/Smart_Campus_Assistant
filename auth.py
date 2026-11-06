@@ -13,7 +13,7 @@ from pwdlib import PasswordHash
 from database import get_connection
 
 JWT_KEY = os.environ.get("JWT_KEY", "")
-if len(JWT_KEY.encode("utf-8")) < 32: #less than 32 bytes - invalid
+if len(JWT_KEY.encode("utf-8")) < 32:  # less than 32 bytes - invalid
     raise RuntimeError("JWT_KEY isn't set to a generated secret")
 
 JWT_ISSUER = "smart-campus-assistant"
@@ -21,13 +21,13 @@ JWT_AUDIENCE = "smart-campus-api"
 
 # JWT access token lifetime: 15 mins
 ACCESS_TOKEN_MINUTES = 15
-JWT_ALGORITHM = "HS256" 
+JWT_ALGORITHM = "HS256"
 
 password_hash = PasswordHash.recommended()
 
-#helps prevent timing attacks with nonexistent usernames
+# helps prevent timing attacks with nonexistent usernames
 # by running pasword verification every time => reduces login timing differences
-DUMMY_HASH = password_hash.hash("fake-Password_123") 
+DUMMY_HASH = password_hash.hash("fake-Password_123")
 bearer = HTTPBearer(auto_error=False)
 
 
@@ -40,13 +40,14 @@ def verify_password(password: str, stored_hash: str) -> bool:
 
 
 def create_session(conn, username: str) -> str:
-    #insert a session using the caller's transaction, return access JWT
+    # insert a session using the caller's transaction, return access JWT
     session_id = uuid4()
     now = datetime.now(UTC)
     expires_at = now + timedelta(minutes=ACCESS_TOKEN_MINUTES)
 
-    conn.execute("INSERT INTO Auth_sessions (session_id, username, expires_at) "
-                 "VALUES (%s,%s,%s)", (session_id, username, expires_at),
+    conn.execute(
+        "INSERT INTO Auth_sessions (session_id, username, expires_at) VALUES (%s,%s,%s)",
+        (session_id, username, expires_at),
     )
 
     return jwt.encode(
@@ -56,7 +57,7 @@ def create_session(conn, username: str) -> str:
             "type": "access",
             "iss": JWT_ISSUER,
             "aud": JWT_AUDIENCE,
-            "iat": now, #issued at
+            "iat": now,  # issued at
             "exp": expires_at,
         },
         JWT_KEY,
@@ -67,10 +68,10 @@ def create_session(conn, username: str) -> str:
 def get_current_user(
     credentials: Annotated[
         HTTPAuthorizationCredentials | None,
-        Depends(bearer), #get bearer token
+        Depends(bearer),  # get bearer token
     ],
 ) -> dict:
-    #validate the JWT, active session, and current student account
+    # validate the JWT, active session, and current student account
     unauthorized = HTTPException(
         status_code=401,
         detail="Authentication required",
@@ -80,23 +81,21 @@ def get_current_user(
     if credentials is None:
         raise unauthorized
 
-    try: #check JWT token details
+    try:  # check JWT token details
         claims = jwt.decode(
             credentials.credentials,
             JWT_KEY,
             algorithms=[JWT_ALGORITHM],
             issuer=JWT_ISSUER,
             audience=JWT_AUDIENCE,
-            options={
-                "require": ["sub", "sid", "type", "iss", "aud", "iat", "exp"]
-            },
+            options={"require": ["sub", "sid", "type", "iss", "aud", "iat", "exp"]},
         )
 
         if claims["type"] != "access" or not isinstance(claims["sub"], str):
             raise jwt.InvalidTokenError("invalid token claims")
 
         session_id = UUID(claims["sid"])
-    except ( #invalid token values
+    except (  # invalid token values
         jwt.InvalidTokenError,
         ValueError,
         TypeError,
@@ -125,7 +124,7 @@ def get_current_user(
             (session_id, claims["sub"]),
         ).fetchone()
 
-    if user is None: #invalid JWT session or account
+    if user is None:  # invalid JWT session or account
         raise unauthorized
 
     return user
@@ -135,7 +134,7 @@ def require_student_owner(
     student_id: int,
     user: Annotated[dict, Depends(get_current_user)],
 ) -> dict:
-    #only allow to the student's own data
+    # only allow to the student's own data
     if user["student_id"] != student_id:
         raise HTTPException(status_code=403, detail="Access denied")
     return user
@@ -146,21 +145,19 @@ def require_open_student(
 ) -> dict:
     # require student verification
     if user["account_status"] != "open":
-        raise HTTPException(
-            status_code=403,
-            detail="verified student account required"
-        )
+        raise HTTPException(status_code=403, detail="verified student account required")
     return user
 
 
 def public_user(user: dict) -> dict:
-    #build frontend user object w/o password or session fields
+    # build frontend user object w/o password or session fields
     return {
         "id": user["student_id"],
         "username": user["username"],
         "name": f"{user['first_name']} {user['last_names']}",
-        "account_status": user["account_status"]
+        "account_status": user["account_status"],
     }
+
 
 def get_admin_user(
     credentials: Annotated[
@@ -171,7 +168,7 @@ def get_admin_user(
     unauthorized = HTTPException(
         status_code=401,
         detail="Administrator authentication required",
-        headers={"WWW-Authenticate": "Bearer"}
+        headers={"WWW-Authenticate": "Bearer"},
     )
 
     if credentials is None:
@@ -184,24 +181,14 @@ def get_admin_user(
             algorithms=[JWT_ALGORITHM],
             issuer=JWT_ISSUER,
             audience=JWT_AUDIENCE,
-            options={
-                "require": [
-                    "sub", "sid", "type", "iss",
-                    "aud", "iat", "exp"
-                ]
-            }
+            options={"require": ["sub", "sid", "type", "iss", "aud", "iat", "exp"]},
         )
 
         if claims["type"] != "access":
             raise jwt.InvalidTokenError("Invalid token type")
 
         session_id = UUID(claims["sid"])
-    except (
-        jwt.InvalidTokenError,
-        ValueError,
-        TypeError,
-        AttributeError
-    ) as exc:
+    except (jwt.InvalidTokenError, ValueError, TypeError, AttributeError) as exc:
         raise unauthorized from exc
 
     with get_connection() as conn:
@@ -214,7 +201,7 @@ def get_admin_user(
               AND u.username = %s AND u.account_type = 'admin' AND u.deleted_timestamp IS NULL
               AND a.revoked_at IS NULL AND a.expires_at > CURRENT_TIMESTAMP
             """,
-            (session_id, claims["sub"])
+            (session_id, claims["sub"]),
         ).fetchone()
 
     if user is None:

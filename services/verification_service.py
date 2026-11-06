@@ -1,4 +1,4 @@
-#enrollment email and manual document verification
+# enrollment email and manual document verification
 
 import hashlib
 import hmac
@@ -15,7 +15,7 @@ from psycopg.errors import UniqueViolation
 from auth import JWT_KEY
 from database import get_connection
 
-#keywords to flag in emails 
+# keywords to flag in emails
 STAFF_LABELS = set(
     "cs cse ee ece bme math physics bio chem psych "
     "hr legal payroll office president provost dean registrar "
@@ -41,7 +41,7 @@ def staff_reasons(email: str):
 
     reasons = sorted(tokens & STAFF_LABELS)
 
-    if re.fullmatch(r"[a-z]+\.[a-z]+", local):
+    if re.fullmatch(r"[a-z]+\.[a-z]+", local.split("+", 1)[0]):
         reasons.append("first.last pattern")
 
     return reasons
@@ -110,8 +110,7 @@ def require_manual(conn, student_id: int, reason: str):
         )
 
     conn.execute(
-        "UPDATE Students SET account_status = 'pending' "
-        "WHERE student_id = %s",
+        "UPDATE Students SET account_status = 'pending' WHERE student_id = %s",
         (student_id,),
     )
 
@@ -134,18 +133,19 @@ def send_email(email: str, code: str):
             "https://api.mailjet.com/v3.1/send",
             auth=(key, secret),
             json={
-                "Messages": [{
-                    "From": {
-                        "Email": sender,
-                        "Name": "Smart Campus Assistant",
-                    },
-                    "To": [{"Email": email}],
-                    "Subject": "Your enrollment verification code",
-                    "TextPart": (
-                        f"Your code is {code}. "
-                        "It expires in five minutes. Do not share it."
-                    ),
-                }],
+                "Messages": [
+                    {
+                        "From": {
+                            "Email": sender,
+                            "Name": "Smart Campus Assistant",
+                        },
+                        "To": [{"Email": email}],
+                        "Subject": "Your enrollment verification code",
+                        "TextPart": (
+                            f"Your code is {code}. It expires in five minutes. Do not share it."
+                        ),
+                    }
+                ],
             },
             timeout=15,
         )
@@ -172,16 +172,11 @@ def start_otp(user: dict, email: str):
         school = school_for(conn, student_id)
 
         # This mapping is administrator-controlled, not browser-supplied.
-        config = json.loads(
-            os.environ.get("INSTITUTION_EMAIL_DOMAINS") or "{}"
-        )
+        config = json.loads(os.environ.get("INSTITUTION_EMAIL_DOMAINS") or "{}")
         allowed = config.get(str(school["scorecard_id"]), [])
         domain = email.rsplit("@", 1)[1]
 
-        matches = any(
-            domain == approved or domain.endswith("." + approved)
-            for approved in allowed
-        )
+        matches = any(domain == approved or domain.endswith("." + approved) for approved in allowed)
 
         if not domain.endswith(".edu") or not matches:
             return require_manual(
@@ -253,8 +248,7 @@ def start_otp(user: dict, email: str):
             send_email(email, code)
         except HTTPException:
             conn.execute(
-                "UPDATE Enrollment_otps SET consumed = TRUE "
-                "WHERE student_id = %s",
+                "UPDATE Enrollment_otps SET consumed = TRUE WHERE student_id = %s",
                 (student_id,),
             )
             result = require_manual(
@@ -276,8 +270,7 @@ def complete_otp(user: dict, code: str):
     try:
         with get_connection() as conn:
             conn.execute(
-                "SELECT username FROM Users "
-                "WHERE username = %s FOR UPDATE",
+                "SELECT username FROM Users WHERE username = %s FOR UPDATE",
                 (user["username"],),
             )
 
@@ -323,8 +316,7 @@ def complete_otp(user: dict, code: str):
                     error = "Incorrect code"
             else:
                 conn.execute(
-                    "UPDATE Enrollment_otps SET consumed = TRUE "
-                    "WHERE student_id = %s",
+                    "UPDATE Enrollment_otps SET consumed = TRUE WHERE student_id = %s",
                     (student_id,),
                 )
 
