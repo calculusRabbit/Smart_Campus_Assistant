@@ -1,4 +1,4 @@
-﻿"""Tests for professor name matching in the chatbot."""
+"""Tests for professor name matching in the chatbot."""
 
 from unittest.mock import patch
 

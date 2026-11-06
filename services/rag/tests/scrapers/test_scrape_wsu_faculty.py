@@ -82,3 +82,20 @@ def test_missing_email_is_skipped():
 def test_missing_faculty_section_raises_error():
     with pytest.raises(ValueError, match="Faculty section not found"):
         parse_faculty("<main><h2>Staff</h2></main>")
+
+
+def test_parse_faculty_supports_custom_department():
+    """Faculty records should use the requested WSU department."""
+    html = make_html(
+        faculty_card("Jane Smith", "jane.smith@wichita.edu")
+    )
+
+    result = parse_faculty(
+        html,
+        department="Electrical and Computer Engineering",
+        source_url="https://www.wichita.edu/academics/engineering/ECE/about/faculty-staff.php",
+    )
+
+    assert len(result) == 1
+    assert result[0]["department"] == "Electrical and Computer Engineering"
+    assert result[0]["source_url"].endswith("/ECE/about/faculty-staff.php")

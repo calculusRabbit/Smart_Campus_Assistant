@@ -44,6 +44,12 @@ export default function NavBar({ goTo }) {
             </button>
             <button
               className={styles.menuItem}
+              onClick={() => handleGo("ml-classifier")}
+            >
+              ML Classifier
+            </button>
+            <button
+              className={styles.menuItem}
               onClick={() => handleGo("reviews")}
             >
               Reviews
