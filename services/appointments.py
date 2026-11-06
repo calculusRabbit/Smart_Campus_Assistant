@@ -1,9 +1,10 @@
 from datetime import date, datetime, time
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
+from auth import get_current_user, require_student_owner
 from database import LOCAL_TIMEZONE, get_connection
 
 router = APIRouter(tags=["Appointments"])
@@ -18,8 +19,17 @@ class AppointmentRequest(BaseModel):
 
 
 @router.post("/appointments", status_code=201)
-def create_appointment(request: AppointmentRequest) -> dict[str, Any]:
+def create_appointment(
+    request: AppointmentRequest,
+    user: Annotated[dict[str, Any], Depends(get_current_user)],
+) -> dict[str, Any]:
     """Submit a pending professor appointment request."""
+
+    if request.student_id != user["student_id"]:
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied",
+        )
 
     reason = request.reason.strip()
 
@@ -54,7 +64,7 @@ def create_appointment(request: AppointmentRequest) -> dict[str, Any]:
                 )
 
             cursor.execute(
-                "SELECT 1 FROM instructors WHERE instructor_id = %s",
+                "SELECT 1 FROM instructors WHERE instructor_id = %s FOR UPDATE",
                 (request.instructor_id,),
             )
             if cursor.fetchone() is None:
@@ -127,9 +137,12 @@ def create_appointment(request: AppointmentRequest) -> dict[str, Any]:
     }
 
 
-@router.get("/students/{student_id}/appointments")
+@router.get(
+    "/students/{student_id}/appointments",
+    dependencies=[Depends(require_student_owner)],
+)
 def get_student_appointments(student_id: int) -> dict[str, Any]:
-    """List appointment requests for a student (prototype only)."""
+    # list student's appointment requests
     if student_id <= 0:
         raise HTTPException(status_code=422, detail="Invalid student ID.")
 

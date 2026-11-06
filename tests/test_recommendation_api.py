@@ -1,3 +1,8 @@
+import pytest
+
+pytestmark = pytest.mark.usefixtures("authenticated_student")
+
+
 class FakeRecommender:
     def __init__(self):
         self.asked = []

@@ -1,12 +1,15 @@
 import re
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from auth import get_current_user, require_student_owner
 from database import (
+    get_connection,
     get_course_details,
     get_courses_by_professor,
     get_courses_from_database,
@@ -18,6 +21,8 @@ from database import (
     save_student_interests,
 )
 from models import ChatRequest, RecommendationRequest, StudentInterestsRequest
+from routers.auth import router as auth_router
+from routers.verification import router as verification_router
 from services.appointments import router as appointments_router
 from services.event_recommender import get_recommender, profile_to_text
 from services.interest_expansion import extract_event_interests
@@ -36,6 +41,9 @@ app = FastAPI()
 app.include_router(ml_router)
 app.include_router(appointments_router)
 
+app.include_router(auth_router)
+app.include_router(verification_router)
+
 # let the react app (vite runs on 5173) call this backend
 app.add_middleware(
     CORSMiddleware,
@@ -47,9 +55,48 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
+# handling all RequestValidationError's
+@app.exception_handler(RequestValidationError)
+async def validation_error_handler(_request: Request, exc: RequestValidationError) -> JSONResponse:
+    return JSONResponse(
+        status_code=422,
+        # input not included in response for potential PII data protection
+        # if segmented into different validation errors, input can be returned for certain ones
+        content={
+            "detail": [
+                {
+                    "loc": list(error["loc"]),
+                    "msg": error["msg"],
+                    "type": error["type"],
+                }
+                for error in exc.errors()
+            ]
+        },
+    )
+
+
 @app.get("/")
 def home() -> FileResponse:
     return FileResponse("static/index.html")
+
+
+@app.get("/health")
+def health() -> dict[str, str]:
+    return {"status": "ok"}
+
+
+@app.get("/ready")
+def ready() -> dict[str, str]:
+    try:
+        with get_connection() as connection:
+            connection.execute("SELECT 1").fetchone()
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="database unreachable",
+        ) from exc
+
+    return {"status": "ready"}
 
 
 @app.get("/events")
@@ -97,8 +144,10 @@ def get_professors() -> dict[str, Any]:
 
 
 @app.get("/deadlines")
-def get_deadlines() -> dict[str, Any]:
-    return {"deadlines": get_deadlines_from_database()}
+def get_deadlines(
+    user: Annotated[dict, Depends(get_current_user)],
+) -> dict[str, Any]:
+    return {"deadlines": get_deadlines_from_database(user["student_id"])}
 
 
 def find_course_by_message(message: str) -> dict[str, Any] | None:
@@ -208,8 +257,14 @@ def recommend_events(request: RecommendationRequest) -> dict[str, Any]:
     return {"interests": request.interests, "recommended_events": recommended_events}
 
 
-@app.post("/students/{student_id}/interests")
-def set_student_interests(student_id: int, request: StudentInterestsRequest) -> dict[str, Any]:
+@app.post(
+    "/students/{student_id}/interests",
+    dependencies=[Depends(require_student_owner)],
+)
+def set_student_interests(
+    student_id: int,
+    request: StudentInterestsRequest,
+) -> dict[str, Any]:
     if not request.interests:
         raise HTTPException(status_code=400, detail="At least one student interest is required.")
 
@@ -219,19 +274,25 @@ def set_student_interests(student_id: int, request: StudentInterestsRequest) -> 
 
     return {
         "student_id": student_id,
-        "interests": request.interests,
+        "interests": get_student_interests(student_id),
         "message": "Student interests saved successfully.",
     }
 
 
-@app.get("/students/{student_id}/interests")
+@app.get(
+    "/students/{student_id}/interests",
+    dependencies=[Depends(require_student_owner)],
+)
 def get_saved_student_interests(student_id: int) -> dict[str, Any]:
     interests = get_student_interests(student_id)
 
     return {"student_id": student_id, "interests": interests}
 
 
-@app.get("/students/{student_id}/recommendations/events")
+@app.get(
+    "/students/{student_id}/recommendations/events",
+    dependencies=[Depends(require_student_owner)],
+)
 def get_student_event_recommendations(student_id: int) -> dict[str, Any]:
     student_interests = get_student_interests(student_id)
 
@@ -481,7 +542,10 @@ def get_general_event_response() -> dict[str, Any]:
     }
 
 
-def get_general_chat_response(message: str) -> dict[str, Any] | None:
+def get_general_chat_response(
+    message: str,
+    user: dict,
+) -> dict[str, Any] | None:
     """Handle general campus information and interest recommendations."""
     event_keywords = ["event", "events", "activity", "activities", "career fair", "competition"]
     dining_keywords = ["dining", "food", "eat", "cafeteria", "restaurant", "hungry"]
@@ -550,14 +614,17 @@ def get_general_chat_response(message: str) -> dict[str, Any] | None:
         return {
             "intent": "deadlines",
             "reply": "Here are some important academic deadlines.",
-            "data": get_deadlines_from_database(),
+            "data": get_deadlines_from_database(user["student_id"]),
         }
 
     return None
 
 
 @app.post("/chat")
-def chat(request: ChatRequest) -> dict[str, Any]:
+def chat(
+    request: ChatRequest,
+    user: Annotated[dict, Depends(get_current_user)],
+) -> dict[str, Any]:
     message = request.message.lower().strip()
 
     if not message:
@@ -579,7 +646,7 @@ def chat(request: ChatRequest) -> dict[str, Any]:
     if live_event_response is not None:
         return live_event_response
 
-    general_response = get_general_chat_response(message)
+    general_response = get_general_chat_response(message, user)
     if general_response is not None:
         return general_response
 

@@ -11,8 +11,26 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - type: bind
-        source: ./sca_database_v0.4.0.sql
+        source: ./sca_database_v0.4.1.sql
         target: /docker-entrypoint-initdb.d/001-schema.sql
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./migrations/002_auth_sessions_UP.sql
+        target: /docker-entrypoint-initdb.d/002-auth-sessions.sql
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./migrations/003_verification_UP.sql
+        target: /docker-entrypoint-initdb.d/003-verification.sql
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./migrations/002_professor_appointments_up.sql
+        target: /docker-entrypoint-initdb.d/004-professor-appointments.sql
         read_only: true
         bind:
           create_host_path: false
@@ -34,9 +52,15 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in root .env}
       POSTGRES_HOST: db
       POSTGRES_PORT: "5432"
+      JWT_KEY: ${JWT_KEY:?generate and set in .env}
       HF_TOKEN: ${HF_TOKEN:-}
       RAG_ENABLED: ${RAG_ENABLED:-true}
       FRONTEND_ORIGIN: http://localhost:${FRONTEND_HOST_PORT:-5173}
+      SCORECARD_API_KEY: ${SCORECARD_API_KEY:-}
+      MAILJET_API_KEY: ${MAILJET_API_KEY:-}
+      MAILJET_API_SECRET: ${MAILJET_API_SECRET:-}
+      MAILJET_FROM: ${MAILJET_FROM:-}
+      INSTITUTION_EMAIL_DOMAINS: ${INSTITUTION_EMAIL_DOMAINS:-}
     ports:
       - "127.0.0.1:${API_HOST_PORT:-8000}:8000"
     volumes:
@@ -89,8 +113,8 @@ services:
             user=os.environ["POSTGRES_USER"],
             password=os.environ["POSTGRES_PASSWORD"],
         )
-        sys.argv = ["dummy_data_populator_v0.5.0.py", "--dsn", dsn, "--reset"]
-        runpy.run_path("/app/dummy_data_populator_v0.5.0.py", run_name="__main__")
+        sys.argv = ["dummy_data_populator_v0.6.0.py", "--dsn", dsn, "--reset"]
+        runpy.run_path("/app/dummy_data_populator_v0.6.0.py", run_name="__main__")
     depends_on:
       db:
         condition: service_healthy

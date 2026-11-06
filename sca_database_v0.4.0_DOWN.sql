@@ -1,4 +1,4 @@
--- Migration rollback (down) file for sca_database_v0.4.0.sql
+-- Migration rollback (down) file for sca_database_v0.4.1.sql
 
 BEGIN;
 

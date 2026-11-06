@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { signup } from "../api";
-import shockerImage from "../assets/images/babyboo-pokko.gif";
+import { signup, login } from "../api";
+import Captcha from "../components/Captcha";
+import InstitutionPicker from "../components/InstitutionPicker";
+import shockerImage from "../assets/images/wsu-shocker.png";
 import { interestOptions, MAX_TAG_WORDS } from "../interests";
 import styles from "./Auth.module.css";
 
@@ -10,7 +12,37 @@ export default function SignUp({ goTo }) {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [dob, setDob] = useState("");
+  const [institution, setInstitution] = useState(null);
+  const [captchaKey, setCaptchaKey] = useState(0);
   const [zipcode, setZipcode] = useState("");
+  const [location, setLocation] = useState(null);
+  const [isPrimary, setIsPrimary] = useState(true);
+  const [degreeLevel, setDegreeLevel] = useState("");
+  const [majors, setMajors] = useState("");
+  const [minors, setMinors] = useState("");
+  const splitSubjects = (value) =>
+    value
+      .split(";")
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+  function useLocation() {
+    if (!navigator.geolocation) {
+      setError("Browser location unavailable; enter a zipcode.");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        setLocation({
+          latitude_approx: Number(coords.latitude.toFixed(2)),
+          longitude_approx: Number(coords.longitude.toFixed(2)),
+        });
+        setError("");
+      },
+      () => setError("Location unavailable or denied; enter a zipcode."),
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 },
+    );
+  }
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [aboutText, setAboutText] = useState("");
@@ -27,7 +59,12 @@ export default function SignUp({ goTo }) {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    const captcha = new FormData(e.currentTarget).get("captcha");
 
+    if (!institution || !captcha) {
+      setError("Select an institution and complete the CAPTCHA");
+      return;
+    }
     // GUYS!!! this is not enough btw, backend needs to check all this too
     // NEVER TRUST USER INPUTTTTTTTTT
     if (username.length < 5 || username.length > 30) {
@@ -40,15 +77,25 @@ export default function SignUp({ goTo }) {
       return;
     }
 
-    if (!/^\d{5}(-\d{4})?$/.test(zipcode)) {
-      setError("Zipcode must be 5 digits (e.g. 67260).");
+    if (!location && !/^\d{5}(-\d{4})?$/.test(zipcode)) {
+      setError(
+        "Zipcode must be 5 digits (e.g. 67260), or 9 digits with extension (e.g. 67260-1234).",
+      );
       return;
     }
 
-    // simple age check, just compares birth year to current year
-    const birthYear = new Date(dob).getFullYear();
-    const currentYear = new Date().getFullYear();
-    const age = currentYear - birthYear;
+    const [birthYear, birthMonth, birthDay] = dob.split("-").map(Number);
+
+    const today = new Date();
+    let age = today.getFullYear() - birthYear;
+
+    const birthdayNotReached =
+      today.getMonth() + 1 < birthMonth ||
+      (today.getMonth() + 1 === birthMonth && today.getDate() < birthDay);
+
+    if (birthdayNotReached) {
+      age -= 1;
+    }
 
     if (age < 14) {
       setError("You must be at least 14 years old to sign up.");
@@ -80,13 +127,22 @@ export default function SignUp({ goTo }) {
         last_name: lastName,
         email: email,
         dob: dob,
-        zipcode: zipcode,
+        zipcode: zipcode || null,
+        ...(location ?? {}),
+        is_primary: isPrimary,
+        degree_level: degreeLevel,
+        majors: splitSubjects(majors),
+        minors: splitSubjects(minors),
         password: password,
         interests: interestList,
+        ...institution,
+        captcha,
       });
-      goTo("login");
+      await login(email, password);
+      goTo("verification");
     } catch (err) {
       setError(err.message);
+      setCaptchaKey((value) => value + 1);
     }
   }
 
@@ -123,6 +179,10 @@ export default function SignUp({ goTo }) {
             name="username"
             placeholder="Username"
             value={username}
+            minLength={5}
+            maxLength={30}
+            pattern={String.raw`[A-Za-z0-9_,@!\-]+`}
+            title="5-30 characters. Accepted: letters, digits, _, comma, -, @, !"
             onChange={(e) => setUsername(e.target.value)}
             required
           />
@@ -158,6 +218,40 @@ export default function SignUp({ goTo }) {
             required
           />
 
+          <InstitutionPicker onChange={setInstitution} />
+          <label>
+            <input
+              type="checkbox"
+              checked={!isPrimary}
+              onChange={(event) => setIsPrimary(!event.target.checked)}
+            />
+            This is not my primary institution
+          </label>
+          <label>
+            Degree level
+            <input
+              required
+              maxLength={100}
+              value={degreeLevel}
+              placeholder="Associate, bachelor, master, doctorate, certificate, non-degree"
+              onChange={(event) => setDegreeLevel(event.target.value)}
+            />
+          </label>
+          <label>
+            Current majors (optional; separate multiple with semicolons)
+            <input
+              value={majors}
+              onChange={(event) => setMajors(event.target.value)}
+            />
+          </label>
+          <label>
+            Current minors (optional; separate multiple with semicolons)
+            <input
+              value={minors}
+              onChange={(event) => setMinors(event.target.value)}
+            />
+          </label>
+
           <p className={styles.label}>Date of birth</p>
           <input
             className={styles.input}
@@ -172,17 +266,27 @@ export default function SignUp({ goTo }) {
             className={styles.input}
             type="text"
             name="zipcode"
-            placeholder="Zipcode (67260)"
+            placeholder="Zipcode (e.g. 67260)"
             value={zipcode}
             onChange={(e) => setZipcode(e.target.value)}
-            required
+            required={!location}
           />
+
+          <button type="button" onClick={useLocation}>
+            Use approximate browser location instead
+          </button>
+          {location && (
+            <p>Approximate location captured. Zipcode is optional.</p>
+          )}
 
           <input
             className={styles.input}
             type="password"
             name="password"
+            autoComplete="new-password"
             placeholder="Password"
+            minLength={8}
+            maxLength={128}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
@@ -192,7 +296,10 @@ export default function SignUp({ goTo }) {
             className={styles.input}
             type="password"
             name="confirmPassword"
+            autoComplete="new-password"
             placeholder="Confirm password"
+            minLength={8}
+            maxLength={128}
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             required
@@ -210,6 +317,8 @@ export default function SignUp({ goTo }) {
 
           <p className={styles.label}>Pick some tags too</p>
           <div className={styles.pills}>{interestButtons}</div>
+
+          <Captcha key={captchaKey} action="signup" />
 
           <button type="submit" className={styles.button}>
             Create Account

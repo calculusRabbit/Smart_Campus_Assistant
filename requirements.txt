@@ -4,7 +4,7 @@ uvicorn[standard]
 
 # postgres, password hashing
 psycopg[binary]
-bcrypt
+pwdlib[argon2]
 
 # scraping, HTTP requests
 beautifulsoup4
@@ -16,3 +16,11 @@ python-dotenv
 huggingface_hub
 sentence-transformers
 faiss-cpu
+
+
+# authentication
+PyJWT
+pwdlib[argon2]
+email-validator
+altcha==2.3.0
+python-multipart

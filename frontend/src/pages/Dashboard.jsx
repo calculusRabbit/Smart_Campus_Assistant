@@ -274,22 +274,22 @@ export default function Dashboard({ goTo }) {
     setRecLoading(true);
     setRecMessage("");
 
-    let recs = [];
     try {
-      recs = await getRecommendedEvents(user.id);
-    } catch {
-      setRecMessage("Could not reach the backend.");
-    }
+      const recs = await getRecommendedEvents(user.id);
 
-    setRecEvents(recs);
-    setRecLoaded(true);
-    setRecLoading(false);
-    setTab("recommended");
+      setRecEvents(recs);
+      setRecLoaded(true);
+      setTab("recommended");
 
-    if (recs.length === 0) {
-      setRecMessage(
-        "No matches yet. Write what you like in Profile and try again.",
-      );
+      if (recs.length === 0) {
+        setRecMessage(
+          "No matches yet. Write what you like in Profile and try again.",
+        );
+      }
+    } catch (error) {
+      setRecMessage(error.message);
+    } finally {
+      setRecLoading(false);
     }
   }
 

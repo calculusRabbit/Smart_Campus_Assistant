@@ -3,22 +3,23 @@ import {
   getUser,
   getInterests,
   saveInterests,
-  deleteAccount,
-  logout,
+  //deleteAccount,
+  //logout,
 } from "../api";
 import shockerImage from "../assets/images/babyboo-pokko.gif";
 import { interestOptions, MAX_TAG_WORDS } from "../interests";
 import styles from "./Auth.module.css";
+import DeactivateAccount from "../components/DeactivateAccount";
 
-// reasons in the delete account popup
-const deleteReasons = [
-  "Not useful for me",
-  "The events or info were wrong",
-  "Privacy concerns",
-  "Too many notifications",
-  "Using something else",
-  "Other",
-];
+// // reasons in the delete account popup
+// const deleteReasons = [
+//   "Not useful for me",
+//   "The events or info were wrong",
+//   "Privacy concerns",
+//   "Too many notifications",
+//   "Using something else",
+//   "Other",
+// ];
 
 export default function Profile({ goTo }) {
   const user = getUser();
@@ -30,30 +31,34 @@ export default function Profile({ goTo }) {
   const [aboutText, setAboutText] = useState("");
   const [message, setMessage] = useState("");
 
-  // delete account popup
-  const [showDelete, setShowDelete] = useState(false);
-  const [reason, setReason] = useState("");
-  const [comment, setComment] = useState("");
-  const [deletePassword, setDeletePassword] = useState("");
-  const [deleteError, setDeleteError] = useState("");
-  const [deleting, setDeleting] = useState(false);
+  // // delete account popup
+  // const [showDelete, setShowDelete] = useState(false);
+  // const [reason, setReason] = useState("");
+  // const [comment, setComment] = useState("");
+  // const [deletePassword, setDeletePassword] = useState("");
+  // const [deleteError, setDeleteError] = useState("");
+  // const [deleting, setDeleting] = useState(false);
 
   // load saved stuff when the page opens
   // the text and the tags are saved in the same list so split them again here
   useEffect(() => {
-    getInterests(user.id).then((saved) => {
-      let tags = [];
-      let texts = [];
-      for (let i = 0; i < saved.length; i++) {
-        if (saved[i].split(" ").length > MAX_TAG_WORDS) {
-          texts.push(saved[i]);
-        } else {
-          tags.push(saved[i]);
+    getInterests(user.id)
+      .then((saved) => {
+        let tags = [];
+        let texts = [];
+        for (let i = 0; i < saved.length; i++) {
+          if (saved[i].split(" ").length > MAX_TAG_WORDS) {
+            texts.push(saved[i]);
+          } else {
+            tags.push(saved[i]);
+          }
         }
-      }
-      setInterests(tags);
-      setAboutText(texts.join(" "));
-    });
+        setInterests(tags);
+        setAboutText(texts.join(" "));
+      })
+      .catch((error) => {
+        setMessage(error.message);
+      });
   }, [user.id]);
 
   function toggleInterest(name) {
@@ -99,42 +104,42 @@ export default function Profile({ goTo }) {
     }
   }
 
-  // close the popup and clear what was typed
-  function closeDelete() {
-    setShowDelete(false);
-    setReason("");
-    setComment("");
-    setDeletePassword("");
-    setDeleteError("");
-  }
+  // // close the popup and clear what was typed
+  // function closeDelete() {
+  //   setShowDelete(false);
+  //   setReason("");
+  //   setComment("");
+  //   setDeletePassword("");
+  //   setDeleteError("");
+  // }
 
-  async function handleDelete(e) {
-    e.preventDefault();
-    setDeleting(true);
+  // async function handleDelete(e) {
+  //   e.preventDefault();
+  //   setDeleting(true);
 
-    try {
-      await deleteAccount(user.id, deletePassword, reason, comment);
-      localStorage.setItem(
-        "loginNotice",
-        "Your account is scheduled for deletion. Log in within 30 days to restore it.",
-      );
-      // log out last, the page needs the user until it changes
-      logout();
-      goTo("login");
-    } catch (err) {
-      setDeleteError(err.message);
-      setDeleting(false);
-    }
-  }
+  //   try {
+  //     await deleteAccount(password, captcha);
+  //     localStorage.setItem(
+  //       "loginNotice",
+  //       "Your account is scheduled for deletion. Log in within 30 days to restore it.",
+  //     );
+  //     // log out last, the page needs the user until it changes
+  //     logout();
+  //     goTo("login");
+  //   } catch (err) {
+  //     setDeleteError(err.message);
+  //     setDeleting(false);
+  //   }
+  // }
 
-  let reasonOptions = [];
-  for (let i = 0; i < deleteReasons.length; i++) {
-    reasonOptions.push(
-      <option key={deleteReasons[i]} value={deleteReasons[i]}>
-        {deleteReasons[i]}
-      </option>,
-    );
-  }
+  // let reasonOptions = [];
+  // for (let i = 0; i < deleteReasons.length; i++) {
+  //   reasonOptions.push(
+  //     <option key={deleteReasons[i]} value={deleteReasons[i]}>
+  //       {deleteReasons[i]}
+  //     </option>,
+  //   );
+  // }
 
   // each interest is a button that turns yellow when picked
   let interestButtons = [];
@@ -158,7 +163,7 @@ export default function Profile({ goTo }) {
       <div className={styles.card}>
         <img className={styles.logo} src={shockerImage} alt="WSU Shocker" />
         <h2 className={styles.title}>Profile</h2>
-        <p className={styles.subtitle}>Logged in as {user.email}</p>
+        <p className={styles.subtitle}>Logged in as {user.username}</p>
         {message && <p className={styles.message}>{message}</p>}
 
         <form onSubmit={handleSubmit}>
@@ -201,20 +206,17 @@ export default function Profile({ goTo }) {
           </button>
         </form>
 
+        <button type="button" onClick={() => goTo("verification")}>
+          Student verification
+        </button>
+
+        <DeactivateAccount goTo={goTo} />
+
         <button onClick={() => goTo("dashboard")} className={styles.darkButton}>
           Back to Dashboard
         </button>
 
-        <hr className={styles.line} />
-        <button
-          onClick={() => setShowDelete(true)}
-          className={styles.dangerButton}
-        >
-          Delete account
-        </button>
-      </div>
-
-      {showDelete && (
+        {/* {showDelete && (
         <div className={styles.overlay} onClick={closeDelete}>
           <form
             className={styles.modal}
@@ -272,7 +274,8 @@ export default function Profile({ goTo }) {
             </div>
           </form>
         </div>
-      )}
+      )} */}
+      </div>
     </div>
   );
 }
