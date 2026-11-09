@@ -6,6 +6,7 @@ import {
   useParams,
 } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
+import Appointments from "./pages/Appointments";
 import MLClassifier from "./pages/MLClassifier";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
@@ -20,6 +21,7 @@ const urls = {
   login: "/login",
   signup: "/signup",
   dashboard: "/dashboard",
+  appointments: "/appointments",
   "ml-classifier": "/ml-classifier",
   profile: "/profile",
   reviews: "/reviews",
@@ -84,6 +86,14 @@ function App() {
         element={
           <RequireLogin>
             <Dashboard goTo={goTo} />
+          </RequireLogin>
+        }
+      />
+      <Route
+        path="/appointments"
+        element={
+          <RequireLogin>
+            <Appointments goTo={goTo} />
           </RequireLogin>
         }
       />
