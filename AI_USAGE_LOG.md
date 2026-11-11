@@ -485,6 +485,89 @@ give me an overview of the backend files (i don't work on frontend, but will do 
 ---
 
 
+## Entry 12: Prototype 3 - React Router, each page gets its own URL
+
+* **Date:** November 2026
+* **Team Member:** Vu Nguyen
+* **Tool Used:** Claude (2 free accounts) and ChatGPT (1 free account), free versions run out of tokens fast
+* **Associated Pull Request:** #93
+* **Associated Feature Branch:** `feature/router`
+
+### Exact Prompt Submitted:
+
+> “but what really different the current we have and using different url like that, benefit, or why we should”
+
+> “oh what public, protected and fallback”
+
+> “Clean URLs … what does it mean”
+
+> “yea im trying to make my code whole project look like real production app, real software engineer, are we still on right track?”
+
+### AI Output Summary & Code Generated:
+
+- Explained routing, public/protected/fallback routes and clean URLs vs hash URLs
+- Generated the `react-router-dom` setup in `main.jsx` and `App.jsx`, plus a 404 page
+
+### Human Review, Refactoring & Modifications Made:
+
+- Decided the page URLs myself before any code
+- Kept the pages unchanged, only `App.jsx` and `main.jsx` changed
+- Fixed the merge conflicts with the ML Classifier and Appointments pages
+
+### Verification & Testing Method:
+
+- Clicked through every URL in the browser (refresh, back button, fake URL)
+- Prettier, ESLint and `vite build` pass
+- Checked the other open PRs for conflicts with the router
+
+
+---
+
+
+## Entry 13: Prototype 3 - E2E tests and accessibility scan
+
+* **Date:** November 2026
+* **Team Member:** Vu Nguyen
+* **Tool Used:** Claude (2 free accounts) and ChatGPT (1 free account), free versions run out of tokens fast
+* **Associated Git Issues:** #99, #100, #101, #102
+* **Associated Pull Request:** #105
+* **Associated Feature Branch:** `feature/e2e-tests`
+
+### Exact Prompt Submitted:
+
+> “what even e2e test”
+
+> “here my unit test for back end, does it look good, i just tried test each function for now, not sure is that suppose to be test look like”
+
+> “that enough and test look good automatically and production for those backend test?”
+
+> “is this one easy/simple?” (about the WCAG 2.1 AA accessibility audit)
+
+> “these should we get data from backend?” (about the test login helper)
+
+> “Avout makefile i dont get you”
+
+### AI Output Summary & Code Generated:
+
+- Explained what E2E tests are and what WCAG A/AA means
+- Generated the Playwright tests, the axe-core scan, `docs/QA_TEST_LOG.md` and the `Makefile`
+
+### Human Review, Refactoring & Modifications Made:
+
+- Picked which user flows to test and read each test
+- Made Issues #99 to #102 for the QA log and the bugs
+- Removed the seed step from the `Makefile` because it resets the database
+
+### Verification & Testing Method:
+
+- `npm run e2e`: 18 passed
+- `make test`: 210 backend tests passed, 75% coverage (60% needed)
+- Terminal output is in `docs/QA_TEST_LOG.md`
+
+
+---
+
+
 ## Audit Certification
 I certify as Team Lead that all entries above accurately represent AI usage within this project phase, all prompts have been recorded, and all code has been validated by human review and automated testing.
 

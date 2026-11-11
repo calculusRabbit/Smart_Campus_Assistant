@@ -24,7 +24,7 @@ export function logout() {
 export async function deleteAccount(studentId, password, reason, comment) {
   if (FAKE_AUTH) {
     const user = getUser();
-    localStorage.setItem("deleted_" + user.email, String(Date.now()));
+    localStorage.setItem("deleted_" + user.email, Date.now());
     return { message: "fake delete ok" };
   }
 

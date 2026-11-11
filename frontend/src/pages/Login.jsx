@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { login } from "../api";
-import shockerImage from "../assets/images/babyboo-pokko.gif";
+import shockerImage from "../assets/images/wsu-shocker.png";
 import styles from "./Auth.module.css";
 
 export default function Login({ goTo }) {
