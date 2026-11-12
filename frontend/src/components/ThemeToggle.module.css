@@ -1,0 +1,60 @@
+.wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dots {
+  display: flex;
+  gap: 8px;
+}
+
+/* the dots always show the light mode shade so they look the same in both modes */
+.dot {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+
+.dot:hover {
+  transform: scale(1.15);
+}
+
+.dot[aria-pressed="true"] {
+  border-color: white;
+  box-shadow: 0 0 0 2px #64748b;
+}
+
+.indigo {
+  background-color: #4f46e5;
+}
+
+.teal {
+  background-color: #0f766e;
+}
+
+.purple {
+  background-color: #7e22ce;
+}
+
+.rose {
+  background-color: #be123c;
+}
+
+.modeButton {
+  padding: 7px 14px;
+  font-weight: bold;
+  color: var(--text);
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  cursor: pointer;
+}
+
+.modeButton:hover {
+  border-color: var(--primary);
+}

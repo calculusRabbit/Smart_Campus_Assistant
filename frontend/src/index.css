@@ -1,38 +1,112 @@
+/* colors for the whole app live here, change them here and every page changes */
 :root {
-  --yellow: #f4c430;
-  --yellow-dark: #ddb125;
-  --black: #111111;
-  --gray: #555555;
-  --page-bg: #f4f6f8;
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  /* light mode (default) */
+  --page-bg: #f1f5f9;
+  --surface: #ffffff;
+  --surface-alt: #f8fafc;
+  --text: #1e293b;
+  --text-soft: #475569;
+  --border: #cbd5e1;
+
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --on-primary: #ffffff;
+  --primary-soft: #e0e7ff;
+
+  --danger: #b91c1c;
+  --danger-hover: #991b1b;
+  --danger-soft: #fee2e2;
+  --success: #15803d;
+  --success-soft: #dcfce7;
+  --warning-soft: #fef3c7;
+  --warning-text: #854d0e;
+
+  --nav-bg: #1e1b4b;
+  --nav-text: #ffffff;
+
+  --shadow: 0 4px 14px rgba(15, 23, 42, 0.1);
+  --shadow-hover: 0 8px 22px rgba(15, 23, 42, 0.16);
+  --radius: 16px;
+  --radius-small: 10px;
 
   --sans: system-ui, "Segoe UI", Roboto, sans-serif;
-  --heading: system-ui, "Segoe UI", Roboto, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
+  font: 17px/150% var(--sans);
   color-scheme: light;
-  color: #1f2937;
-  background: var(--bg);
-  font-synthesis: none;
+  color: var(--text);
+  background: var(--page-bg);
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+}
 
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
+/* dark mode, the toggle puts data-theme="dark" on the html tag */
+:root[data-theme="dark"] {
+  --page-bg: #0f172a;
+  --surface: #1e293b;
+  --surface-alt: #172033;
+  --text: #e2e8f0;
+  --text-soft: #a8b5c7;
+  --border: #475569;
+
+  --primary: #a5b4fc;
+  --primary-hover: #c7d2fe;
+  --on-primary: #0f172a;
+  --primary-soft: #312e81;
+
+  --danger: #fca5a5;
+  --danger-hover: #fecaca;
+  --danger-soft: #7f1d1d;
+  --success: #86efac;
+  --success-soft: #14532d;
+  --warning-soft: #713f12;
+  --warning-text: #fde68a;
+
+  --nav-bg: #020617;
+  --nav-text: #f8fafc;
+
+  --shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+  --shadow-hover: 0 8px 22px rgba(0, 0, 0, 0.6);
+
+  color-scheme: dark;
+}
+
+/* the user can also pick another main color, light mode values first */
+:root[data-accent="teal"] {
+  --primary: #0f766e;
+  --primary-hover: #115e59;
+  --primary-soft: #ccfbf1;
+}
+
+:root[data-accent="purple"] {
+  --primary: #7e22ce;
+  --primary-hover: #6b21a8;
+  --primary-soft: #f3e8ff;
+}
+
+:root[data-accent="rose"] {
+  --primary: #be123c;
+  --primary-hover: #9f1239;
+  --primary-soft: #ffe4e6;
+}
+
+/* same colors but for dark mode (these need a bit lighter shades to be readable) */
+:root[data-theme="dark"][data-accent="teal"] {
+  --primary: #5eead4;
+  --primary-hover: #99f6e4;
+  --primary-soft: #134e4a;
+}
+
+:root[data-theme="dark"][data-accent="purple"] {
+  --primary: #d8b4fe;
+  --primary-hover: #e9d5ff;
+  --primary-soft: #581c87;
+}
+
+:root[data-theme="dark"][data-accent="rose"] {
+  --primary: #fda4af;
+  --primary-hover: #fecdd3;
+  --primary-soft: #881337;
 }
 
 * {
@@ -41,54 +115,84 @@
 
 body {
   margin: 0;
+  background: var(--page-bg);
+  color: var(--text);
+  transition:
+    background-color 0.25s,
+    color 0.25s;
 }
 
 #root {
   width: 100%;
   min-height: 100svh;
-  box-sizing: border-box;
 }
 
 h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
+h2,
+h3 {
+  color: var(--text);
+  line-height: 1.2;
 }
 
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
 p {
   margin: 0;
 }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
+a {
+  color: var(--primary);
 }
 
 code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+  font-family: var(--mono);
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--surface-alt);
+}
+
+/* big visible outline when you tab through the page */
+:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* plain buttons and inputs that dont have their own css (verification, ml page etc) */
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+}
+
+/* small fade in when a page loads */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* people who turn off animations in their os should not get them */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+@media (max-width: 1024px) {
+  :root {
+    font-size: 16px;
+  }
 }

@@ -152,11 +152,10 @@ export default function Appointments({ goTo }) {
           className={styles.backButton}
           onClick={() => goTo("dashboard")}
         >
-          ? Back to Dashboard
+          Back to Dashboard
         </button>
 
         <header className={styles.header}>
-          <span className={styles.eyebrow}>Smart Campus Assistant</span>
           <h1>Professor Appointments</h1>
           <p>
             Request a meeting with a professor to discuss coursework, academic
