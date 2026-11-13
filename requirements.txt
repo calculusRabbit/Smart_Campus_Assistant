@@ -19,7 +19,7 @@ faiss-cpu
 
 
 # authentication
-PyJWT
+PyJWT>=2,<3
 pwdlib[argon2]
 email-validator
 altcha==2.3.0
