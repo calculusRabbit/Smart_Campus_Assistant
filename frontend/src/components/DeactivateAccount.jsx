@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { deleteAccount } from "../api";
 import Captcha from "./Captcha";
+import styles from "../pages/Auth.module.css";
 
 export default function DeactivateAccount({ goTo }) {
   const [message, setMessage] = useState("");
@@ -31,6 +32,7 @@ export default function DeactivateAccount({ goTo }) {
 
   return (
     <section>
+      <hr className={styles.line} />
       <h2>Deactivate account</h2>
       <p>
         Your data is retained. Log in with your password to restore the account.
@@ -52,7 +54,9 @@ export default function DeactivateAccount({ goTo }) {
 
         <Captcha key={captchaKey} action="deactivate" />
 
-        <button type="submit">Deactivate account</button>
+        <button type="submit" className={styles.dangerButton}>
+          Deactivate account
+        </button>
       </form>
     </section>
   );

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { login } from "../api";
-import shockerImage from "../assets/images/wsu-shocker.png";
+import ThemeToggle from "../components/ThemeToggle";
+import { APP_NAME } from "../config";
 import styles from "./Auth.module.css";
 
 export default function Login({ goTo }) {
@@ -28,9 +29,11 @@ export default function Login({ goTo }) {
 
   return (
     <div className={styles.page}>
+      <div className={styles.themeCorner}>
+        <ThemeToggle />
+      </div>
       <div className={styles.card}>
-        <img className={styles.logo} src={shockerImage} alt="WSU Shocker" />
-        <h2 className={styles.title}>Smart Campus</h2>
+        <h2 className={styles.title}>{APP_NAME}</h2>
         <p className={styles.subtitle}>Log in to your account</p>
 
         {notice && <p className={styles.message}>{notice}</p>}

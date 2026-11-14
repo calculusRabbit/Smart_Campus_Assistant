@@ -115,57 +115,6 @@ export async function deleteAccount(password, captcha) {
   return { message: "Account deactivated successfully." };
 }
 
-// export function getUser() {
-//   const saved = localStorage.getItem("user");
-//   if (saved === null) {
-//     return null;
-//   }
-//   return JSON.parse(saved);
-// }
-
-// export function logout() {
-//   localStorage.removeItem("user");
-//   localStorage.removeItem("token");
-// }
-
-// export async function login(email, password) {
-//   if (FAKE_AUTH) {
-//     const user = { id: 1, name: email.split("@")[0], email: email };
-//     localStorage.setItem("user", JSON.stringify(user));
-//     localStorage.setItem("token", "fake-token");
-//     return user;
-//   }
-
-//   const res = await fetch(BASE_URL + "/login", {
-//     method: "POST",
-//     headers: { "Content-Type": "application/json" },
-//     body: JSON.stringify({ email, password }),
-//   });
-//   if (!res.ok) {
-//     throw new Error("Wrong email or password.");
-//   }
-//   const data = await res.json();
-//   localStorage.setItem("token", data.access_token);
-//   localStorage.setItem("user", JSON.stringify(data.user));
-//   return data.user;
-// }
-
-// export async function signup(form) {
-//   if (FAKE_AUTH) {
-//     return { message: "fake signup ok" };
-//   }
-
-//   const res = await fetch(BASE_URL + "/signup", {
-//     method: "POST",
-//     headers: { "Content-Type": "application/json" },
-//     body: JSON.stringify(form),
-//   });
-//   if (!res.ok) {
-//     throw new Error("Could not create account.");
-//   }
-//   return res.json();
-// }
-
 export async function getEvents() {
   const res = await fetch(BASE_URL + "/events");
   const data = await res.json();

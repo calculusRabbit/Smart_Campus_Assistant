@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { apiFetch, refreshUser } from "../api";
+import NavBar from "../components/NavBar";
+import styles from "./Auth.module.css";
 
 export default function Verification({ goTo }) {
   const [status, setStatus] = useState(null);
@@ -152,93 +154,107 @@ export default function Verification({ goTo }) {
   }
 
   return (
-    <main style={{ maxWidth: 650, margin: "2rem auto" }}>
-      <h1>Student verification</h1>
+    <>
+      <NavBar goTo={goTo} />
+      <div className={styles.pageInner}>
+        <main className={styles.card + " " + styles.wide}>
+          <h1>Student verification</h1>
 
-      <p>Institution: {status?.school || "Loading..."}</p>
-      <p>Status: {status?.account_status || "Loading..."}</p>
+          <p>Institution: {status?.school || "Loading..."}</p>
+          <p>Status: {status?.account_status || "Loading..."}</p>
 
-      {status?.verification?.admin_message && (
-        <p>{status.verification.admin_message}</p>
-      )}
+          {status?.verification?.admin_message && (
+            <p>{status.verification.admin_message}</p>
+          )}
 
-      {message && <p role="status">{message}</p>}
+          {message && <p role="status">{message}</p>}
 
-      <h2>Institutional SSO via studid.io (optional)</h2>
-      <p>
-        Studid is a third-party service. It opens in a separate tab (please keep
-        this tab open). Email OTP and manual verification are still available
-        below.
-      </p>
-
-      <button type="button" onClick={startStudid} disabled={checkingStudid}>
-        Continue with Studid
-      </button>
-
-      {studidId && (
-        <button type="button" onClick={checkStudid} disabled={checkingStudid}>
-          {checkingStudid ? "Checking..." : "Check institutional login"}
-        </button>
-      )}
-
-      <h2>Verify institution email</h2>
-      <p>
-        Six digits, five-minute validity, three guesses total. Wait one minute
-        before requesting another code.
-      </p>
-
-      <form onSubmit={sendCode}>
-        <label>
-          Institution .edu email
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-          />
-        </label>
-        <button type="submit">Send code</button>
-      </form>
-
-      <form onSubmit={checkCode}>
-        <label>
-          Code
-          <input
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            pattern="[0-9]{6}"
-            maxLength={6}
-            value={code}
-            required
-            onChange={(event) => setCode(event.target.value)}
-          />
-        </label>
-        <button type="submit">Verify code</button>
-      </form>
-
-      <button type="button" onClick={requestManual}>
-        I can't access my .edu email / I didn't receive a code / I want to use
-        manual verification
-      </button>
-
-      {manual && (
-        <section>
-          <h2>Manual enrollment document</h2>
+          <h2>Institutional SSO via studid.io (optional)</h2>
           <p>
-            Submit a current enrolment letter or schedule. Redact unrelated
-            personal information. One PDF, maximum 5 MB.
+            Studid is a third-party service. It opens in a separate tab (please
+            keep this tab open). Email OTP and manual verification are still
+            available below.
           </p>
 
-          <form onSubmit={upload}>
-            <input type="file" name="file" accept="application/pdf" required />
-            <button type="submit">Submit document</button>
-          </form>
-        </section>
-      )}
+          <button type="button" onClick={startStudid} disabled={checkingStudid}>
+            Continue with Studid
+          </button>
 
-      <button type="button" onClick={() => goTo("dashboard")}>
-        Back to dashboard
-      </button>
-    </main>
+          {studidId && (
+            <button
+              type="button"
+              onClick={checkStudid}
+              disabled={checkingStudid}
+            >
+              {checkingStudid ? "Checking..." : "Check institutional login"}
+            </button>
+          )}
+
+          <h2>Verify institution email</h2>
+          <p>
+            Six digits, five-minute validity, three guesses total. Wait one
+            minute before requesting another code.
+          </p>
+
+          <form onSubmit={sendCode}>
+            <label>
+              Institution .edu email
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+              />
+            </label>
+            <button type="submit">Send code</button>
+          </form>
+
+          <form onSubmit={checkCode}>
+            <label>
+              Code
+              <input
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9]{6}"
+                maxLength={6}
+                value={code}
+                required
+                onChange={(event) => setCode(event.target.value)}
+              />
+            </label>
+            <button type="submit">Verify code</button>
+          </form>
+
+          <button type="button" onClick={requestManual}>
+            I can't access my .edu email / I didn't receive a code / I want to
+            use manual verification
+          </button>
+
+          {manual && (
+            <section>
+              <h2>Manual enrollment document</h2>
+              <p>
+                Submit a current enrolment letter or schedule. Redact unrelated
+                personal information. One PDF, maximum 5 MB.
+              </p>
+
+              <form onSubmit={upload}>
+                <input
+                  type="file"
+                  name="file"
+                  accept="application/pdf"
+                  required
+                />
+                <button type="submit">Submit document</button>
+              </form>
+            </section>
+          )}
+
+          <button type="button" onClick={() => goTo("dashboard")}>
+            Back to dashboard
+          </button>
+        </main>
+      </div>
+    </>
   );
 }
