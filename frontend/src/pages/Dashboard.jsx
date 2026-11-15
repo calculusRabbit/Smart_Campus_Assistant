@@ -192,7 +192,7 @@ function ChatPanel() {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                View on ShockerSync
+                View event page
               </a>
             ) : (
               part

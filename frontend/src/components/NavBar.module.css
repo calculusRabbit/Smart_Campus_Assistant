@@ -6,8 +6,8 @@
   flex-wrap: wrap;
   gap: 10px;
   padding: 12px 30px;
-  color: white;
-  background-color: var(--black);
+  color: var(--nav-text);
+  background-color: var(--nav-bg);
 }
 
 .brand {
@@ -15,17 +15,25 @@
   align-items: center;
   font-size: 20px;
   font-weight: bold;
+  gap: 10px;
+  padding: 0;
+  color: inherit;
+  background: none;
+  border: none;
   cursor: pointer;
-}
-
-.logo {
-  height: 40px;
-  margin-right: 10px;
 }
 
 .brandAccent {
   margin-left: 5px;
-  color: var(--yellow);
+  color: var(--primary);
+}
+
+/* dark mode button and the menu sit together on the right */
+.right {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
 }
 
 /* the dropdown sits under the button */
@@ -43,16 +51,17 @@
   min-width: 150px;
   margin-top: 6px;
   padding: 6px;
-  background-color: white;
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  box-shadow: var(--shadow-hover);
 }
 
 .menuItem {
   padding: 8px 12px;
   text-align: left;
   font-weight: bold;
-  color: var(--black);
+  color: var(--text);
   background: none;
   border: none;
   border-radius: 4px;
@@ -60,22 +69,22 @@
 }
 
 .menuItem:hover {
-  background-color: var(--yellow);
+  background-color: var(--primary-soft);
 }
 
 .navButton {
   margin-left: 8px;
   padding: 8px 14px;
   font-weight: bold;
-  color: var(--black);
-  background-color: var(--yellow);
+  color: var(--on-primary);
+  background-color: var(--primary);
   border: none;
-  border-radius: 6px;
+  border-radius: 20px;
   cursor: pointer;
 }
 
 .navButton:hover {
-  background-color: var(--yellow-dark);
+  background-color: var(--primary-hover);
 }
 
 @media (max-width: 850px) {

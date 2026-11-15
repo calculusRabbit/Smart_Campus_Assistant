@@ -8,21 +8,22 @@
 /* welcome banner */
 .banner {
   padding: 25px 30px;
-  color: white;
-  background-color: var(--black);
-  border-top: 3px solid var(--yellow);
+  color: var(--on-primary);
+  background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+  border-radius: 0 0 var(--radius) var(--radius);
 }
 
 .bannerTitle {
   margin: 0;
   font-size: 32px;
-  color: white;
+  color: var(--on-primary);
   text-align: left;
 }
 
 .bannerText {
   margin: 5px 0 0 0;
-  color: #cccccc;
+  color: var(--on-primary);
+  opacity: 0.9;
 }
 
 /* main area, events on the left and classes + chat on the right */
@@ -43,14 +44,15 @@
 }
 
 .hint {
-  color: var(--gray);
+  color: var(--text-soft);
 }
 
 .box {
   padding: 16px;
-  background-color: white;
-  border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background-color: var(--surface);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
 }
 
 .boxTitle {
@@ -61,11 +63,12 @@
 .eventCard {
   margin-bottom: 15px;
   padding: 16px;
-  background-color: white;
-  border-radius: 10px;
-  border-left: 6px solid var(--yellow);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background-color: var(--surface);
+  border-radius: var(--radius);
+  border-left: 6px solid var(--primary);
+  box-shadow: var(--shadow);
   text-align: left;
+  animation: fade-up 0.35s ease-out;
   transition:
     transform 0.15s,
     box-shadow 0.15s;
@@ -73,13 +76,13 @@
 
 .eventCard:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-hover);
 }
 
 .eventCategory {
   margin: 0;
   font-size: 12px;
-  color: gray;
+  color: var(--text-soft);
   text-transform: uppercase;
 }
 
@@ -95,35 +98,35 @@
 .primaryButton {
   padding: 8px 14px;
   font-weight: bold;
-  color: var(--black);
-  background-color: var(--yellow);
+  color: var(--on-primary);
+  background-color: var(--primary);
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-small);
   cursor: pointer;
 }
 
 .primaryButton:hover {
-  background-color: var(--yellow-dark);
+  background-color: var(--primary-hover);
 }
 
 .darkButton {
   padding: 8px 14px;
   font-weight: bold;
-  color: var(--yellow);
-  background-color: var(--black);
-  border: none;
-  border-radius: 6px;
+  color: var(--text);
+  background-color: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
   cursor: pointer;
 }
 
 .darkButton:hover {
-  background-color: #333333;
+  border-color: var(--primary);
 }
 
 /* class list */
 .scheduleItem {
   padding: 6px 0;
-  border-bottom: 1px solid #dddddd;
+  border-bottom: 1px solid var(--border);
   text-align: left;
 }
 
@@ -135,13 +138,13 @@
 .scheduleInfo {
   margin: 0;
   font-size: 13px;
-  color: var(--gray);
+  color: var(--text-soft);
 }
 
 .scheduleProfessor {
   margin: 0;
   font-size: 12px;
-  color: #888888;
+  color: var(--text-soft);
 }
 
 /* chat panel */
@@ -153,8 +156,8 @@
   height: 300px;
   padding: 10px;
   overflow-y: auto;
-  background-color: #fafafa;
-  border-radius: 8px;
+  background-color: var(--surface-alt);
+  border-radius: var(--radius-small);
 }
 
 .message {
@@ -169,14 +172,15 @@
   display: inline-block;
   max-width: 90%;
   padding: 8px 12px;
-  color: var(--black);
-  background-color: #eef1f4;
-  border-radius: 12px;
+  color: var(--text);
+  background-color: var(--primary-soft);
+  border-radius: 16px;
   text-align: left;
 }
 
 .bubbleUser {
-  background-color: var(--yellow);
+  background-color: var(--primary);
+  color: var(--on-primary);
 }
 
 .chatLine {
@@ -193,13 +197,13 @@
 .chatInput {
   flex: 1;
   padding: 10px;
-  border: 1px solid #cccccc;
-  border-radius: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
 }
 
 .chatInput:focus {
   outline: none;
-  border-color: var(--yellow);
+  border-color: var(--primary);
 }
 
 /* tabs above the event list */
@@ -213,24 +217,25 @@
   padding: 10px 20px;
   font-size: 16px;
   font-weight: bold;
-  color: var(--black);
-  background-color: white;
-  border: 2px solid var(--black);
+  color: var(--text);
+  background-color: var(--surface);
+  border: 2px solid var(--border);
   border-radius: 20px;
   cursor: pointer;
 }
 
 .tab:hover {
-  background-color: #eeeeee;
+  background-color: var(--surface-alt);
+  border-color: var(--primary);
 }
 
 .tabActive {
   padding: 10px 20px;
   font-size: 16px;
   font-weight: bold;
-  color: var(--yellow);
-  background-color: var(--black);
-  border: 2px solid var(--black);
+  color: var(--on-primary);
+  background-color: var(--primary);
+  border: 2px solid var(--primary);
   border-radius: 20px;
   cursor: pointer;
 }
@@ -239,10 +244,10 @@
 .savedButton {
   padding: 8px 14px;
   font-weight: bold;
-  color: var(--black);
-  background-color: var(--yellow);
-  border: 2px solid var(--black);
-  border-radius: 6px;
+  color: var(--text);
+  background-color: var(--primary-soft);
+  border: 2px solid var(--primary);
+  border-radius: var(--radius-small);
   cursor: pointer;
 }
 
