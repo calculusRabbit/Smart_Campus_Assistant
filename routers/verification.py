@@ -284,8 +284,7 @@ def review_verification(
     return {"message": "Review saved; uploaded document deleted"}
 
 
-
-#studid.io routes
+# studid.io routes
 
 
 @router.post("/verification/studid")

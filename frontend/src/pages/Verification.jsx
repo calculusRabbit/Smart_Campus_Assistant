@@ -6,9 +6,9 @@ export default function Verification({ goTo }) {
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [message, setMessage] = useState("");
-const [manual, setManual] = useState(false);
-const [studidId, setStudidId] = useState(null);
-const [checkingStudid, setCheckingStudid] = useState(false);
+  const [manual, setManual] = useState(false);
+  const [studidId, setStudidId] = useState(null);
+  const [checkingStudid, setCheckingStudid] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -53,13 +53,14 @@ const [checkingStudid, setCheckingStudid] = useState(false);
     return result;
   }
 
-  
-    async function startStudid() {
+  async function startStudid() {
     // open during the click so browser doesn't block the tab
     const popup = window.open("about:blank", "_blank");
 
     if (!popup) {
-      setMessage("Please allow Studid to open in a new tab for SSO verification");
+      setMessage(
+        "Please allow Studid to open in a new tab for SSO verification",
+      );
       return;
     }
 
@@ -69,9 +70,7 @@ const [checkingStudid, setCheckingStudid] = useState(false);
       const data = await post("/verification/studid", {});
       setStudidId(data.id);
       popup.location.replace(data.url);
-      setMessage(
-        "Sign in in the new tab, then return to this tab.",
-      );
+      setMessage("Sign in in the new tab, then return to this tab.");
     } catch (err) {
       popup.close();
       setMessage(
@@ -85,10 +84,7 @@ const [checkingStudid, setCheckingStudid] = useState(false);
 
     try {
       for (let attempt = 0; attempt < 12; attempt++) {
-        const data = await post(
-          `/verification/studid/${studidId}`,
-          {},
-        );
+        const data = await post(`/verification/studid/${studidId}`, {});
 
         if (!data.pending) {
           setStudidId(null);
@@ -111,9 +107,7 @@ const [checkingStudid, setCheckingStudid] = useState(false);
       setCheckingStudid(false);
     }
   }
-  
-  
-  
+
   async function sendCode(event) {
     event.preventDefault();
 
@@ -170,26 +164,19 @@ const [checkingStudid, setCheckingStudid] = useState(false);
 
       {message && <p role="status">{message}</p>}
 
-            <h2>Institutional SSO via studid.io (optional)</h2>
+      <h2>Institutional SSO via studid.io (optional)</h2>
       <p>
-        Studid is a third-party service. It opens in a separate tab (please keep this tab open).
-        Email OTP and manual verification are still available below.
+        Studid is a third-party service. It opens in a separate tab (please keep
+        this tab open). Email OTP and manual verification are still available
+        below.
       </p>
 
-      <button
-        type="button"
-        onClick={startStudid}
-        disabled={checkingStudid}
-      >
+      <button type="button" onClick={startStudid} disabled={checkingStudid}>
         Continue with Studid
       </button>
 
       {studidId && (
-        <button
-          type="button"
-          onClick={checkStudid}
-          disabled={checkingStudid}
-        >
+        <button type="button" onClick={checkStudid} disabled={checkingStudid}>
           {checkingStudid ? "Checking..." : "Check institutional login"}
         </button>
       )}
@@ -230,7 +217,8 @@ const [checkingStudid, setCheckingStudid] = useState(false);
       </form>
 
       <button type="button" onClick={requestManual}>
-        I can't access my .edu email / I didn't receive a code / I want to use manual verification
+        I can't access my .edu email / I didn't receive a code / I want to use
+        manual verification
       </button>
 
       {manual && (

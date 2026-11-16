@@ -396,8 +396,8 @@ def complete_otp(user: dict[str, Any], code: str) -> dict[str, Any]:
     return result
 
 
-
 # studid.io integration functions
+
 
 def _studid_request(
     method: str,
@@ -431,14 +431,10 @@ def _studid_request(
 
 def _studid_entities(scorecard_id: int | None) -> list[str]:
     try:
-        config = json.loads(
-            os.environ.get("INSTITUTION_STUDID_ENTITIES") or "{}"
-        )
+        config = json.loads(os.environ.get("INSTITUTION_STUDID_ENTITIES") or "{}")
         entities = config.get(str(scorecard_id), [])
 
-        if not isinstance(entities, list) or any(
-            not isinstance(item, str) for item in entities
-        ):
+        if not isinstance(entities, list) or any(not isinstance(item, str) for item in entities):
             raise ValueError("Invalid institution mapping")
 
         return entities
@@ -483,9 +479,7 @@ def start_studid(user: dict[str, Any]) -> dict[str, str]:
         verification_id = UUID(data["id"])
         link = data["link"]
 
-        if not isinstance(link, str) or not link.startswith(
-            "https://studid.io/"
-        ):
+        if not isinstance(link, str) or not link.startswith("https://studid.io/"):
             raise ValueError("Invalid verification link")
     except (KeyError, ValueError, TypeError, AttributeError) as exc:
         raise HTTPException(
@@ -494,11 +488,8 @@ def start_studid(user: dict[str, Any]) -> dict[str, str]:
         ) from exc
 
     with get_connection() as conn:
-        conn.execute(
-            "DELETE FROM Studid_verifications "
-            "WHERE expires_at <= CURRENT_TIMESTAMP"
-        )
-        conn.execute( # in case of conflict, use upsert to overwrite old verification data
+        conn.execute("DELETE FROM Studid_verifications WHERE expires_at <= CURRENT_TIMESTAMP")
+        conn.execute(  # in case of conflict, use upsert to overwrite old verification data
             """
             INSERT INTO Studid_verifications (student_id, verification_id, secret_token)
             VALUES (%s, %s, %s)
@@ -506,22 +497,20 @@ def start_studid(user: dict[str, Any]) -> dict[str, str]:
                 verification_id = EXCLUDED.verification_id,
                 secret_token = EXCLUDED.secret_token,
                 expires_at = EXCLUDED.expires_at
-            """, (user["student_id"], verification_id, secret)
+            """,
+            (user["student_id"], verification_id, secret),
         )
 
-    return {
-        "id": str(verification_id),
-        "url": link
-    }
+    return {"id": str(verification_id), "url": link}
 
 
 def _apply_studid(
     conn: Connection[dict[str, Any]],
     student_id: int,
     school: dict[str, Any],
-    session: dict[str, Any]
+    session: dict[str, Any],
 ) -> dict[str, Any]:
-    
+
     entity_id = session.get("entityId")
 
     if entity_id not in _studid_entities(school["scorecard_id"]):
@@ -532,15 +521,13 @@ def _apply_studid(
         )
 
     identifier = session.get("authIdentifier")
-    if identifier is not None and (
-        not isinstance(identifier, str) or not identifier
-    ):
+    if identifier is not None and (not isinstance(identifier, str) or not identifier):
         raise HTTPException(503, "Invalid Studid identity response")
 
     conn.execute(
         """UPDATE Students SET studid_entity_id = %s, studid_identifier = %s
         WHERE student_id = %s""",
-        (entity_id, identifier, student_id)
+        (entity_id, identifier, student_id),
     )
 
     affiliations = session.get("affiliations", [])
@@ -550,12 +537,12 @@ def _apply_studid(
     roles = {role.lower().split("@", 1)[0] for role in affiliations if isinstance(role, str)}
 
     if roles & {"staff", "faculty", "employee"}:
-        return require_manual(conn, student_id,"Institution returned staff/faculty affiliation")
+        return require_manual(conn, student_id, "Institution returned staff/faculty affiliation")
 
     pending = conn.execute(
         """SELECT 1 FROM Authentications
         WHERE student_id = %s AND status = 'pending' AND method = 'manual' """,
-        (student_id,)
+        (student_id,),
     ).fetchone()
 
     if pending:
@@ -671,12 +658,8 @@ def complete_studid(
 
             school = school_for(conn, user["student_id"])
 
-            return _apply_studid(
-                conn,
-                user["student_id"],
-                school,
-                session
-            )
+            return _apply_studid(conn, user["student_id"], school, session)
     except UniqueViolation as exc:
-        raise HTTPException(409,"This institutional identity is already linked to another account"
+        raise HTTPException(
+            409, "This institutional identity is already linked to another account"
         ) from exc
