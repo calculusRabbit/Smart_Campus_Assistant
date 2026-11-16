@@ -4,11 +4,22 @@ const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 let accessToken = null;
 let currentUser = null;
 
-// remove stale credentials from fake implementation
+// remove stale credentials from fake auth placeholder
 localStorage.removeItem("token");
 localStorage.removeItem("user");
 
 export function getUser() {
+  return currentUser;
+}
+
+export async function refreshUser() {
+  const requestToken = accessToken;
+  const data = await (await apiFetch("/me")).json();
+
+  if (requestToken !== null && accessToken === requestToken) {
+    currentUser = data;
+  }
+
   return currentUser;
 }
 

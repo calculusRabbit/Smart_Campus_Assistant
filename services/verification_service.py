@@ -675,10 +675,8 @@ def complete_studid(
                 conn,
                 user["student_id"],
                 school,
-                session,
+                session
             )
     except UniqueViolation as exc:
-        raise HTTPException(
-            409,
-            "This institutional identity is already linked to another account",
+        raise HTTPException(409,"This institutional identity is already linked to another account"
         ) from exc

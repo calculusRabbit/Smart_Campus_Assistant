@@ -1,4 +1,5 @@
 from typing import Annotated, Any
+from uuid import UUID
 
 from fastapi import (
     APIRouter,
@@ -9,6 +10,7 @@ from fastapi import (
     Response,
     UploadFile,
 )
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
 from auth import get_admin_user, get_current_user
@@ -20,9 +22,11 @@ from services.institution_service import (
 )
 from services.verification_service import (
     complete_otp,
+    complete_studid,
     require_manual,
     school_for,
     start_otp,
+    start_studid,
 )
 
 router = APIRouter(tags=["verification"])
@@ -278,3 +282,36 @@ def review_verification(
         )
 
     return {"message": "Review saved; uploaded document deleted"}
+
+
+
+#studid.io routes
+
+
+@router.post("/verification/studid")
+def studid_start(user: User, response: Response) -> dict[str, str]:
+    response.headers["Cache-Control"] = "no-store"
+    return start_studid(user)
+
+
+@router.post("/verification/studid/{verification_id}")
+def studid_check(
+    verification_id: UUID,
+    user: User,
+    response: Response,
+) -> dict[str, Any]:
+    response.headers["Cache-Control"] = "no-store"
+    return complete_studid(user, verification_id)
+
+
+@router.get(
+    "/verification/studid/return",
+    response_class=HTMLResponse,
+)
+def studid_return() -> HTMLResponse:
+    return HTMLResponse(
+        "<h1>Institutional login returned</h1>"
+        "<p>Close this tab and return to Smart Campus Assistant. "
+        "Choose 'Check institutional login' to finish verification.</p>",
+        headers={"Cache-Control": "no-store"},
+    )

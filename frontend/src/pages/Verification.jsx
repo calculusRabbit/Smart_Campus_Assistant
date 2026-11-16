@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
-import { apiFetch } from "../api";
+import { apiFetch, refreshUser } from "../api";
 
 export default function Verification({ goTo }) {
   const [status, setStatus] = useState(null);
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [message, setMessage] = useState("");
-  const [manual, setManual] = useState(false);
+const [manual, setManual] = useState(false);
+const [studidId, setStudidId] = useState(null);
+const [checkingStudid, setCheckingStudid] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -44,11 +46,74 @@ export default function Verification({ goTo }) {
     if (result.manual_required) setManual(true);
 
     if (result.approved) {
-      // Current getUser() is in-memory; logging in again refreshes it.
-      setMessage("Verified. Log out and log in again to refresh access.");
+      await refreshUser();
+      goTo("dashboard");
+    }
+
+    return result;
+  }
+
+  
+    async function startStudid() {
+    // open during the click so browser doesn't block the tab
+    const popup = window.open("about:blank", "_blank");
+
+    if (!popup) {
+      setMessage("Please allow Studid to open in a new tab for SSO verification");
+      return;
+    }
+
+    popup.opener = null;
+
+    try {
+      const data = await post("/verification/studid", {});
+      setStudidId(data.id);
+      popup.location.replace(data.url);
+      setMessage(
+        "Sign in in the new tab, then return to this tab.",
+      );
+    } catch (err) {
+      popup.close();
+      setMessage(
+        `${err.message}. Email OTP and manual verification remain available.`,
+      );
     }
   }
 
+  async function checkStudid() {
+    setCheckingStudid(true);
+
+    try {
+      for (let attempt = 0; attempt < 12; attempt++) {
+        const data = await post(
+          `/verification/studid/${studidId}`,
+          {},
+        );
+
+        if (!data.pending) {
+          setStudidId(null);
+          return;
+        }
+
+        if (attempt < 11) {
+          await new Promise((resolve) => setTimeout(resolve, 5000));
+        }
+      }
+
+      setMessage(
+        "Login is still pending. Finish SSO and check again, or use email OTP.",
+      );
+    } catch (err) {
+      setMessage(
+        `${err.message}. You can use email OTP or manual verification instead.`,
+      );
+    } finally {
+      setCheckingStudid(false);
+    }
+  }
+  
+  
+  
   async function sendCode(event) {
     event.preventDefault();
 
@@ -105,6 +170,30 @@ export default function Verification({ goTo }) {
 
       {message && <p role="status">{message}</p>}
 
+            <h2>Institutional SSO via studid.io (optional)</h2>
+      <p>
+        Studid is a third-party service. It opens in a separate tab (please keep this tab open).
+        Email OTP and manual verification are still available below.
+      </p>
+
+      <button
+        type="button"
+        onClick={startStudid}
+        disabled={checkingStudid}
+      >
+        Continue with Studid
+      </button>
+
+      {studidId && (
+        <button
+          type="button"
+          onClick={checkStudid}
+          disabled={checkingStudid}
+        >
+          {checkingStudid ? "Checking..." : "Check institutional login"}
+        </button>
+      )}
+
       <h2>Verify institution email</h2>
       <p>
         Six digits, five-minute validity, three guesses total. Wait one minute
@@ -141,15 +230,15 @@ export default function Verification({ goTo }) {
       </form>
 
       <button type="button" onClick={requestManual}>
-        Cannot access email / no code received / use manual verification
+        I can't access my .edu email / I didn't receive a code / I want to use manual verification
       </button>
 
       {manual && (
         <section>
           <h2>Manual enrollment document</h2>
           <p>
-            Submit a current enrollment letter or schedule. Redact unrelated
-            personal information. One PDF, maximum 5 MiB.
+            Submit a current enrolment letter or schedule. Redact unrelated
+            personal information. One PDF, maximum 5 MB.
           </p>
 
           <form onSubmit={upload}>
