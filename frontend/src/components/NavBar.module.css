@@ -92,3 +92,14 @@
     padding: 12px 15px;
   }
 }
+
+/* small phones, put the brand and buttons on separate rows */
+@media (max-width: 520px) {
+  .nav {
+    justify-content: center;
+  }
+
+  .right {
+    justify-content: center;
+  }
+}
