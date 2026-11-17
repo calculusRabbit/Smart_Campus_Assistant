@@ -4,6 +4,7 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 import psycopg
+from psycopg.abc import Params
 from psycopg.rows import dict_row
 
 DATABASE_NAME = os.getenv("POSTGRES_DB", "smart_campus")
@@ -36,19 +37,20 @@ def get_connection() -> psycopg.Connection[dict[str, Any]]:
     )
 
 
-def fetch_all(query: str, params: Any = None) -> list[dict[str, Any]]:
-    connection = get_connection()
-    cursor = connection.cursor()
-    cursor.execute(query, params)
-    rows = cursor.fetchall()
-    connection.close()
-    return rows
+def fetch_all(
+    query: str,
+    params: Params | None = None,
+) -> list[dict[str, Any]]:
+    with get_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(query, params)
+            return cursor.fetchall()
 
 
 def format_clock(text: str) -> str:
     # "13:30" -> "1:30 PM"
     try:
-        return datetime.strptime(text, "%H:%M").strftime("%-I:%M %p")
+        return datetime.strptime(text, "%H:%M").strftime("%I:%M %p").lstrip("0")
     except ValueError:
         return text
 
@@ -101,8 +103,7 @@ def get_events_from_database() -> list[dict[str, Any]]:
             ranges = list(row["event_time"])
             start = ranges[0].lower.astimezone(LOCAL_TIMEZONE)
             event_date = start.strftime("%Y-%m-%d")
-            time_text = start.strftime("%-I:%M %p")
-
+            time_text = start.strftime("%I:%M %p").lstrip("0")
         tags = row["event_tags"] or []
         category = "general"
         if len(tags) > 0:
@@ -124,7 +125,8 @@ def get_events_from_database() -> list[dict[str, Any]]:
 
 def get_student_interests(student_id: int) -> list[str]:
     rows = fetch_all(
-        "SELECT interests FROM students WHERE student_id = %s",
+        "SELECT interests FROM students "
+        "WHERE student_id = %s AND deleted_timestamp IS NULL AND account_status <> 'closed'",
         (student_id,)
     )
     if len(rows) == 0 or rows[0]["interests"] is None:
@@ -133,29 +135,29 @@ def get_student_interests(student_id: int) -> list[str]:
 
 
 def save_student_interests(student_id: int, interests: list[str]) -> bool:
-    cleaned = []
-    for interest in interests:
-        cleaned.append(interest.lower().strip())
+    cleaned = [interest.lower().strip() for interest in interests]
 
-    connection = get_connection()
-    cursor = connection.cursor()
-    cursor.execute(
-        "UPDATE students SET interests = %s WHERE student_id = %s",
-        (cleaned, student_id)
-    )
-    # no row changed means there is no student with this id
-    found = cursor.rowcount > 0
-    connection.commit()
-    connection.close()
-    return found
+    with get_connection() as connection:
+        cursor = connection.execute(
+            """
+            UPDATE students
+            SET interests = %s
+            WHERE student_id = %s
+              AND deleted_timestamp IS NULL
+              AND account_status <> 'closed'
+            """,
+            (cleaned, student_id)
+        )
+        return cursor.rowcount > 0 #were any rows changed?
 
 
-def get_deadlines_from_database() -> list[dict[str, Any]]:
-    rows = fetch_all("""
-        SELECT deadline_id, deadline_action, deadline_datetime, deadline_description
+def get_deadlines_from_database(student_id: int) -> list[dict[str, Any]]:
+    rows = fetch_all("""SELECT deadline_id, deadline_action, deadline_datetime, deadline_description
         FROM deadlines
+        WHERE student_id = %s
         ORDER BY deadline_datetime
-    """)
+        """,(student_id,)
+    )
 
     deadlines = []
     for row in rows:

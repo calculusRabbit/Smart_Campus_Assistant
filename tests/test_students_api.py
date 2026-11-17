@@ -1,3 +1,8 @@
+import pytest
+
+pytestmark = pytest.mark.usefixtures("authenticated_student")
+
+
 def test_save_then_get_interests(client, keep_interests):
     response = client.post(
         "/students/1/interests",
@@ -43,15 +48,15 @@ def test_empty_interests_are_rejected(client):
 def test_unknown_student_is_404(client):
     response = client.post("/students/999999/interests", json={"interests": ["coding"]})
 
-    assert response.status_code == 404
-    assert response.json()["detail"] == "Student not found."
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Access denied"
 
 
-def test_get_interests_of_unknown_student_is_empty(client):
+def test_get_interests_of_another_student_is_forbidden(client):
     response = client.get("/students/999999/interests")
 
-    assert response.status_code == 200
-    assert response.json()["interests"] == []
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Access denied"
 
 
 def test_missing_interests_is_422(client):

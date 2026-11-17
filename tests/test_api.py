@@ -1,6 +1,10 @@
+import pytest
 from fastapi.testclient import TestClient
 
 from main import app
+
+pytestmark = pytest.mark.usefixtures("authenticated_student")
+
 
 client = TestClient(app)
 
@@ -379,16 +383,23 @@ def test_chat_general_events_use_shockersync(monkeypatch):
     """General event questions should list upcoming ShockerSync events."""
     no_matches(monkeypatch)
 
+    from datetime import datetime, timedelta
+    from zoneinfo import ZoneInfo
+
+    # the event is always 3 days from today, so this test never goes out of date
+    now = datetime.now(ZoneInfo("America/Chicago"))
+    event_day = (now + timedelta(days=3)).date().isoformat()
+
     class FakeRecommender:
         events = [
             {
                 "id": "12345",
                 "source": "shockersync",
                 "title": "Campus Welcome Event",
-                "dates": ["2026-11-10"],
-                "start_date": "2026-11-10",
-                "end_date": "2026-11-10",
-                "end_datetime": "2026-11-10T18:00:00-06:00",
+                "dates": [event_day],
+                "start_date": event_day,
+                "end_date": event_day,
+                "end_datetime": event_day + "T18:00:00-06:00",
                 "time": "4:00 PM",
                 "location": "RSC",
                 "description": "Welcome students",
@@ -408,16 +419,6 @@ def test_chat_general_events_use_shockersync(monkeypatch):
     monkeypatch.setattr(
         "main.get_events_from_database",
         reject_database_events,
-    )
-
-    from datetime import date
-
-    from services import event_recommender
-
-    monkeypatch.setattr(
-        event_recommender,
-        "today_in_wichita",
-        lambda: date(2026, 11, 3),
     )
 
     response = client.post(

@@ -15,7 +15,7 @@ export default function Login({ goTo }) {
   }, []);
 
   async function handleSubmit(e) {
-    e.preventDefault();
+    e.preventDefault(); //prevent browser default form submission
 
     try {
       await login(email, password);
@@ -39,7 +39,7 @@ export default function Login({ goTo }) {
         <form onSubmit={handleSubmit}>
           <input
             className={styles.input}
-            autoComplete="off"
+            autoComplete="username"
             autoFocus
             placeholder="Email"
             type="email"
@@ -49,9 +49,12 @@ export default function Login({ goTo }) {
           />
           <input
             className={styles.input}
+            autoComplete="current-password"
             placeholder="Password"
             type="password"
             value={password}
+            minLength={8}
+            maxLength={128}
             onChange={(e) => setPassword(e.target.value)}
             required
           />

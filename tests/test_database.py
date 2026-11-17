@@ -167,7 +167,7 @@ def test_dining_has_opening_and_closing_times(monkeypatch):
 
 
 def test_deadlines_have_a_date_text():
-    deadlines = get_deadlines_from_database()
+    deadlines = get_deadlines_from_database(student_id=1)
 
     # the seed might not have deadlines, then there is nothing to check
     assert isinstance(deadlines, list)

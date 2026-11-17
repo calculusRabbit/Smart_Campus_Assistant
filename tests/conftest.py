@@ -1,6 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
+from auth import get_current_user
 from database import fetch_all, get_connection
 from main import app
 
@@ -61,3 +62,25 @@ def fake_events():
             "event_tags": ["music"],
         },
     ]
+
+
+@pytest.fixture
+def student_user():
+    return {
+        "student_id": 1,
+        "username": "teststudent0",
+        "account_status": "open",
+        "first_name": "Test",
+        "last_names": "Student",
+    }
+
+
+@pytest.fixture
+def authenticated_student(student_user):
+    previous = app.dependency_overrides.copy()
+    app.dependency_overrides[get_current_user] = lambda: student_user
+    try:
+        yield student_user
+    finally:
+        app.dependency_overrides.clear()
+        app.dependency_overrides.update(previous)

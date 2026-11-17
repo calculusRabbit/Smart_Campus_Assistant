@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import {
   Navigate,
   Route,
@@ -15,6 +16,7 @@ import Reviews from "./pages/Reviews";
 import ProfessorPage from "./pages/ProfessorPage";
 import NotFound from "./pages/NotFound";
 import { getUser } from "./api";
+import Verification from "./pages/Verification";
 
 // the pages still say goTo("profile"), this is the url for each page name
 const urls = {
@@ -25,12 +27,27 @@ const urls = {
   "ml-classifier": "/ml-classifier",
   profile: "/profile",
   reviews: "/reviews",
+  verification: "/verification",
 };
 
 // pages that need a logged in user
 function RequireLogin({ children }) {
   if (getUser() === null) {
     return <Navigate to="/login" replace />;
+  }
+  return children;
+}
+
+// reviews are only for verified students (account_status is "open")
+function RequireVerified({ goTo, children }) {
+  const user = getUser();
+  if (user.account_status !== "open") {
+    return (
+      <main>
+        <p>Student verification is required to access reviews.</p>
+        <button onClick={() => goTo("dashboard")}>Back to dashboard</button>
+      </main>
+    );
   }
   return children;
 }
@@ -55,6 +72,17 @@ function App() {
   function goTo(page) {
     navigate(urls[page]);
   }
+
+  useEffect(() => {
+    function handleAuthExpired() {
+      navigate("/login");
+    }
+    //install listener, then unmount and uninstall
+    window.addEventListener("auth-expired", handleAuthExpired);
+    return () => {
+      window.removeEventListener("auth-expired", handleAuthExpired);
+    };
+  }, [navigate]);
 
   function openProfessor(id) {
     navigate("/professors/" + id);
@@ -114,10 +142,20 @@ function App() {
         }
       />
       <Route
+        path="/verification"
+        element={
+          <RequireLogin>
+            <Verification goTo={goTo} />
+          </RequireLogin>
+        }
+      />
+      <Route
         path="/reviews"
         element={
           <RequireLogin>
-            <Reviews goTo={goTo} openProfessor={openProfessor} />
+            <RequireVerified goTo={goTo}>
+              <Reviews goTo={goTo} openProfessor={openProfessor} />
+            </RequireVerified>
           </RequireLogin>
         }
       />
@@ -125,7 +163,9 @@ function App() {
         path="/professors/:professorId"
         element={
           <RequireLogin>
-            <ProfessorRoute goTo={goTo} />
+            <RequireVerified goTo={goTo}>
+              <ProfessorRoute goTo={goTo} />
+            </RequireVerified>
           </RequireLogin>
         }
       />
