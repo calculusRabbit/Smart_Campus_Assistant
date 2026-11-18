@@ -1,8 +1,6 @@
 # enrollment email and manual document verification
-
 import hashlib
 import hmac
-import json
 import os
 import re
 import secrets
@@ -12,6 +10,7 @@ from uuid import UUID
 
 import httpx
 from fastapi import HTTPException
+from institution_identity import matches_domain, require_institution_email
 from psycopg import Connection
 from psycopg.errors import UniqueViolation
 
@@ -180,22 +179,22 @@ def start_otp(user: dict[str, Any], email: str) -> dict[str, Any]:
             (user["username"],),
         )
 
-        school_for(conn, student_id)
+        school = school_for(conn, student_id)
 
-        # This mapping is administrator-controlled, not browser-supplied.
-        domain = email.rsplit("@", 1)[1]
-        if not domain.endswith(".edu"):
-            raise HTTPException(
-                status_code=400,
-                detail="Please use a .edu email address.",
-            )
+        identity = conn.execute(
+            """
+            SELECT email_domains FROM Institution_identity
+            WHERE school_id = %s
+            """,
+            (school["school_id"],),
+        ).fetchone()
+
+        email = require_institution_email(email, identity["email_domains"] if identity else [])
 
         pending = conn.execute(
             """
             SELECT 1 FROM Authentications
-            WHERE student_id = %s
-              AND status = 'pending'
-              AND method = 'manual'
+            WHERE student_id = %s AND status = 'pending' AND method = 'manual'
             """,
             (student_id,),
         ).fetchone()
@@ -282,7 +281,26 @@ def _complete_verified_otp(
     if reasons:
         return require_manual(conn, student_id, ", ".join(reasons))
 
-    # A previous staff/manual flag cannot be bypassed with email OTP.
+    
+    domain = email.rsplit("@", 1)[1]
+
+    student_mailbox = matches_domain(
+        domain,
+        identity["student_only_domains"],
+        allow_subdomains=False,
+    )
+
+    if not student_mailbox and not trusted_student_sso:
+        return {
+            "approved": False,
+            "manual_available": True,
+            "message": (
+                "Your email address is confirmed, but we couldn't confirm "
+                "student enrollment. Please submit an enrollment document."
+            ),
+        }
+
+    # a previous staff/manual flag can't be bypassed with email OTP
     pending = conn.execute(
         """
         SELECT 1 FROM Authentications
@@ -429,21 +447,6 @@ def _studid_request(
         ) from exc
 
 
-def _studid_entities(scorecard_id: int | None) -> list[str]:
-    try:
-        config = json.loads(os.environ.get("INSTITUTION_STUDID_ENTITIES") or "{}")
-        entities = config.get(str(scorecard_id), [])
-
-        if not isinstance(entities, list) or any(not isinstance(item, str) for item in entities):
-            raise ValueError("Invalid institution mapping")
-
-        return entities
-    except (ValueError, AttributeError) as exc:
-        raise HTTPException(
-            503,
-            "Studid institution mapping is not configured correctly",
-        ) from exc
-
 
 def start_studid(user: dict[str, Any]) -> dict[str, str]:
     callback = os.environ.get("STUDID_REDIRECT_URL", "")
@@ -454,13 +457,7 @@ def start_studid(user: dict[str, Any]) -> dict[str, str]:
         )
 
     with get_connection() as conn:
-        school = school_for(conn, user["student_id"])
-
-    if not _studid_entities(school["scorecard_id"]):
-        raise HTTPException(
-            503,
-            "This institution isn't configured in Studid. Please use email OTP instead",
-        )
+        _school = school_for(conn, user["student_id"])
 
     secret = secrets.token_urlsafe(32)
 
@@ -512,13 +509,6 @@ def _apply_studid(
 ) -> dict[str, Any]:
 
     entity_id = session.get("entityId")
-
-    if entity_id not in _studid_entities(school["scorecard_id"]):
-        return require_manual(
-            conn,
-            student_id,
-            "SSO institution does not match selected institution",
-        )
 
     identifier = session.get("authIdentifier")
     if identifier is not None and (not isinstance(identifier, str) or not identifier):
