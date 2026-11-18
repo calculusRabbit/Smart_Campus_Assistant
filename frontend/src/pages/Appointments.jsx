@@ -1,146 +1,99 @@
 import { useEffect, useState } from "react";
-import { createAppointment, getStudentAppointments, getUser } from "../api";
+import { apiFetch } from "../api";
 import NavBar from "../components/NavBar";
 import styles from "./Appointments.module.css";
 
+// Resource configuration is separate from authentication.
+// Add other universities only after verifying their official URLs.
+const universityResources = {
+  wsu: {
+    name: "Wichita State University",
+    scheduling: {
+      title: "WSU Navigate360",
+      description:
+        "Schedule supported academic advising, tutoring, and student support appointments through WSU.",
+      url: "https://wichita.campus.eab.com/",
+    },
+    directory: {
+      title: "WSU Faculty and Staff Directory",
+      description:
+        "Find a professor's official contact information and ask about office hours or individual appointment scheduling.",
+      url: "https://www.wichita.edu/directories/",
+    },
+  },
+};
+
 export default function Appointments({ goTo }) {
-  const user = getUser();
+  // WSU is the only configured university for this initial release.
+  // University selection will be integrated separately after authentication
+  // exposes a verified institution identifier.
+  const university = universityResources.wsu;
 
   const [professors, setProfessors] = useState([]);
-  const [professorId, setProfessorId] = useState("");
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
-  const [reason, setReason] = useState("");
-
-  const [loading, setLoading] = useState(false);
-  const [loadingProfessors, setLoadingProfessors] = useState(true);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [confirmation, setConfirmation] = useState(null);
-  const [appointments, setAppointments] = useState([]);
-  const [historyLoading, setHistoryLoading] = useState(true);
-  const [historyError, setHistoryError] = useState("");
-
-  // Local date avoids UTC date differences near midnight.
-  function todayString() {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, "0");
-    const day = String(today.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  }
 
   useEffect(() => {
+    const controller = new AbortController();
+
     async function loadProfessors() {
       try {
-        const response = await fetch("http://localhost:8000/professors");
+        const response = await apiFetch("/professors", {
+          signal: controller.signal,
+        });
+        const data = await response.json();
 
-        if (!response.ok) {
-          throw new Error("Could not load professors.");
+        if (!Array.isArray(data.professors)) {
+          throw new Error("Invalid professor response.");
         }
 
-        const data = await response.json();
-        setProfessors(data.professors || []);
+        const wsuProfessors = data.professors
+          .filter((professor) => {
+            const email = String(professor.professor_email || "")
+              .trim()
+              .toLowerCase();
+            const name = String(professor.professor_name || "").toLowerCase();
+            const department = String(
+              professor.professor_department || "",
+            ).toLowerCase();
+
+            return (
+              name.trim().length > 0 &&
+              email.endsWith("@wichita.edu") &&
+              email.includes("@") &&
+              !name.includes("test") &&
+              !department.includes("test")
+            );
+          })
+          .sort((a, b) => a.professor_name.localeCompare(b.professor_name));
+
+        if (!controller.signal.aborted) {
+          setProfessors(wsuProfessors);
+        }
       } catch (err) {
-        setError(err.message);
+        if (!controller.signal.aborted) {
+          setError("Could not load professors: " + err.message);
+        }
       } finally {
-        setLoadingProfessors(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       }
     }
 
     loadProfessors();
+
+    return () => controller.abort();
   }, []);
 
-  useEffect(() => {
-    if (!user?.id) {
-      setHistoryLoading(false);
-      return;
-    }
+  const filteredProfessors = professors.filter((professor) => {
+    const text = [professor.professor_name, professor.professor_department]
+      .join(" ")
+      .toLowerCase();
 
-    let active = true;
-
-    getStudentAppointments(user.id)
-      .then((items) => {
-        if (active) setAppointments(items);
-      })
-      .catch(() => {
-        if (active) {
-          setHistoryError("Could not load appointment history.");
-        }
-      })
-      .finally(() => {
-        if (active) setHistoryLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [user?.id]);
-
-  async function handleSubmit(event) {
-    event.preventDefault();
-    setError("");
-    setConfirmation(null);
-
-    if (!user) {
-      setError("Please log in to request an appointment.");
-      return;
-    }
-
-    if (!professorId || !date || !time || !reason.trim()) {
-      setError("Please complete all appointment fields.");
-      return;
-    }
-
-    if (new Date(`${date}T${time}:00`) <= new Date()) {
-      setError("Please choose a future date and time.");
-      return;
-    }
-
-    if (reason.trim().length > 300) {
-      setError("The reason must be 300 characters or fewer.");
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const result = await createAppointment({
-        student_id: user.id,
-        instructor_id: Number(professorId),
-        appointment_date: date,
-        appointment_time: time,
-        reason: reason.trim(),
-      });
-
-      const professor = professors.find(
-        (item) => item.professor_id === Number(professorId),
-      );
-
-      setConfirmation({
-        ...result,
-        professor_name: professor?.professor_name || "Professor",
-      });
-
-      setHistoryError("");
-      try {
-        const updated = await getStudentAppointments(user.id);
-        setAppointments(updated);
-      } catch {
-        setHistoryError(
-          "Request saved, but appointment history could not refresh.",
-        );
-      }
-
-      setProfessorId("");
-      setDate("");
-      setTime("");
-      setReason("");
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
+    return text.includes(search.trim().toLowerCase());
+  });
 
   return (
     <div className={styles.page}>
@@ -152,187 +105,121 @@ export default function Appointments({ goTo }) {
           className={styles.backButton}
           onClick={() => goTo("dashboard")}
         >
-          ? Back to Dashboard
+          Back to Dashboard
         </button>
 
         <header className={styles.header}>
-          <span className={styles.eyebrow}>Smart Campus Assistant</span>
-          <h1>Professor Appointments</h1>
+          <span className={styles.eyebrow}>
+            Smart Campus Assistant / Resources
+          </span>
+          <h1>Appointment Resources</h1>
           <p>
-            Request a meeting with a professor to discuss coursework, academic
-            questions, or other university matters.
+            Find official university resources for scheduling appointments and
+            contacting professors.
           </p>
         </header>
 
         <section className={styles.card}>
-          <h2>Request an Appointment</h2>
+          <h2>{university.name}</h2>
           <p className={styles.subtitle}>
-            Select your preferred meeting date and time. All requests are
-            subject to professor approval.
+            Choose the official service that matches your appointment needs.
           </p>
 
-          {error && (
-            <div className={styles.error} role="alert">
-              {error}
-            </div>
-          )}
+          <h3>{university.scheduling.title}</h3>
+          <p>{university.scheduling.description}</p>
 
-          {confirmation && (
-            <div className={styles.success} role="status">
-              <h3>Appointment Request Submitted!</h3>
-              <p>
-                Your request to meet with{" "}
-                <strong>{confirmation.professor_name}</strong> was saved.
-              </p>
-              <p>
-                <strong>Date:</strong> {confirmation.appointment_date}
-              </p>
-              <p>
-                <strong>Time:</strong> {confirmation.appointment_time}
-              </p>
-              <p>
-                <strong>Request ID:</strong> {confirmation.appointment_id}
-              </p>
-              <span className={styles.pending}>Pending Approval</span>
-            </div>
-          )}
+          <a
+            className={styles.submitButton}
+            style={{ display: "inline-block", textDecoration: "none" }}
+            href={university.scheduling.url}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Open WSU Navigate360
+          </a>
 
-          <form onSubmit={handleSubmit} className={styles.form}>
-            <label htmlFor="appointment-professor">Select Professor</label>
-            <select
-              id="appointment-professor"
-              value={professorId}
-              onChange={(event) => setProfessorId(event.target.value)}
-              disabled={loading || loadingProfessors}
-              required
-            >
-              <option value="">
-                {loadingProfessors
-                  ? "Loading professors..."
-                  : "Choose a professor"}
-              </option>
+          <hr style={{ margin: "28px 0", borderColor: "#e8e8ef" }} />
 
-              {professors.map((professor) => (
-                <option
-                  key={professor.professor_id}
-                  value={professor.professor_id}
-                >
-                  {professor.professor_name}
-                  {professor.professor_department
-                    ? ` ? ${professor.professor_department}`
-                    : ""}
-                </option>
-              ))}
-            </select>
+          <h3>{university.directory.title}</h3>
+          <p>{university.directory.description}</p>
 
-            <div className={styles.dateTimeRow}>
-              <div className={styles.field}>
-                <label htmlFor="appointment-date">Appointment Date</label>
-                <input
-                  id="appointment-date"
-                  type="date"
-                  min={todayString()}
-                  value={date}
-                  onChange={(event) => setDate(event.target.value)}
-                  required
-                  disabled={loading}
-                />
-              </div>
+          <a
+            href={university.directory.url}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Find a Professor in the WSU Directory
+          </a>
 
-              <div className={styles.field}>
-                <label htmlFor="appointment-time">Preferred Time</label>
-                <input
-                  id="appointment-time"
-                  type="time"
-                  value={time}
-                  onChange={(event) => setTime(event.target.value)}
-                  required
-                  disabled={loading}
-                />
-              </div>
-            </div>
+          <section className={styles.professorSection}>
+            <h3>Find a Professor</h3>
+            <p>
+              Search the currently configured WSU faculty records. Contact your
+              professor to ask about office hours or their preferred scheduling
+              method.
+            </p>
 
-            <label htmlFor="appointment-reason">Reason for Appointment</label>
-            <textarea
-              id="appointment-reason"
-              rows="5"
-              maxLength={300}
-              placeholder="Example: I would like to discuss my course schedule and academic progress."
-              value={reason}
-              onChange={(event) => setReason(event.target.value)}
-              required
-              disabled={loading}
+            <label htmlFor="resource-professor-search">
+              Search by professor name or department
+            </label>
+            <input
+              id="resource-professor-search"
+              className={styles.professorSearch}
+              type="search"
+              placeholder="Search WSU professors..."
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
             />
 
-            <p className={styles.characterCount}>
-              {reason.length}/300 characters
-            </p>
+            {loading && <p role="status">Loading professors...</p>}
 
-            <button
-              className={styles.submitButton}
-              type="submit"
-              disabled={loading || loadingProfessors || professors.length === 0}
-            >
-              {loading ? "Submitting..." : "Submit Appointment Request"}
-            </button>
-          </form>
+            {error && (
+              <p className={styles.error} role="alert">
+                {error}
+              </p>
+            )}
+
+            {!loading && !error && filteredProfessors.length === 0 && (
+              <p>No matching professors found.</p>
+            )}
+
+            {!loading && !error && (
+              <div className={styles.professorList}>
+                {filteredProfessors.map((professor) => (
+                  <article
+                    className={styles.professorCard}
+                    key={professor.professor_id}
+                  >
+                    <div>
+                      <h4>{professor.professor_name}</h4>
+                      <p>{professor.professor_department}</p>
+                    </div>
+
+                    <a
+                      href={
+                        "mailto:" +
+                        encodeURIComponent(professor.professor_email)
+                      }
+                      className={styles.contactLink}
+                    >
+                      Email Professor
+                    </a>
+                  </article>
+                ))}
+              </div>
+            )}
+
+            <p className={styles.notice}>
+              Professor-specific booking links have not been verified. Email
+              contact does not automatically schedule an appointment.
+            </p>
+          </section>
 
           <p className={styles.notice}>
-            This form submits an appointment request only. It does not
-            automatically reserve a professor's time or send a notification.
+            Smart Campus Assistant does not book or confirm appointments.
+            Complete your scheduling directly through the university's official
+            service. Individual professors may use different scheduling methods.
           </p>
-        </section>
-
-        <section className={styles.card} style={{ marginTop: "28px" }}>
-          <h2>My Appointments</h2>
-          <p className={styles.subtitle}>
-            Review your submitted appointment requests and their current status.
-          </p>
-
-          {historyLoading && <p>Loading your appointments...</p>}
-
-          {historyError && (
-            <p className={styles.error} role="alert">
-              {historyError}
-            </p>
-          )}
-
-          {!historyLoading && appointments.length === 0 && (
-            <p className={styles.subtitle}>
-              You have not submitted any appointment requests yet.
-            </p>
-          )}
-
-          {!historyLoading &&
-            appointments.map((appointment) => (
-              <article
-                key={appointment.appointment_id}
-                className={styles.historyCard}
-              >
-                <div className={styles.historyHeading}>
-                  <h3>{appointment.professor_name}</h3>
-                  <span className={styles.pending}>
-                    {appointment.status === "pending"
-                      ? "Pending Approval"
-                      : appointment.status}
-                  </span>
-                </div>
-
-                <p>
-                  <strong>Date:</strong> {appointment.appointment_date}
-                </p>
-                <p>
-                  <strong>Time:</strong>{" "}
-                  {appointment.appointment_time.slice(0, 5)}
-                </p>
-                <p>
-                  <strong>Reason:</strong> {appointment.reason}
-                </p>
-                <p className={styles.historyId}>
-                  Request #{appointment.appointment_id}
-                </p>
-              </article>
-            ))}
         </section>
       </main>
     </div>

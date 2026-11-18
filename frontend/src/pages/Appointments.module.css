@@ -278,3 +278,67 @@
     flex-direction: column;
   }
 }
+
+/* Professor appointment resource directory */
+.professorSection {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #e8e8ef;
+}
+
+.professorSection label {
+  display: block;
+  margin: 18px 0 8px;
+  font-weight: 600;
+}
+
+.professorSearch {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 13px 15px;
+  border: 1px solid #d0d5dd;
+  border-radius: 10px;
+  font: inherit;
+}
+
+.professorSearch:focus-visible,
+.contactLink:focus-visible {
+  outline: 3px solid #7768c2;
+  outline-offset: 2px;
+}
+
+.professorList {
+  display: grid;
+  gap: 12px;
+  margin-top: 20px;
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+.professorCard {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #e4e7ec;
+  border-radius: 12px;
+  background: #fafbfe;
+}
+
+.professorCard h4 {
+  margin: 0 0 6px;
+}
+
+.professorCard p {
+  margin: 0;
+  color: #667085;
+  font-size: 14px;
+}
+
+.contactLink {
+  color: #554399;
+  font-weight: 600;
+  text-decoration: underline;
+}
