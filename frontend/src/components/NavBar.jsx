@@ -65,7 +65,7 @@ export default function NavBar({ goTo }) {
               className={styles.menuItem}
               onClick={() => handleGo("appointments")}
             >
-              Appointments
+              Resources
             </button>
             <button
               className={styles.menuItem}

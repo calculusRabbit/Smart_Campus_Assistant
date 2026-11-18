@@ -23,7 +23,7 @@ const urls = {
   login: "/login",
   signup: "/signup",
   dashboard: "/dashboard",
-  appointments: "/appointments",
+  appointments: "/resources",
   "ml-classifier": "/ml-classifier",
   profile: "/profile",
   reviews: "/reviews",
@@ -119,6 +119,10 @@ function App() {
       />
       <Route
         path="/appointments"
+        element={<Navigate to="/resources" replace />}
+      />
+      <Route
+        path="/resources"
         element={
           <RequireLogin>
             <Appointments goTo={goTo} />
