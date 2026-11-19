@@ -32,8 +32,8 @@
   gap: 25px;
   padding: 25px;
   margin-bottom: 20px;
-  color: var(--on-primary);
-  background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+  color: var(--hero-text);
+  background: var(--hero-bg);
   border-radius: var(--radius);
   text-align: left;
 }
@@ -46,23 +46,23 @@
 .bigNumber {
   font-size: 56px;
   font-weight: bold;
-  color: var(--on-primary);
+  color: var(--hero-text);
 }
 
 .outOf {
   font-size: 20px;
-  color: var(--on-primary);
+  color: var(--hero-text);
 }
 
 .name {
   margin: 0;
   font-size: 30px;
-  color: var(--on-primary);
+  color: var(--hero-text);
 }
 
 .meta {
   margin: 4px 0 0 0;
-  color: var(--on-primary);
+  color: var(--hero-text);
 }
 
 .toolbar {
@@ -173,7 +173,7 @@
   margin-bottom: 15px;
   background-color: var(--surface);
   border-radius: var(--radius);
-  border-left: 6px solid var(--primary);
+  border: 1px solid var(--border);
   box-shadow: var(--shadow);
   text-align: left;
   animation: fade-up 0.35s ease-out;

@@ -8,6 +8,9 @@
   padding: 12px 30px;
   color: var(--nav-text);
   background-color: var(--nav-bg);
+  position: sticky;
+  top: 0;
+  z-index: 20;
 }
 
 .brand {
@@ -25,7 +28,7 @@
 
 .brandAccent {
   margin-left: 5px;
-  color: var(--primary);
+  color: var(--nav-accent);
 }
 
 /* dark mode button and the menu sit together on the right */

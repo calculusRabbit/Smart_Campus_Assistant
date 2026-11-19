@@ -7,11 +7,16 @@ import {
   sendChat,
 } from "../api";
 import NavBar from "../components/NavBar";
+import WeekSchedule from "../components/WeekSchedule";
 import styles from "./Dashboard.module.css";
 
-function EventCard({ event, saved, onToggleSave }) {
+// index is only used to make the cards fade in one after another
+function EventCard({ event, saved, onToggleSave, index }) {
   return (
-    <div className={styles.eventCard}>
+    <div
+      className={styles.eventCard}
+      style={{ "--delay": Math.min(index, 8) * 60 + "ms" }}
+    >
       <p className={styles.eventCategory}>{event.event_category}</p>
       <h3 className={styles.eventName}>{event.event_name}</h3>
       <p>
@@ -25,8 +30,8 @@ function EventCard({ event, saved, onToggleSave }) {
 
       {/* no score from the backend yet */}
       {event.score !== undefined && (
-        <p style={{ fontWeight: "bold", color: getScoreColor(event.score) }}>
-          Match: {event.score}%
+        <p className={event.score >= 50 ? styles.matchGood : styles.matchOk}>
+          {getScoreLabel(event.score)}: {event.score}%
         </p>
       )}
 
@@ -43,26 +48,23 @@ function EventCard({ event, saved, onToggleSave }) {
   );
 }
 
-function ScheduleCard({ course }) {
-  return (
-    <div className={styles.scheduleItem}>
-      <p className={styles.scheduleName}>
-        {course.code} - {course.name}
-      </p>
-      <p className={styles.scheduleInfo}>
-        {course.time} | {course.room}
-      </p>
-      <p className={styles.scheduleProfessor}>{course.professor}</p>
-    </div>
-  );
+// words next to the number so it is not only a color (color blind people)
+function getScoreLabel(score) {
+  if (score >= 50) {
+    return "Strong match";
+  } else {
+    return "Possible match";
+  }
 }
 
-function getScoreColor(score) {
-  if (score >= 50) {
-    return "green";
-  } else {
-    return "orange";
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) {
+    return "Good morning";
+  } else if (hour < 18) {
+    return "Good afternoon";
   }
+  return "Good evening";
 }
 
 // make lines of text from the data /chat sends back
@@ -328,14 +330,8 @@ export default function Dashboard({ goTo }) {
         event={shownEvents[i]}
         saved={savedIds.includes(shownEvents[i].event_id)}
         onToggleSave={toggleSave}
+        index={i}
       />,
-    );
-  }
-
-  let scheduleCards = [];
-  for (let i = 0; i < schedules.length; i++) {
-    scheduleCards.push(
-      <ScheduleCard key={schedules[i].id} course={schedules[i]} />,
     );
   }
 
@@ -344,13 +340,31 @@ export default function Dashboard({ goTo }) {
       <NavBar goTo={goTo} />
 
       <div className={styles.banner}>
-        <h1 className={styles.bannerTitle}>Hey, {user.name}</h1>
+        <h1 className={styles.bannerTitle}>
+          {getGreeting()}, {user.name}
+        </h1>
         <p className={styles.bannerText}>
           Here is whats going on around campus today.
         </p>
       </div>
 
       <div className={styles.content}>
+        {/* the little number cards, they sit on top of the banner a bit */}
+        <div className={styles.stats}>
+          <div className={styles.stat}>
+            <span className={styles.statNumber}>{allEvents.length}</span>
+            <span className={styles.statLabel}>Upcoming events</span>
+          </div>
+          <div className={styles.stat}>
+            <span className={styles.statNumber}>{savedEvents.length}</span>
+            <span className={styles.statLabel}>Saved events</span>
+          </div>
+          <div className={styles.stat}>
+            <span className={styles.statNumber}>{schedules.length}</span>
+            <span className={styles.statLabel}>Classes</span>
+          </div>
+        </div>
+
         <div className={styles.layout}>
           <div>
             <div className={styles.tabs}>
@@ -400,11 +414,8 @@ export default function Dashboard({ goTo }) {
             {eventCards}
           </div>
 
-          <div>
-            <div className={styles.box}>
-              <h3 className={styles.boxTitle}>My Classes</h3>
-              {scheduleCards}
-            </div>
+          <div className={styles.sidebar}>
+            <WeekSchedule courses={schedules} events={allEvents} />
 
             <ChatPanel />
           </div>

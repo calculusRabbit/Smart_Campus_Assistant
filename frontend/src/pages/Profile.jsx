@@ -1,25 +1,9 @@
 import { useEffect, useState } from "react";
-import {
-  getUser,
-  getInterests,
-  saveInterests,
-  //deleteAccount,
-  //logout,
-} from "../api";
+import { getUser, getInterests, saveInterests } from "../api";
 import NavBar from "../components/NavBar";
 import { interestOptions, MAX_TAG_WORDS } from "../interests";
 import styles from "./Auth.module.css";
 import DeactivateAccount from "../components/DeactivateAccount";
-
-// // reasons in the delete account popup
-// const deleteReasons = [
-//   "Not useful for me",
-//   "The events or info were wrong",
-//   "Privacy concerns",
-//   "Too many notifications",
-//   "Using something else",
-//   "Other",
-// ];
 
 export default function Profile({ goTo }) {
   const user = getUser();
@@ -30,14 +14,6 @@ export default function Profile({ goTo }) {
   const [interests, setInterests] = useState([]);
   const [aboutText, setAboutText] = useState("");
   const [message, setMessage] = useState("");
-
-  // // delete account popup
-  // const [showDelete, setShowDelete] = useState(false);
-  // const [reason, setReason] = useState("");
-  // const [comment, setComment] = useState("");
-  // const [deletePassword, setDeletePassword] = useState("");
-  // const [deleteError, setDeleteError] = useState("");
-  // const [deleting, setDeleting] = useState(false);
 
   // load saved stuff when the page opens
   // the text and the tags are saved in the same list so split them again here
@@ -104,43 +80,6 @@ export default function Profile({ goTo }) {
     }
   }
 
-  // // close the popup and clear what was typed
-  // function closeDelete() {
-  //   setShowDelete(false);
-  //   setReason("");
-  //   setComment("");
-  //   setDeletePassword("");
-  //   setDeleteError("");
-  // }
-
-  // async function handleDelete(e) {
-  //   e.preventDefault();
-  //   setDeleting(true);
-
-  //   try {
-  //     await deleteAccount(password, captcha);
-  //     localStorage.setItem(
-  //       "loginNotice",
-  //       "Your account is scheduled for deletion. Log in within 30 days to restore it.",
-  //     );
-  //     // log out last, the page needs the user until it changes
-  //     logout();
-  //     goTo("login");
-  //   } catch (err) {
-  //     setDeleteError(err.message);
-  //     setDeleting(false);
-  //   }
-  // }
-
-  // let reasonOptions = [];
-  // for (let i = 0; i < deleteReasons.length; i++) {
-  //   reasonOptions.push(
-  //     <option key={deleteReasons[i]} value={deleteReasons[i]}>
-  //       {deleteReasons[i]}
-  //     </option>,
-  //   );
-  // }
-
   // each interest is a button that turns yellow when picked
   let interestButtons = [];
   for (let i = 0; i < interestOptions.length; i++) {
@@ -180,6 +119,7 @@ export default function Profile({ goTo }) {
             <p className={styles.label}>Year</p>
             <select
               className={styles.input}
+              aria-label="Year"
               value={year}
               onChange={(e) => setYear(e.target.value)}
             >

@@ -3,6 +3,7 @@ import { signup, login } from "../api";
 import Captcha from "../components/Captcha";
 import InstitutionPicker from "../components/InstitutionPicker";
 import ThemeToggle from "../components/ThemeToggle";
+import { APP_NAME } from "../config";
 import { interestOptions, MAX_TAG_WORDS } from "../interests";
 import styles from "./Auth.module.css";
 
@@ -170,7 +171,7 @@ export default function SignUp({ goTo }) {
       </div>
       <div className={styles.card}>
         <h2 className={styles.title}>Create account</h2>
-        <p className={styles.subtitle}>Join Smart Campus</p>
+        <p className={styles.subtitle}>Join {APP_NAME}</p>
 
         {error && <p className={styles.error}>{error}</p>}
 
@@ -258,6 +259,7 @@ export default function SignUp({ goTo }) {
           <input
             className={styles.input}
             type="date"
+            aria-label="Date of birth"
             name="dob"
             value={dob}
             onChange={(e) => setDob(e.target.value)}

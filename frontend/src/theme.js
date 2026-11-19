@@ -1,10 +1,15 @@
-// light/dark mode and the accent color, saved in localStorage
+// the 3 looks of the app, saved in localStorage
+// light = default, dark = dark mode, colorblind = blue/orange colors that work for color blind people
 
-export const ACCENTS = ["indigo", "teal", "purple", "rose"];
+export const THEMES = [
+  { id: "light", label: "Light" },
+  { id: "dark", label: "Dark" },
+  { id: "colorblind", label: "Color-blind" },
+];
 
 export function getTheme() {
   const saved = localStorage.getItem("theme");
-  if (saved) {
+  if (saved === "light" || saved === "dark" || saved === "colorblind") {
     return saved;
   }
   // nothing saved yet so use what the computer is set to
@@ -14,22 +19,12 @@ export function getTheme() {
   return "light";
 }
 
-export function getAccent() {
-  return localStorage.getItem("accent") || "indigo";
-}
-
 export function setTheme(theme) {
   document.documentElement.setAttribute("data-theme", theme);
   localStorage.setItem("theme", theme);
 }
 
-export function setAccent(accent) {
-  document.documentElement.setAttribute("data-accent", accent);
-  localStorage.setItem("accent", accent);
-}
-
 // run once before react starts so the page doesnt flash the wrong color
 export function loadTheme() {
   document.documentElement.setAttribute("data-theme", getTheme());
-  document.documentElement.setAttribute("data-accent", getAccent());
 }
