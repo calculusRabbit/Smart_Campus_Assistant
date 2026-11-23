@@ -15,6 +15,7 @@ from pydantic import (
 )
 
 from models import Interest
+from services.username_policy import validate_student_username
 
 
 def normalize_email(value: str) -> str:
@@ -67,9 +68,7 @@ class SignupRequest(BaseModel):
     @field_validator("username")
     @classmethod
     def validate_username(cls, value: str) -> str:
-        if any(word in value.casefold() for word in ("admin", "system", "alert")):
-            raise ValueError("Username contains a reserved phrase")
-        return value
+        return validate_student_username(value)
 
     @field_validator("password")
     @classmethod

@@ -47,9 +47,13 @@ app.include_router(verification_router)
 # let the react app (vite runs on 5173) call this backend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Retry-After"],
 )
 
 app.mount("/static", StaticFiles(directory="static"), name="static")

@@ -77,10 +77,42 @@ export default function InstitutionPicker({ onChange }) {
       {error && <p role="alert">{error}</p>}
 
       {results.map((school) => (
-        <button key={school.id} type="button" onClick={() => choose(school.id)}>
-          {school.name} — {school.city}, {school.state}
+        <button
+          key={school.id}
+          type="button"
+          onClick={() => choose(school.id)}
+        >
+          <span>
+            {school.name}
+            {school.acronym ? ` (${school.acronym})` : ""}
+            {" — "}
+            {school.city}, {school.state}
+          </span>
+
+          {school.native_name &&
+            school.native_name !== school.name && (
+              <small style={{ display: "block" }}>
+                {school.native_name}
+              </small>
+            )}
+
+          {school.aliases?.length > 0 && (
+            <small style={{ display: "block" }}>
+              Also known as:{" "}
+              {school.aliases.slice(0, 3).join("; ")}
+            </small>
+          )}
         </button>
       ))}
+
+      {selected && (
+        <p>
+          {selected.native_name &&
+            `${selected.native_name}. `}
+          {selected.aliases?.length > 0 &&
+            `Also known as: ${selected.aliases.join("; ")}`}
+        </p>
+      )}
 
       {selected && (
         <label>

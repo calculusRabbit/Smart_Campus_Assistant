@@ -17,12 +17,15 @@ from auth import get_admin_user, get_current_user
 from auth_models import AccountEmail
 from database import get_connection
 from services.institution_service import (
-    get_institution,
+    get_enriched_institution,
     search_institutions,
 )
 from services.verification_service import (
+    cancel_otp,
+    cancel_studid,
     complete_otp,
     complete_studid,
+    otp_status,
     require_manual,
     school_for,
     start_otp,
@@ -42,15 +45,23 @@ def institutions(q: str = Query(min_length=2, max_length=100)) -> list[dict[str,
 
 @router.get("/institutions/{scorecard_id}")
 def institution(scorecard_id: int) -> dict[str, Any]:
-    return get_institution(scorecard_id)
+    return get_enriched_institution(scorecard_id)
 
 
 @router.get("/verification")
-def verification_status(user: User, response: Response) -> dict[str, Any]:
+@router.get("/verification")
+def verification_status(
+    user: User,
+    response: Response,
+) -> dict[str, Any]:
     with get_connection() as conn:
         school = school_for(conn, user["student_id"])
+
         student = conn.execute(
-            "SELECT account_status FROM Students WHERE student_id = %s",
+            """
+            SELECT account_status FROM Students
+            WHERE student_id = %s
+            """,
             (user["student_id"],),
         ).fetchone()
 
@@ -59,40 +70,99 @@ def verification_status(user: User, response: Response) -> dict[str, Any]:
 
         latest = conn.execute(
             """
-            SELECT status, method, reason, admin_message
-            FROM Authentications
+            SELECT status, method, reason, admin_message FROM Authentications
             WHERE student_id = %s
-            ORDER BY authentication_id DESC
-            LIMIT 1
+            ORDER BY authentication_id DESC LIMIT 1
             """,
             (user["student_id"],),
+        ).fetchone()
+
+        otp = conn.execute(
+            """
+            SELECT * FROM Enrollment_otps
+            WHERE student_id = %s
+            """,
+            (user["student_id"],),
+        ).fetchone()
+
+        pending_sso = conn.execute(
+            """
+            SELECT verification_id FROM Studid_verifications
+            WHERE student_id = %s AND school_id = %s AND expires_at > CURRENT_TIMESTAMP
+            """,
+            (user["student_id"], school["school_id"]),
         ).fetchone()
 
     response.headers["Cache-Control"] = "no-store"
 
     return {
         "school": school["school_name"],
+        "school_id": school["school_id"],
         "account_status": student["account_status"],
         "verification": latest,
+        "otp": otp_status(otp),
+        "studid_id": (
+            str(pending_sso["verification_id"])
+            if pending_sso
+            else None
+        ),
     }
-
 
 class SendOtpRequest(BaseModel):
     email: AccountEmail
 
 
 class CheckOtpRequest(BaseModel):
+    challenge_id: UUID
     code: str = Field(pattern=r"^[0-9]{6}$")
 
 
 @router.post("/verification/otp/send")
-def send_otp(request: SendOtpRequest, user: User) -> dict[str, Any]:
+def send_otp(
+    request: SendOtpRequest,
+    user: User,
+    response: Response,
+) -> dict[str, Any]:
+    response.headers["Cache-Control"] = "no-store"
     return start_otp(user, str(request.email))
 
 
 @router.post("/verification/otp/check")
-def check_otp(request: CheckOtpRequest, user: User) -> dict[str, Any]:
-    return complete_otp(user, request.code)
+def check_otp(
+    request: CheckOtpRequest,
+    user: User,
+    response: Response,
+) -> dict[str, Any]:
+    response.headers["Cache-Control"] = "no-store"
+
+    return complete_otp(
+        user,
+        request.code,
+        request.challenge_id,
+    )
+    
+
+@router.delete("/verification/otp")
+def otp_cancel(
+    user: User,
+    response: Response,
+) -> dict[str, bool]:
+    response.headers["Cache-Control"] = "no-store"
+    return cancel_otp(user)
+
+
+@router.delete("/verification/studid/{verification_id}")
+def studid_cancel(
+    verification_id: UUID,
+    user: User,
+    response: Response,
+) -> dict[str, bool]:
+    response.headers["Cache-Control"] = "no-store"
+
+    return cancel_studid(
+        user,
+        verification_id,
+    )
 
 
 @router.post("/verification/manual")
