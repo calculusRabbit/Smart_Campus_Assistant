@@ -255,78 +255,32 @@ def _get_entity(
         ) from exc
 
 
-def _organization_matches(
-    organization: Any,
-    identity: dict[str, Any],
-) -> bool:
-    if not isinstance(organization, dict):
-        return False
-
-    official_host = hostname(identity.get("website"))
-
-    if (
-        not official_host
-        or hostname(organization.get("url")) != official_host
-    ):
-        return False
-
-    names = institution_names(identity)
-
-    return any(
-        normalized_name(organization.get(field)) in names
-        for field in ("name", "displayName")
-        if normalized_name(organization.get(field))
-    )
-
-
 def entity_matches(
     identity: dict[str, Any],
     entity_id: str,
 ) -> bool:
-    if (
-        not isinstance(entity_id, str)
-        or not 1 <= len(entity_id) <= 512
-    ):
+    if not isinstance(entity_id, str) or not 1 <= len(entity_id) <= 512:
         return False
 
-    data = _get_entity(
-        entity_id,
-        int(time.time() // 600),
-    )
+    data = _get_entity(entity_id, int(time.time() // 600))
 
-    if (
-        data.get("entityID") != entity_id
-        or data.get("type") != "live"
-    ):
+    if data.get("entityID") != entity_id or data.get("type") != "live":
         return False
 
     country = data.get("country")
 
-    if (
-        not isinstance(country, str)
-        or country.upper() not in {"US", "USA"}
-    ):
+    if not isinstance(country, str) or country.upper() not in {"US", "USA"}:
         return False
 
-    organizations = data.get("organizations", [])
     scopes = data.get("scopes", [])
     domains = identity.get("domains", [])
 
-    if not all(
-        isinstance(value, list)
-        for value in (organizations, scopes, domains)
-    ):
+    if not isinstance(scopes, list) or not isinstance(domains, list):
         return False
 
-    organization_match = any(
-        _organization_matches(organization, identity)
-        for organization in organizations
-    )
-
-    scope_match = any(
-        isinstance(scope, str)
-        and domain_matches(scope, domains)
+    # scope: the security domain the IdP asserts for its users (e.g. wichita.edu)
+    # matching it to the institution's domains is better than comparing organisation names/URLs
+    return any(
+        isinstance(scope, str) and domain_matches(scope, domains)
         for scope in scopes
     )
-
-    return organization_match and scope_match

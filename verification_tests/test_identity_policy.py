@@ -6,7 +6,6 @@ from fastapi import HTTPException
 from services import institution_identity as identity
 from services.username_policy import validate_student_username
 
-
 SCORECARD = {
     "id": 123,
     "name": "Example University",

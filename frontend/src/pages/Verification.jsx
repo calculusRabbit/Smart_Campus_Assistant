@@ -190,7 +190,7 @@ export default function Verification({ goTo }) {
         popup.location.replace(result.url);
 
         setMessage(
-          "Sign in in the other tab, then return here.",
+          "Sign in with the other tab. When you're done, please close that tab and click 'Check institutional login'.",
         );
       } catch (err) {
         popup.close();

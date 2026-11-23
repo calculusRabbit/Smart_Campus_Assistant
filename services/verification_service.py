@@ -22,6 +22,13 @@ from services.institution_identity import (
 )
 from services.institution_service import get_institution
 
+
+# this is the page the user sees after completing SSO via studid
+# this MUST be a HTTPS page, and so the application can't currently be the page
+# TODO: after deployment, change to application HTTPS URL (preferably dynamic page)
+STUDID_RETURN_URL = "https://studid.io/"
+
+
 # keywords to flag in emails
 STAFF_LABELS = set(
     "hr legal payroll office president provost dean registrar "
@@ -45,12 +52,15 @@ def staff_reasons(email: str) -> list[str]:
     tokens = set(re.split(r"[^a-z0-9]+", local))
     tokens.update(domain.split(".")[:-2])
 
-    reasons = sorted(tokens & STAFF_LABELS)
+    return sorted(tokens & STAFF_LABELS)
 
-    if re.fullmatch(r"[a-z]+\.[a-z]+", local.split("+", 1)[0]):
-        reasons.append("first.last pattern")
 
-    return reasons
+def staff_affiliation(roles: set[str]) -> bool:
+    if roles & {"faculty", "staff"}:
+        return True
+
+    # student workers are common, so "employee" + "student" is considered 
+    return "employee" in roles and "student" not in roles
 
 
 def school_for(
@@ -252,17 +262,11 @@ def otp_status(
 
     return {
         "email": row["email"],
-        "challenge_id": (
-            str(row["challenge_id"])
-            if row["challenge_id"]
-            else None
-        ),
+        "challenge_id": (str(row["challenge_id"]) if row["challenge_id"] else None),
         "school_id": row["school_id"],
         "consumed": row["consumed"],
         "expires_at": row["expires_at"],
-        "resend_available_at": (
-            row["last_sent"] + timedelta(seconds=60)
-        ),
+        "resend_available_at": (row["last_sent"] + timedelta(seconds=60)),
         "locked_until": row["locked_until"],
     }
 
@@ -305,22 +309,35 @@ def _check_send_limits(
 
     return old["failures"]
 
+def _school_identity(
+    user: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    # External lookups happen here, before any account row lock is taken.
+    with get_connection() as conn:
+        school = school_for(conn, user["student_id"])
+
+    return school, _identity(school)
+
 
 def start_otp(
     user: dict[str, Any],
     email: str,
 ) -> dict[str, Any]:
     student_id = user["student_id"]
+    school, identity = _school_identity(user)
+    email = require_institution_email(email, identity)
     now = datetime.now(UTC)
+    code = f"{secrets.randbelow(1_000_000):06d}"
+    challenge_id = uuid4()
 
     with get_connection() as conn:
         _lock_account(conn, user)
 
-        school = school_for(conn, student_id)
-        email = require_institution_email(
-            email,
-            _identity(school),
-        )
+        if school_for(conn, student_id)["school_id"] != school["school_id"]:
+            raise HTTPException(
+                409,
+                "Your institution changed. Start verification again.",
+            )
 
         if _pending_manual(conn, student_id):
             return _manual_result()
@@ -336,8 +353,6 @@ def start_otp(
         ).fetchone()
 
         failures = _check_send_limits(old, now)
-        challenge_id = uuid4()
-        code = f"{secrets.randbelow(1_000_000):06d}"
 
         conn.execute(
             """
@@ -378,37 +393,34 @@ def start_otp(
 
         # old unfinished SSO attempts must not complete
         conn.execute(
-            """
-            DELETE FROM Studid_verifications
-            WHERE student_id = %s
-            """,
+            "DELETE FROM Studid_verifications WHERE student_id = %s",
             (student_id,),
         )
 
-        try:
-            send_email(email, code)
-        except HTTPException:
+    # The email provider is called after commit, so a slow provider
+    # never holds the account lock (which login also needs).
+    try:
+        send_email(email, code)
+    except HTTPException:
+        with get_connection() as conn:
             conn.execute(
                 """
                 UPDATE Enrollment_otps
                 SET consumed = TRUE
-                WHERE student_id = %s
+                WHERE student_id = %s AND challenge_id = %s
                 """,
-                (student_id,),
+                (student_id, challenge_id),
             )
 
-            # returning normally -> challenge invalidation
-            return {
-                "sent": False,
-                "manual_available": True,
-                "resend_available_at": (
-                    now + timedelta(seconds=60)
-                ),
-                "message": (
-                    "We couldn't send your email. Try again later, "
-                    "change email, or use manual verification."
-                ),
-            }
+        return {
+            "sent": False,
+            "manual_available": True,
+            "resend_available_at": now + timedelta(seconds=60),
+            "message": (
+                "We couldn't send your email. Try again later, "
+                "change email, or use manual verification."
+            ),
+        }
 
     return {
         "sent": True,
@@ -419,7 +431,6 @@ def start_otp(
         "message": "Code sent. It expires in five minutes.",
     }
 
-
 def _complete_verified_otp(
     conn: Connection[dict[str, Any]],
     student_id: int,
@@ -428,8 +439,7 @@ def _complete_verified_otp(
 ) -> dict[str, Any]:
     conn.execute(
         """
-        UPDATE Enrollment_otps
-        SET consumed = TRUE
+        UPDATE Enrollment_otps SET consumed = TRUE
         WHERE student_id = %s
         """,
         (student_id,),
@@ -451,16 +461,14 @@ def _complete_verified_otp(
         """
         SELECT affiliations
         FROM Student_sso_evidence
-        WHERE student_id = %s
-          AND school_id = %s
-          AND expires_at > CURRENT_TIMESTAMP
+        WHERE student_id = %s AND school_id = %s AND expires_at > CURRENT_TIMESTAMP
         """,
         (student_id, school["school_id"]),
     ).fetchone()
 
     roles = set(evidence["affiliations"]) if evidence else set()
 
-    if roles & {"staff", "faculty", "employee"}:
+    if staff_affiliation(roles):
         return require_manual(
             conn,
             student_id,
@@ -470,16 +478,13 @@ def _complete_verified_otp(
     conn.execute(
         """
         UPDATE Students
-        SET edu_email = %s,
-            account_status = 'open'
+        SET edu_email = %s, account_status = 'open'
         WHERE student_id = %s
         """,
         (email, student_id),
     )
 
-    reason = (
-        "Institution mailbox confirmed; office-name heuristic passed; "
-    )
+    reason = "Institution mailbox confirmed; office-name heuristic passed; "
 
     if "student" in roles:
         reason += "same-application-account SSO student role observed"
@@ -513,9 +518,8 @@ def _complete_verified_otp(
 
 
 def _check_otp_attempt(
-    conn: Connection[dict[str, Any]],
-    student_id: int,
     school: dict[str, Any],
+    identity: dict[str, Any],
     row: dict[str, Any] | None,
     code: str,
     challenge_id: UUID,
@@ -552,11 +556,7 @@ def _check_otp_attempt(
     )
 
     if not correct:
-        locked_until = (
-            datetime.now(UTC) + timedelta(minutes=15)
-            if row["failures"] == 2
-            else None
-        )
+        locked_until = datetime.now(UTC) + timedelta(minutes=15) if row["failures"] == 2 else None
 
         conn.execute(
             """
@@ -579,19 +579,15 @@ def _check_otp_attempt(
                 "locked_until": locked_until,
                 "manual_available": True,
                 "message": (
-                    "Too many incorrect codes. Wait 15 minutes "
-                    "or use manual verification."
+                    "Too many incorrect codes. Wait 15 minutes or use manual verification."
                 ),
             }, None
 
         return None, "Incorrect code"
 
-    # recheck institution metadata when consuming OTP
-    email = require_institution_email(
-        row["email"],
-        _identity(school),
-    )
-
+    # recheck institution domains when consuming OTP (resolved before the lock)
+    email = require_institution_email(row["email"], identity)
+    
     return (
         _complete_verified_otp(
             conn,
@@ -609,11 +605,17 @@ def complete_otp(
     challenge_id: UUID,
 ) -> dict[str, Any]:
     student_id = user["student_id"]
+    school, identity = _school_identity(user)
 
     try:
         with get_connection() as conn:
             _lock_account(conn, user)
-            school = school_for(conn, student_id)
+
+            if school_for(conn, student_id)["school_id"] != school["school_id"]:
+                raise HTTPException(
+                    409,
+                    "Your institution changed. Start verification again.",
+                )
 
             row = conn.execute(
                 """
@@ -629,6 +631,7 @@ def complete_otp(
                 conn,
                 student_id,
                 school,
+                identity,
                 row,
                 code,
                 challenge_id,
@@ -643,10 +646,7 @@ def complete_otp(
         raise HTTPException(400, error)
 
     if result is None:
-        raise HTTPException(
-            500,
-            "Verification produced no result",
-        )
+        raise HTTPException(500, "Verification produced no result")
 
     return result
 
@@ -702,25 +702,7 @@ def _studid_request(
 def start_studid(
     user: dict[str, Any],
 ) -> dict[str, str]:
-    callback = os.environ.get("STUDID_REDIRECT_URL", "")
 
-    try:
-        parsed = urlsplit(callback)
-        valid_callback = (
-            parsed.scheme == "https"
-            and bool(parsed.hostname)
-            and not parsed.username
-            and not parsed.password
-        )
-    except ValueError:
-        valid_callback = False
-
-    if not valid_callback:
-        raise HTTPException(
-            503,
-            "Studid needs a public HTTPS callback. "
-            "Please use email OTP.",
-        )
 
     with get_connection() as conn:
         school = school_for(conn, user["student_id"])
@@ -733,7 +715,7 @@ def start_studid(
         "auth/verification",
         json={
             "secretToken": secret,
-            "redirectUrl": callback,
+            "redirectUrl": STUDID_RETURN_URL,
             "serviceName": "Smart Campus Assistant",
             "mode": "live",
         },
@@ -816,45 +798,39 @@ def start_studid(
         "url": link,
     }
 
-
-def _apply_studid(
-    conn: Connection[dict[str, Any]],
-    student_id: int,
-    school: dict[str, Any],
-    session: dict[str, Any],
-) -> dict[str, Any]:
+def _parse_studid_session(session: dict[str, Any]) -> dict[str, Any]:
     entity_id = session.get("entityId")
     identifier = session.get("authIdentifier")
     affiliations = session.get("affiliations", [])
 
     if not isinstance(entity_id, str) or not entity_id:
-        raise HTTPException(
-            503,
-            "Invalid Studid institution response",
-        )
+        raise HTTPException(503, "Invalid Studid institution response")
 
     if identifier is not None and (
-        not isinstance(identifier, str)
-        or not identifier.strip()
+        not isinstance(identifier, str) or not identifier.strip()
     ):
-        raise HTTPException(
-            503,
-            "Invalid Studid identity response",
-        )
+        raise HTTPException(503, "Invalid Studid identity response")
 
-    if (
-        not isinstance(affiliations, list)
-        or any(
-            not isinstance(role, str)
-            for role in affiliations
-        )
+    if not isinstance(affiliations, list) or any(
+        not isinstance(role, str) for role in affiliations
     ):
-        raise HTTPException(
-            503,
-            "Invalid Studid affiliation response",
-        )
+        raise HTTPException(503, "Invalid Studid affiliation response")
 
-    if not entity_matches(_identity(school), entity_id):
+    return {
+        "entity_id": entity_id,
+        "identifier": identifier,
+        "roles": sorted({role.casefold().split("@", 1)[0] for role in affiliations}),
+    }
+
+
+def _apply_studid(
+    conn: Connection[dict[str, Any]],
+    student_id: int,
+    school: dict[str, Any],
+    parsed: dict[str, Any],
+    matched: bool,
+) -> dict[str, Any]:
+    if not matched:
         return {
             "email_required": True,
             "message": (
@@ -863,11 +839,6 @@ def _apply_studid(
                 "your selected institution's .edu email through OTP."
             ),
         }
-
-    roles = sorted({
-        role.casefold().split("@", 1)[0]
-        for role in affiliations
-    })
 
     conn.execute(
         """
@@ -890,9 +861,9 @@ def _apply_studid(
         (
             student_id,
             school["school_id"],
-            entity_id,
-            identifier,
-            roles,
+            parsed["entity_id"],
+            parsed["identifier"],
+            parsed["roles"],
             datetime.now(UTC) + timedelta(hours=1),
         ),
     )
@@ -904,10 +875,10 @@ def _apply_studid(
             studid_identifier = %s
         WHERE student_id = %s
         """,
-        (entity_id, identifier, student_id),
+        (parsed["entity_id"], parsed["identifier"], student_id),
     )
 
-    if set(roles) & {"staff", "faculty", "employee"}:
+    if staff_affiliation(set(parsed["roles"])):
         return require_manual(
             conn,
             student_id,
@@ -917,7 +888,7 @@ def _apply_studid(
     if _pending_manual(conn, student_id):
         return _manual_result()
 
-    # authIdentifier is account-linking data
+    # authIdentifier is account-linking data, not a verified mailbox
     return {
         "email_required": True,
         "message": (
@@ -932,6 +903,8 @@ def complete_studid(
     user: dict[str, Any],
     verification_id: UUID,
 ) -> dict[str, Any]:
+    school, identity = _school_identity(user)
+
     with get_connection() as conn:
         pending = conn.execute(
             """
@@ -953,9 +926,7 @@ def complete_studid(
     data = _studid_request(
         "GET",
         f"auth/verification/{verification_id}",
-        headers={
-            "Authorization": f"Bearer {pending['secret_token']}",
-        },
+        headers={"Authorization": f"Bearer {pending['secret_token']}"},
     )
 
     session = data.get("session")
@@ -966,14 +937,15 @@ def complete_studid(
             "message": "Waiting for institutional login",
         }
 
-    if (
-        not isinstance(session, dict)
-        or session.get("test") is not False
-    ):
+    if not isinstance(session, dict) or session.get("test") is not False:
         raise HTTPException(
             400,
             "Test or invalid Studid sessions cannot verify enrollment",
         )
+
+    # Parse and match before taking the account lock (both may call APIs).
+    parsed = _parse_studid_session(session)
+    matched = entity_matches(identity, parsed["entity_id"])
 
     try:
         with get_connection() as conn:
@@ -998,14 +970,15 @@ def complete_studid(
                     "Verification cancelled, already used, or expired",
                 )
 
-            school = school_for(conn, user["student_id"])
+            current = school_for(conn, user["student_id"])
 
-            if pending["school_id"] != school["school_id"]:
+            if not (
+                pending["school_id"]
+                == school["school_id"]
+                == current["school_id"]
+            ):
                 conn.execute(
-                    """
-                    DELETE FROM Studid_verifications
-                    WHERE student_id = %s
-                    """,
+                    "DELETE FROM Studid_verifications WHERE student_id = %s",
                     (user["student_id"],),
                 )
                 return {
@@ -1019,15 +992,13 @@ def complete_studid(
             result = _apply_studid(
                 conn,
                 user["student_id"],
-                school,
-                session,
+                current,
+                parsed,
+                matched,
             )
 
             conn.execute(
-                """
-                DELETE FROM Studid_verifications
-                WHERE student_id = %s
-                """,
+                "DELETE FROM Studid_verifications WHERE student_id = %s",
                 (user["student_id"],),
             )
 
@@ -1035,10 +1006,8 @@ def complete_studid(
     except UniqueViolation as exc:
         raise HTTPException(
             409,
-            "This institutional identity is already linked "
-            "to another account",
+            "This institutional identity is already linked to another account",
         ) from exc
-
 
 def cancel_studid(
     user: dict[str, Any],

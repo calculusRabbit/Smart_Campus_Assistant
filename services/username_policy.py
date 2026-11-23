@@ -1,4 +1,4 @@
-#helps implements policies for student usernames
+# helps implements policies for student usernames
 
 import re
 import unicodedata
@@ -29,16 +29,18 @@ PROFANITY_WORDS = {
     "pussy",
 }
 
-LEET = str.maketrans({
-    "0": "o",
-    "1": "i",
-    "3": "e",
-    "4": "a",
-    "5": "s",
-    "7": "t",
-    "@": "a",
-    "!": "i",
-})
+LEET = str.maketrans(
+    {
+        "0": "o",
+        "1": "i",
+        "3": "e",
+        "4": "a",
+        "5": "s",
+        "7": "t",
+        "@": "a",
+        "!": "i",
+    }
+)
 
 
 def validate_student_username(value: str) -> str:
@@ -46,10 +48,7 @@ def validate_student_username(value: str) -> str:
     translated = folded.translate(LEET)
     compact = re.sub(r"[^a-z]", "", translated)
     word = ""
-    if any(
-        word in folded or word in compact
-        for word in RESERVED
-    ):
+    if any(word in folded or word in compact for word in RESERVED):
         raise ValueError(f"Username contains a reserved phrase: {word}")
 
     tokens = set(re.findall(r"[a-z]+", translated))
@@ -61,9 +60,7 @@ def validate_student_username(value: str) -> str:
         folded,
     ).translate(LEET)
 
-    tokens.add(
-        re.sub(r"[^a-z]", "", without_suffix)
-    )
+    tokens.add(re.sub(r"[^a-z]", "", without_suffix))
 
     if (
         any(word in compact for word in PROFANITY_STEMS)

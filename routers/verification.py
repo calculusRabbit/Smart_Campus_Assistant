@@ -101,12 +101,9 @@ def verification_status(
         "account_status": student["account_status"],
         "verification": latest,
         "otp": otp_status(otp),
-        "studid_id": (
-            str(pending_sso["verification_id"])
-            if pending_sso
-            else None
-        ),
+        "studid_id": (str(pending_sso["verification_id"]) if pending_sso else None),
     }
+
 
 class SendOtpRequest(BaseModel):
     email: AccountEmail
@@ -140,7 +137,7 @@ def check_otp(
         request.code,
         request.challenge_id,
     )
-    
+
 
 @router.delete("/verification/otp")
 def otp_cancel(

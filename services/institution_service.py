@@ -4,11 +4,7 @@ from typing import Any
 import httpx
 from fastapi import HTTPException
 
-from services.institution_identity import (
-    resolve_identity,
-    same_institution,
-    search_universities
-)
+from services.institution_identity import resolve_identity, same_institution, search_universities
 
 BASE_URL = "https://api.data.gov/ed/collegescorecard/v1/schools"
 
@@ -41,18 +37,14 @@ def _get(**params: Any) -> list[dict[str, Any]]:
         response.raise_for_status()
         results = response.json()["results"]
 
-        if (
-            not isinstance(results, list)
-            or any(not isinstance(row, dict) for row in results)
-        ):
+        if not isinstance(results, list) or any(not isinstance(row, dict) for row in results):
             raise ValueError("Invalid Scorecard response")
 
         return results
     except (httpx.HTTPError, KeyError, ValueError) as exc:
         raise HTTPException(
             503,
-            "Institution search is unavailable, "
-            "please try again later.",
+            "Institution search is unavailable, please try again later.",
         ) from exc
 
 
@@ -61,18 +53,12 @@ def _search_scorecard(query: str) -> list[dict[str, Any]]:
         **{
             "school.name": query,
             "school.state": ",".join(US_STATES.split()),
-            "fields": (
-                "id,school.name,school.city,school.state,"
-                "school.school_url"
-            ),
+            "fields": ("id,school.name,school.city,school.state,school.school_url"),
             "per_page": 20,
         }
     )
 
-    return [
-        {"id": row["id"], **row["school"]}
-        for row in rows
-    ]
+    return [{"id": row["id"], **row["school"]} for row in rows]
 
 
 def _enrichment(identity: dict[str, Any]) -> dict[str, Any]:
@@ -107,11 +93,7 @@ def search_institutions(query: str) -> list[dict[str, Any]]:
     results = {}
 
     for row in rows:
-        matches = [
-            item
-            for item in candidates
-            if same_institution(row, item)
-        ]
+        matches = [item for item in candidates if same_institution(row, item)]
 
         if len(matches) == 1:
             row = {
@@ -148,12 +130,7 @@ def get_institution(scorecard_id: int) -> dict[str, Any]:
     if school.get("state") not in US_STATES.split():
         raise HTTPException(400, "Choose a US institution")
 
-    programs = (
-        row.get("latest", {})
-        .get("programs", {})
-        .get("cip_4_digit")
-        or []
-    )
+    programs = row.get("latest", {}).get("programs", {}).get("cip_4_digit") or []
 
     options = {}
 
