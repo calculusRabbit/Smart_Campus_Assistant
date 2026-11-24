@@ -32,18 +32,23 @@ from services.verification_service import (
     start_studid,
 )
 
+from services.rate_limit import limit_institution_search
+
 router = APIRouter(tags=["verification"])
 
 User = Annotated[dict, Depends(get_current_user)]
 Admin = Annotated[dict, Depends(get_admin_user)]
 
 
-@router.get("/institutions")
+@router.get("/institutions", dependencies=[Depends(limit_institution_search)])
 def institutions(q: str = Query(min_length=2, max_length=100)) -> list[dict[str, Any]]:
     return search_institutions(q.strip())
 
 
-@router.get("/institutions/{scorecard_id}")
+@router.get(
+    "/institutions/{scorecard_id}",
+    dependencies=[Depends(limit_institution_search)],
+)
 def institution(scorecard_id: int) -> dict[str, Any]:
     return get_enriched_institution(scorecard_id)
 

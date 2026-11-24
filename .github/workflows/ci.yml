@@ -126,7 +126,13 @@ jobs:
             -h "$POSTGRES_HOST" \
             -U "$POSTGRES_USER" \
             -d "$POSTGRES_DB" \
-            -f migrations/005_studid_UP.sql  
+            -f migrations/005_studid_UP.sql
+          
+          psql -v ON_ERROR_STOP=1 \
+            -h "$POSTGRES_HOST" \
+            -U "$POSTGRES_USER" \
+            -d "$POSTGRES_DB" \
+            -f migrations/006_verification_binding_UP.sql  
           
         env:
           PGPASSWORD: ${{ env.POSTGRES_PASSWORD }}

@@ -47,14 +47,8 @@ services:
         bind:
           create_host_path: false
       - type: bind
-        source: ./migrations/006_institution_identity_UP.sql
-        target: /docker-entrypoint-initdb.d/007-institution-identity.sql
-        read_only: true
-        bind:
-          create_host_path: false
-      - type: bind
-        source: ./migrations/007_verification_binding_UP.sql
-        target: /docker-entrypoint-initdb.d/008-verification-binding.sql
+        source: ./migrations/006_verification_binding_UP.sql
+        target: /docker-entrypoint-initdb.d/007-verification-binding.sql
         read_only: true
         bind:
           create_host_path: false

@@ -56,10 +56,10 @@ def staff_reasons(email: str) -> list[str]:
 
 
 def staff_affiliation(roles: set[str]) -> bool:
-    if roles & {"faculty", "staff"}:
+    if staff_affiliation(roles):
         return True
 
-    # student workers are common, so "employee" + "student" is considered 
+    # student workers ("employee" + "student") considered students
     return "employee" in roles and "student" not in roles
 
 
