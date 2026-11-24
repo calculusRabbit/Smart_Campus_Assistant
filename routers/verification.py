@@ -34,6 +34,7 @@ from services.verification_service import (
 
 from services.rate_limit import limit_institution_search
 
+
 router = APIRouter(tags=["verification"])
 
 User = Annotated[dict, Depends(get_current_user)]
