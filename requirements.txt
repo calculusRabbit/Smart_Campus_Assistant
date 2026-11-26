@@ -22,5 +22,5 @@ faiss-cpu
 PyJWT>=2,<3
 pwdlib[argon2]
 email-validator
-altcha==2.3.0
+altcha==2.5.0
 python-multipart
