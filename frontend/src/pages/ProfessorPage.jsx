@@ -293,6 +293,7 @@ export default function ProfessorPage({ goTo, professorId }) {
         <div className={styles.toolbar}>
           <select
             className={styles.select}
+            aria-label="Sort reviews"
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
           >
@@ -320,6 +321,7 @@ export default function ProfessorPage({ goTo, professorId }) {
             <p className={styles.label}>Choose class</p>
             <select
               className={styles.input}
+              aria-label="Class"
               value={course}
               onChange={(e) => setCourse(e.target.value)}
             >
@@ -329,6 +331,7 @@ export default function ProfessorPage({ goTo, professorId }) {
             <p className={styles.label}>Rating</p>
             <select
               className={styles.input}
+              aria-label="Rating"
               value={rating}
               onChange={(e) => setRating(e.target.value)}
             >

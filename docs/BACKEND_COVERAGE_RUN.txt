@@ -1,0 +1,57 @@
+Backend test coverage, run 2026-11-24 with the same pytest flags as CI (local docker, fresh seed)
+
+Name                                               Stmts   Miss Branch BrPart  Cover   Missing
+----------------------------------------------------------------------------------------------
+auth.py                                               72     34     18      2    47%   18, 36, 40, 88-134, 151-153, 158, 172-214
+auth_models.py                                        75      3     16      3    93%   24, 114, 117
+database.py                                          127      4     44      7    94%   34, 102->107, 109->112, 134, 193->197, 274, 276
+main.py                                              260     23     82     15    89%   85, 90-99, 187, 275, 385-387, 428->433, 430->433, 442-445, 465-467, 526-528, 639, 660, 664->666, 666->677, 668, 672->674, 674->676, 677->679
+models.py                                              9      0      0      0   100%
+routers/__init__.py                                    0      0      0      0   100%
+routers/auth.py                                       58     31      6      0    42%   18-20, 25-26, 34-35, 40-41, 50-88, 96-100, 110-131
+routers/verification.py                               96     50     14      0    42%   40, 45, 50-73, 90, 95, 100-101, 113-155, 160-163, 191-204, 226-284, 292-293, 302-303, 311
+services/__init__.py                                   0      0      0      0   100%
+services/appointments.py                              48     31     16      0    27%   28-129, 146-176
+services/auth_service.py                              47     36     12      0    19%   23-110, 113-168, 178-179
+services/captcha_service.py                           32     19      6      0    34%   25-43, 47-79
+services/event_recommender.py                        213     31    102     27    80%   38, 45->47, 71-72, 252, 279, 296-298, 311, 312->314, 315, 317, 324, 367, 389, 398-409, 412, 432, 434, 447-448, 455, 471, 475, 488, 500, 511, 532, 534, 566, 587->589
+services/institution_service.py                       44     33     12      0    20%   20-32, 38-47, 52-91
+services/interest_expansion.py                        25      3     16      2    83%   57, 91-92
+services/ml/__init__.py                                0      0      0      0   100%
+services/ml/predictor.py                              21      0      2      0   100%
+services/ml/recommendation_enrichment.py              20      2      6      1    88%   19-20
+services/ml/router.py                                 10      0      0      0   100%
+services/ml/test_predictor.py                         25      0      0      0   100%
+services/ml/test_recommendation_enrichment.py         30      0      0      0   100%
+services/ml/test_router.py                            23      0      0      0   100%
+services/ml/theme_scoring.py                          20      1      2      0    95%   24
+services/ml/train.py                                  57     57      6      0     0%   1-117
+services/ml/train_themes.py                           57     57     10      0     0%   1-115
+services/rag/__init__.py                               0      0      0      0   100%
+services/rag/config.py                                24      0      0      0   100%
+services/rag/embed_and_load.py                        33     33      4      0     0%   1-65
+services/rag/gui.py                                   21     21      0      0     0%   1-40
+services/rag/pipeline.py                             111     11     42      5    88%   116->115, 118->121, 151-157, 225-242, 298-304
+services/rag/retriever.py                             36     11      6      1    67%   53-67, 72
+services/rag/scrapers/get_urls.py                     33     13     14      1    62%   9-19, 43-51, 55
+services/rag/scrapers/scrape_wsu_courses.py           33      7     12      2    76%   30, 60, 67-73
+services/rag/scrapers/scrape_wsu_dining.py            41      5     16      2    88%   91, 95, 133-135
+services/rag/scrapers/scrape_wsu_dining_hours.py      49      6     18      3    87%   68, 79, 85, 97-99
+services/rag/scrapers/scrape_wsu_faculty.py           51     11     16      2    78%   83, 108-120, 128-133
+services/rag/scrapers/scraper.py                     156      7     64     10    92%   56->59, 61->64, 82->80, 85, 103, 206, 208->211, 249, 252-253, 262
+services/rag/scrapers/sync_wsu_courses.py             85     29     38      4    65%   19-25, 60-111, 151, 171, 192, 197, 238-239
+services/rag/scrapers/sync_wsu_dining.py              78     53     28      1    36%   30, 46-89, 103-230
+services/rag/scrapers/sync_wsu_faculty.py             95     34     38      5    63%   56-127, 133, 163, 229, 231->234, 243
+services/recommendation_service.py                    14      0      4      0   100%
+services/recommender_config.py                         7      0      0      0   100%
+services/verification_service.py                     207    177     70      0    11%   36-37, 41-50, 57-72, 81-128, 135-168, 172-265, 276-320, 327-396, 407-426, 433-442, 449-504, 514-581, 591-663
+----------------------------------------------------------------------------------------------
+TOTAL                                               2443    833    740     93    64%
+Required test coverage of 60.0% reached. Total coverage: 64.00%
+=========================== short test summary info ============================
+FAILED tests/test_database.py::test_save_and_get_student_interests - assert F...
+FAILED tests/test_students_api.py::test_save_then_get_interests - assert 404 ...
+FAILED tests/test_students_api.py::test_saving_again_replaces_the_old_interests
+FAILED tests/test_students_api.py::test_the_text_a_student_wrote_is_saved_as_one_item
+4 failed, 274 passed in 32.01s
+

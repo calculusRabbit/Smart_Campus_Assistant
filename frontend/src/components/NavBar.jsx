@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { getUser, logout } from "../api";
-import shockerImage from "../assets/images/wsu-shocker.png";
+import { logout } from "../api";
+import ThemeToggle from "./ThemeToggle";
+import { BRAND_START, BRAND_END, NAV_LINKS } from "../config";
 import styles from "./NavBar.module.css";
 
 // top bar shown on every page after login
 export default function NavBar({ goTo }) {
-  const user = getUser();
   // is the dropdown menu open
   const [open, setOpen] = useState(false);
 
@@ -27,58 +27,45 @@ export default function NavBar({ goTo }) {
     goTo(page);
   }
 
+  let menuItems = [];
+  for (let i = 0; i < NAV_LINKS.length; i++) {
+    let link = NAV_LINKS[i];
+    menuItems.push(
+      <button
+        key={link.page}
+        className={styles.menuItem}
+        onClick={() => handleGo(link.page)}
+      >
+        {link.label}
+      </button>,
+    );
+  }
+
   return (
     <nav className={styles.nav}>
-      <span className={styles.brand} onClick={() => goTo("dashboard")}>
-        <img className={styles.logo} src={shockerImage} alt="WSU Shocker" />
-        Smart <span className={styles.brandAccent}>Campus</span>
-      </span>
-      <span className={styles.menuWrap}>
-        <button
-          className={styles.navButton}
-          aria-expanded={open}
-          onClick={() => setOpen(!open)}
-        >
-          {user.name} ▾
-        </button>
-        {open && (
-          <div className={styles.menu}>
-            <button
-              className={styles.menuItem}
-              onClick={() => handleGo("dashboard")}
-            >
-              Dashboard
-            </button>
-            <button
-              className={styles.menuItem}
-              onClick={() => handleGo("ml-classifier")}
-            >
-              ML Classifier
-            </button>
-            <button
-              className={styles.menuItem}
-              onClick={() => handleGo("reviews")}
-            >
-              Reviews
-            </button>
-            <button
-              className={styles.menuItem}
-              onClick={() => handleGo("appointments")}
-            >
-              Appointments
-            </button>
-            <button
-              className={styles.menuItem}
-              onClick={() => handleGo("profile")}
-            >
-              Profile
-            </button>
-            <button className={styles.menuItem} onClick={handleLogout}>
-              Log out
-            </button>
-          </div>
-        )}
-      </span>
+      <button className={styles.brand} onClick={() => goTo("dashboard")}>
+        {BRAND_START} <span className={styles.brandAccent}>{BRAND_END}</span>
+      </button>
+      <div className={styles.right}>
+        <ThemeToggle />
+        <span className={styles.menuWrap}>
+          <button
+            className={styles.navButton}
+            aria-expanded={open}
+            onClick={() => setOpen(!open)}
+          >
+            Menu ▾
+          </button>
+          {open && (
+            <div className={styles.menu}>
+              {menuItems}
+              <button className={styles.menuItem} onClick={handleLogout}>
+                Log out
+              </button>
+            </div>
+          )}
+        </span>
+      </div>
     </nav>
   );
 }

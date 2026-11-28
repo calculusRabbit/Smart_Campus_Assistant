@@ -1,25 +1,9 @@
 import { useEffect, useState } from "react";
-import {
-  getUser,
-  getInterests,
-  saveInterests,
-  //deleteAccount,
-  //logout,
-} from "../api";
-import shockerImage from "../assets/images/wsu-shocker.png";
+import { getUser, getInterests, saveInterests } from "../api";
+import NavBar from "../components/NavBar";
 import { interestOptions, MAX_TAG_WORDS } from "../interests";
 import styles from "./Auth.module.css";
 import DeactivateAccount from "../components/DeactivateAccount";
-
-// // reasons in the delete account popup
-// const deleteReasons = [
-//   "Not useful for me",
-//   "The events or info were wrong",
-//   "Privacy concerns",
-//   "Too many notifications",
-//   "Using something else",
-//   "Other",
-// ];
 
 export default function Profile({ goTo }) {
   const user = getUser();
@@ -30,14 +14,6 @@ export default function Profile({ goTo }) {
   const [interests, setInterests] = useState([]);
   const [aboutText, setAboutText] = useState("");
   const [message, setMessage] = useState("");
-
-  // // delete account popup
-  // const [showDelete, setShowDelete] = useState(false);
-  // const [reason, setReason] = useState("");
-  // const [comment, setComment] = useState("");
-  // const [deletePassword, setDeletePassword] = useState("");
-  // const [deleteError, setDeleteError] = useState("");
-  // const [deleting, setDeleting] = useState(false);
 
   // load saved stuff when the page opens
   // the text and the tags are saved in the same list so split them again here
@@ -104,43 +80,6 @@ export default function Profile({ goTo }) {
     }
   }
 
-  // // close the popup and clear what was typed
-  // function closeDelete() {
-  //   setShowDelete(false);
-  //   setReason("");
-  //   setComment("");
-  //   setDeletePassword("");
-  //   setDeleteError("");
-  // }
-
-  // async function handleDelete(e) {
-  //   e.preventDefault();
-  //   setDeleting(true);
-
-  //   try {
-  //     await deleteAccount(password, captcha);
-  //     localStorage.setItem(
-  //       "loginNotice",
-  //       "Your account is scheduled for deletion. Log in within 30 days to restore it.",
-  //     );
-  //     // log out last, the page needs the user until it changes
-  //     logout();
-  //     goTo("login");
-  //   } catch (err) {
-  //     setDeleteError(err.message);
-  //     setDeleting(false);
-  //   }
-  // }
-
-  // let reasonOptions = [];
-  // for (let i = 0; i < deleteReasons.length; i++) {
-  //   reasonOptions.push(
-  //     <option key={deleteReasons[i]} value={deleteReasons[i]}>
-  //       {deleteReasons[i]}
-  //     </option>,
-  //   );
-  // }
-
   // each interest is a button that turns yellow when picked
   let interestButtons = [];
   for (let i = 0; i < interestOptions.length; i++) {
@@ -159,64 +98,69 @@ export default function Profile({ goTo }) {
   }
 
   return (
-    <div className={styles.page}>
-      <div className={styles.card}>
-        <img className={styles.logo} src={shockerImage} alt="WSU Shocker" />
-        <h2 className={styles.title}>Profile</h2>
-        <p className={styles.subtitle}>Logged in as {user.username}</p>
-        {message && <p className={styles.message}>{message}</p>}
+    <>
+      <NavBar goTo={goTo} />
+      <div className={styles.pageInner}>
+        <div className={styles.card}>
+          <h2 className={styles.title}>Profile</h2>
+          <p className={styles.subtitle}>Logged in as {user.username}</p>
+          {message && <p className={styles.message}>{message}</p>}
 
-        <form onSubmit={handleSubmit}>
-          <p className={styles.label}>Major</p>
-          <input
-            className={styles.input}
-            type="text"
-            placeholder="Computer Science"
-            value={major}
-            onChange={(e) => setMajor(e.target.value)}
-          />
+          <form onSubmit={handleSubmit}>
+            <p className={styles.label}>Major</p>
+            <input
+              className={styles.input}
+              type="text"
+              placeholder="Computer Science"
+              value={major}
+              onChange={(e) => setMajor(e.target.value)}
+            />
 
-          <p className={styles.label}>Year</p>
-          <select
-            className={styles.input}
-            value={year}
-            onChange={(e) => setYear(e.target.value)}
-          >
-            <option value="freshman">Freshman</option>
-            <option value="sophomore">Sophomore</option>
-            <option value="junior">Junior</option>
-            <option value="senior">Senior</option>
-          </select>
+            <p className={styles.label}>Year</p>
+            <select
+              className={styles.input}
+              aria-label="Year"
+              value={year}
+              onChange={(e) => setYear(e.target.value)}
+            >
+              <option value="freshman">Freshman</option>
+              <option value="sophomore">Sophomore</option>
+              <option value="junior">Junior</option>
+              <option value="senior">Senior</option>
+            </select>
 
-          <p className={styles.label}>
-            What do you like to do, get involved in or explore?
-          </p>
-          <textarea
-            className={styles.input + " " + styles.textarea}
-            placeholder="I like going to concerts and hackathons, and I want to join a club about..."
-            value={aboutText}
-            onChange={(e) => setAboutText(e.target.value)}
-          />
+            <p className={styles.label}>
+              What do you like to do, get involved in or explore?
+            </p>
+            <textarea
+              className={styles.input + " " + styles.textarea}
+              placeholder="I like going to concerts and hackathons, and I want to join a club about..."
+              value={aboutText}
+              onChange={(e) => setAboutText(e.target.value)}
+            />
 
-          <p className={styles.label}>Pick some tags too</p>
-          <div className={styles.pills}>{interestButtons}</div>
+            <p className={styles.label}>Pick some tags too</p>
+            <div className={styles.pills}>{interestButtons}</div>
 
-          <button type="submit" className={styles.button}>
-            Save
+            <button type="submit" className={styles.button}>
+              Save
+            </button>
+          </form>
+
+          <button type="button" onClick={() => goTo("verification")}>
+            Student verification
           </button>
-        </form>
 
-        <button type="button" onClick={() => goTo("verification")}>
-          Student verification
-        </button>
+          <DeactivateAccount goTo={goTo} />
 
-        <DeactivateAccount goTo={goTo} />
+          <button
+            onClick={() => goTo("dashboard")}
+            className={styles.darkButton}
+          >
+            Back to Dashboard
+          </button>
 
-        <button onClick={() => goTo("dashboard")} className={styles.darkButton}>
-          Back to Dashboard
-        </button>
-
-        {/* {showDelete && (
+          {/* {showDelete && (
         <div className={styles.overlay} onClick={closeDelete}>
           <form
             className={styles.modal}
@@ -275,7 +219,8 @@ export default function Profile({ goTo }) {
           </form>
         </div>
       )} */}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

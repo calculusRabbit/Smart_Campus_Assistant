@@ -1,38 +1,112 @@
-:root {
-  --yellow: #f4c430;
-  --yellow-dark: #ddb125;
-  --black: #111111;
-  --gray: #555555;
-  --page-bg: #f4f6f8;
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+/* colors for the whole app live here, change them here and every page changes
 
-  --sans: system-ui, "Segoe UI", Roboto, sans-serif;
-  --heading: system-ui, "Segoe UI", Roboto, sans-serif;
+   The purple/indigo and gray shades come from Radix Colors (Iris and Slate scales,
+   light and dark), MIT license: https://www.radix-ui.com/colors
+   The color blind theme is our own, based on the Okabe-Ito blue and orange. */
+:root {
+  /* light mode (default) */
+  --page-bg: #f0f0f3;
+  --surface: #ffffff;
+  --surface-alt: #f9f9fb;
+  --text: #1c2024;
+  --text-soft: #60646c;
+  --border: #cdced6;
+
+  --primary: #5b5bd6;
+  --primary-hover: #5151cd;
+  --on-primary: #ffffff;
+  --primary-soft: #e6e7ff;
+
+  --danger: #b91c1c;
+  --danger-hover: #991b1b;
+  --danger-soft: #fee2e2;
+  --success: #15803d;
+  --success-soft: #dcfce7;
+  --warning-soft: #fef3c7;
+  --warning-text: #854d0e;
+
+  --nav-bg: #272962;
+  --nav-text: #ffffff;
+  --nav-accent: #b8baf8;
+
+  /* the big colored banner at the top of the pages */
+  --hero-bg: linear-gradient(135deg, #272962, #5b5bd6);
+  --hero-text: #ffffff;
+
+  --shadow: 0 1px 4px rgba(15, 23, 42, 0.1);
+  --shadow-hover: 0 3px 10px rgba(15, 23, 42, 0.16);
+  --radius: 12px;
+  --radius-small: 8px;
+
+  --sans: "Atkinson Hyperlegible", system-ui, "Segoe UI", sans-serif;
+  --heading: "Bitter", Georgia, serif;
   --mono: ui-monospace, Consolas, monospace;
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
+  font: 17px/150% var(--sans);
   color-scheme: light;
-  color: #1f2937;
-  background: var(--bg);
-  font-synthesis: none;
+  color: var(--text);
+  background: var(--page-bg);
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+}
 
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
+/* dark mode, the toggle puts data-theme="dark" on the html tag */
+:root[data-theme="dark"] {
+  --page-bg: #13131e;
+  --surface: #1b1b2b;
+  --surface-alt: #171625;
+  --text: #edeef0;
+  --text-soft: #b0b4ba;
+  --border: #3a3a55;
+
+  --primary: #b1a9ff;
+  --primary-hover: #c9c3ff;
+  --on-primary: #13131e;
+  --primary-soft: #262a65;
+
+  --danger: #fca5a5;
+  --danger-hover: #fecaca;
+  --danger-soft: #7f1d1d;
+  --success: #86efac;
+  --success-soft: #14532d;
+  --warning-soft: #713f12;
+  --warning-text: #fde68a;
+
+  --nav-bg: #0c0c14;
+  --nav-text: #f8fafc;
+  --hero-bg: linear-gradient(135deg, #202248, #303374 60%, #4a4a95);
+  --hero-text: #f8fafc;
+
+  --shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  --shadow-hover: 0 3px 10px rgba(0, 0, 0, 0.6);
+
+  color-scheme: dark;
+}
+
+/* color blind mode, uses blue + orange (the Okabe-Ito colors) because red and green look the same
+   for a lot of people. things also have text labels so color is never the only hint */
+:root[data-theme="colorblind"] {
+  --page-bg: #f5f7fa;
+  --text: #14213d;
+  --text-soft: #3d4a63;
+  --border: #9aa5b8;
+
+  --primary: #0063a3;
+  --primary-hover: #004f82;
+  --primary-soft: #d6ecfa;
+
+  --danger: #a33f00;
+  --danger-hover: #7f3000;
+  --danger-soft: #fde4cf;
+  --success: #005a8c;
+  --success-soft: #d6ecfa;
+  --warning-soft: #fff3b0;
+  --warning-text: #5c4b00;
+
+  --nav-bg: #00314f;
+  --nav-accent: #a5d8ff;
+  --hero-bg: linear-gradient(135deg, #00314f, #0063a3);
+  --hero-text: #ffffff;
 }
 
 * {
@@ -41,54 +115,85 @@
 
 body {
   margin: 0;
+  background: var(--page-bg);
+  color: var(--text);
+  transition:
+    background-color 0.25s,
+    color 0.25s;
 }
 
 #root {
   width: 100%;
   min-height: 100svh;
-  box-sizing: border-box;
 }
 
 h1,
-h2 {
+h2,
+h3 {
   font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
+  color: var(--text);
+  line-height: 1.2;
 }
 
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
 p {
   margin: 0;
 }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
+a {
+  color: var(--primary);
 }
 
 code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+  font-family: var(--mono);
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--surface-alt);
+}
+
+/* big visible outline when you tab through the page */
+:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* plain buttons and inputs that dont have their own css (verification, ml page etc) */
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+}
+
+/* small fade in when a page loads */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* people who turn off animations in their os should not get them */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+@media (max-width: 1024px) {
+  :root {
+    font-size: 16px;
+  }
 }

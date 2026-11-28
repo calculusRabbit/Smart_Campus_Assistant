@@ -14,6 +14,11 @@
     "e2e": "playwright test"
   },
   "dependencies": {
+    "@fontsource/atkinson-hyperlegible": "^5.3.0",
+    "@fontsource/bitter": "^5.3.0",
+    "@fullcalendar/core": "^6.1.22",
+    "@fullcalendar/react": "^6.1.22",
+    "@fullcalendar/timegrid": "^6.1.22",
     "altcha": "^3.5.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",

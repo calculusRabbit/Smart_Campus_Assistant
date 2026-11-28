@@ -7,21 +7,22 @@
 
 .banner {
   padding: 25px 30px;
-  color: white;
-  background-color: var(--black);
-  border-top: 3px solid var(--yellow);
+  color: var(--hero-text);
+  background: var(--hero-bg);
+  border-radius: 0 0 var(--radius) var(--radius);
 }
 
 .bannerTitle {
   margin: 0;
   font-size: 32px;
-  color: white;
+  color: var(--hero-text);
   text-align: left;
 }
 
 .bannerText {
   margin: 5px 0 0 0;
-  color: #cccccc;
+  color: var(--hero-text);
+  opacity: 0.9;
 }
 
 .content {
@@ -35,14 +36,14 @@
   padding: 14px;
   margin-bottom: 20px;
   font-size: 18px;
-  border: 1px solid #cccccc;
-  border-radius: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
 }
 
 .search:focus {
   outline: none;
-  border-color: var(--yellow);
-  box-shadow: 0 0 0 3px rgba(244, 196, 48, 0.35);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
 }
 
 /* one professor in the list */
@@ -52,20 +53,21 @@
   gap: 20px;
   padding: 16px;
   margin-bottom: 15px;
-  background-color: white;
-  border-radius: 10px;
-  border-left: 6px solid var(--yellow);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background-color: var(--surface);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
   text-align: left;
   cursor: pointer;
+  animation: fade-up 0.35s ease-out;
   transition:
-    transform 0.15s,
+    border-color 0.15s,
     box-shadow 0.15s;
 }
 
 .professorCard:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+  border-color: var(--primary);
+  box-shadow: var(--shadow-hover);
 }
 
 .score {
@@ -73,9 +75,9 @@
   padding: 15px 10px;
   font-size: 24px;
   font-weight: bold;
-  color: var(--yellow);
-  background-color: var(--black);
-  border-radius: 8px;
+  color: var(--on-primary);
+  background-color: var(--primary);
+  border-radius: var(--radius-small);
   text-align: center;
 }
 
@@ -90,25 +92,25 @@
 .professorMeta {
   margin: 3px 0 0 0;
   font-size: 14px;
-  color: var(--gray);
+  color: var(--text-soft);
 }
 
 .primaryButton {
   padding: 10px 20px;
   font-size: 15px;
   font-weight: bold;
-  color: var(--black);
-  background-color: var(--yellow);
+  color: var(--on-primary);
+  background-color: var(--primary);
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-small);
   cursor: pointer;
 }
 
 .primaryButton:hover {
-  background-color: var(--yellow-dark);
+  background-color: var(--primary-hover);
 }
 
 .empty {
   text-align: center;
-  color: var(--gray);
+  color: var(--text-soft);
 }

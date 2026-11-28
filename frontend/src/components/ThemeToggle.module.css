@@ -1,0 +1,31 @@
+/* 3 buttons stuck together like a segmented control */
+.wrap {
+  display: inline-flex;
+  padding: 3px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+.option {
+  padding: 5px 12px;
+  font-size: 13px;
+  font-weight: bold;
+  color: var(--text-soft);
+  background: none;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+}
+
+.option:hover {
+  color: var(--text);
+}
+
+.option[aria-pressed="true"] {
+  color: var(--on-primary);
+  background-color: var(--primary);
+}

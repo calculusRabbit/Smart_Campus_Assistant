@@ -1,0 +1,47 @@
+/* week calendar on the dashboard, the colors of the calendar come from our theme */
+
+.box {
+  padding: 16px;
+  font-size: 14px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+
+  /* the calendar library reads these css variables */
+  --fc-page-bg-color: var(--surface);
+  --fc-neutral-bg-color: var(--surface-alt);
+  --fc-neutral-text-color: var(--text-soft);
+  --fc-border-color: var(--border);
+  --fc-today-bg-color: var(--primary-soft);
+  --fc-now-indicator-color: var(--danger);
+  --fc-button-bg-color: var(--primary);
+  --fc-button-border-color: var(--primary);
+  --fc-button-text-color: var(--on-primary);
+  --fc-button-hover-bg-color: var(--primary-hover);
+  --fc-button-hover-border-color: var(--primary-hover);
+  --fc-button-active-bg-color: var(--primary-hover);
+  --fc-button-active-border-color: var(--primary-hover);
+}
+
+.title {
+  margin-top: 0;
+}
+
+/* event names in the top row go on a new line instead of getting cut off,
+   the box is tight so the margins are small to fit words like Hackathon */
+.box :global(.fc-daygrid-event) {
+  margin: 0;
+  font-size: 11px;
+  white-space: normal;
+}
+
+.box :global(.fc-daygrid-event .fc-event-title) {
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
+.box :global(.fc-daygrid-event .fc-event-main) {
+  padding: 1px 0;
+  text-align: center;
+}

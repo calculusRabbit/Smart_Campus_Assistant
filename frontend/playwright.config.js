@@ -8,6 +8,8 @@ export default defineConfig({
     baseURL: "http://localhost:5173",
     channel: "chrome",
     screenshot: "only-on-failure",
+    // no fade animations while testing, axe can scan a color in the middle of a fade
+    reducedMotion: "reduce",
   },
   // start the vite dev server for us (or reuse it if it is already running)
   webServer: {
